@@ -268,5 +268,5 @@
     const s = Math.sqrt(v2.reduce((a, b2) => a + b2 * b2, 0));
     return v2.map((x2) => x2 / (s || 1));
   }
-  window.dabzAnalysis = { analyzeAudioUrl, estimateKeyFromChroma };
+  window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyFromChroma };
 })();
