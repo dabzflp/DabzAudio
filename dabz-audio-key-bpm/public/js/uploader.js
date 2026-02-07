@@ -12,7 +12,8 @@ async function uploadFile(file) {
   form.append('audiofile', file);
 
   // Use absolute URL to work with ngrok and different domains
-  const uploadUrl = window.location.origin + '/upload';
+  // Use production backend for uploads
+  const uploadUrl = 'https://dabzaudio-production.up.railway.app/upload';
 
   const resp = await fetch(uploadUrl, {
     method: 'POST',

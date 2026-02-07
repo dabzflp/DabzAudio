@@ -5,15 +5,6 @@
 node_modules/
 npm-debug.log*
 
-# Audio / Video
-*.wav
-*.mp3
-*.aiff
-*.flac
-*.mov
-*.mp4
-*.zip
-
 # Plugins / installers
 *.pkg
 *.dmg
