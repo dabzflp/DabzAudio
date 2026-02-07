@@ -19,46 +19,45 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusEl) statusEl.textContent = msg;
   }
 
-  // Upload a file to the server
-  async function upload(file) {
-    const fd = new FormData();
-    fd.append('audiofile', file);
-    setStatus('Uploading...');
-    // Use absolute URL to work with ngrok and different domains
-    const uploadUrl = window.location.origin + '/upload';
-    const r = await fetch(uploadUrl, { method: 'POST', body: fd });
-    const j = await r.json();
-    if (!j.success) throw new Error(j.message || 'Upload failed');
-    return j.url;
-  }
-
-  // Main analysis flow: upload file → run analysis → display results
+  // Main analysis flow: run client-side analysis only
   async function run(file) {
     try {
-      setStatus('Uploading file...');
-      const url = await upload(file);
-      setStatus('Uploaded. Starting analysis...');
-
-      // Ensure the analysis module is loaded
-      if (!window.dabzAnalysis || !window.dabzAnalysis.analyzeAudioUrl) {
-        throw new Error('Analysis module not loaded. Include js/analysis.bundle.js');
-      }
-
-      // Run the analysis and get BPM + Key
-      const res = await window.dabzAnalysis.analyzeAudioUrl(url, setStatus);
-      setStatus('Done');
-      
-      // Display results in the dedicated result cards
-      const bpmEl = document.getElementById('bpmResult');
-      const keyEl = document.getElementById('keyResult');
-      const playerEl = document.getElementById('player');
-      
-      if (bpmEl) bpmEl.textContent = res.bpm ?? 'Unknown';
-      if (keyEl) keyEl.textContent = res.key ?? 'Unknown';
-      if (playerEl) playerEl.src = url;
-    } catch (e) {
-      setStatus('Error: ' + (e.message || String(e)));
-      console.error(e);
+      setStatus('Analyzing file...');
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const arrayBuffer = e.target.result;
+          setStatus('Running analysis...');
+          // Ensure the analysis module is loaded
+          if (!window.dabzAnalysis || !window.dabzAnalysis.analyzeAudioBuffer) {
+            throw new Error('Analysis module not loaded. Include js/analysis.bundle.js');
+          }
+          // Run the analysis and get BPM + Key
+          const res = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, setStatus);
+          setStatus('Done');
+          // Display results in the dedicated result cards
+          const bpmEl = document.getElementById('bpmResult');
+          const keyEl = document.getElementById('keyResult');
+          const playerEl = document.getElementById('player');
+          if (bpmEl) bpmEl.textContent = res.bpm ?? 'Unknown';
+          if (keyEl) keyEl.textContent = res.key ?? 'Unknown';
+          if (playerEl) {
+            // Create a blob URL for playback
+            const blob = new Blob([arrayBuffer], { type: file.type });
+            playerEl.src = URL.createObjectURL(blob);
+          }
+        } catch (err) {
+          setStatus('Error: ' + err.message);
+          console.error(err);
+        }
+      };
+      reader.onerror = function() {
+        setStatus('Error reading file');
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      setStatus('Error: ' + err.message);
+      console.error(err);
     }
   }
 
