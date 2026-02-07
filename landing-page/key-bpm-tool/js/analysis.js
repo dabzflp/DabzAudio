@@ -1,4 +1,79 @@
-/**
+// Analyze audio from ArrayBuffer (for client-side analysis)
+async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ac = new AudioContext();
+
+  progressCallback("Decoding audio...");
+  const audioBuffer = await ac.decodeAudioData(arrBuffer);
+
+  // Meyda setup
+  const Meyda = await ensureMeyda();
+
+  progressCallback("Extracting chroma features...");
+  const sampleRate = audioBuffer.sampleRate;
+  const channelData = audioBuffer.numberOfChannels > 0 ? audioBuffer.getChannelData(0) : null;
+  if (!channelData) return { bpm: null, key: "Unknown" };
+
+  const frameSize = 4096;
+  const hopSize = 2048;
+  const chromaSum = new Array(12).fill(0);
+  let frames = 0;
+
+  for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
+    const frame = channelData.slice(i, i + frameSize);
+    const chroma = Meyda.extract("chroma", frame, {
+      bufferSize: frameSize,
+      sampleRate,
+    });
+    if (Array.isArray(chroma) && chroma.length === 12) {
+      for (let k = 0; k < 12; k++) chromaSum[k] += chroma[k];
+      frames++;
+    }
+    if (i % (hopSize * 50) === 0)
+      progressCallback(`Chroma: ${(i / channelData.length * 100).toFixed(1)}%`);
+  }
+
+  if (frames === 0) return { bpm: null, key: "Unknown" };
+  const chromaAvg = chromaSum.map((v) => v / frames);
+  const key = estimateKeyFromChroma(chromaAvg);
+
+  progressCallback("Estimating BPM (Realtime Analyzer)...");
+  const bpm = await estimateBPMWithRealtime(audioBuffer);
+
+  ac.close();
+  return { bpm, key };
+}
+async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ac = new AudioContext();
+
+  progressCallback("Decoding audio...");
+  const audioBuffer = await ac.decodeAudioData(arrBuffer);
+
+  // ...rest of the analysis code (same as in analyzeAudioUrl)...
+  // Meyda setup, chroma extraction, BPM estimation, etc.
+
+  // (copy the code from analyzeAudioUrl after decoding)
+  // Don't forget to close the AudioContext at the end!
+  // ac.close();
+
+  // Return the result as { bpm, key }
+}async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ac = new AudioContext();
+
+  progressCallback("Decoding audio...");
+  const audioBuffer = await ac.decodeAudioData(arrBuffer);
+
+  // ...rest of the analysis code (same as in analyzeAudioUrl)...
+  // Meyda setup, chroma extraction, BPM estimation, etc.
+
+  // (copy the code from analyzeAudioUrl after decoding)
+  // Don't forget to close the AudioContext at the end!
+  // ac.close();
+
+  // Return the result as { bpm, key }
+}/**
  * analysis.js
  *
  * Client-side audio analysis:
@@ -146,4 +221,4 @@ function normalizeVector(v) {
 }
 
 /* ---- Expose to app ---- */
-window.dabzAnalysis = { analyzeAudioUrl, estimateKeyFromChroma };
+window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyFromChroma };

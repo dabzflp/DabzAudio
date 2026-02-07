@@ -89,7 +89,10 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 app.post('/upload', upload.single('audiofile'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-  const publicUrl = `/uploads/${req.file.filename}`;
+  // Build full public URL for the uploaded file
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const publicUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
 
   // --- PLACE FOR SERVER-SIDE ANALYSIS ---
   // e.g.

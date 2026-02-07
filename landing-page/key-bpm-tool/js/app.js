@@ -30,32 +30,39 @@ uploadBtn.addEventListener('click', async () => {
   }
 
   try {
-    status.textContent = 'Uploading...';
+    status.textContent = 'Reading file...';
     uploadBtn.disabled = true;
 
-    // upload to server
-    const res = await window.uploader.uploadFile(selectedFile);
-    if (!res.success) throw new Error('Upload failed');
+    // Read file as ArrayBuffer
+    const fileReader = new FileReader();
+    fileReader.readAsArrayBuffer(selectedFile);
+    fileReader.onload = async (e) => {
+      const arrayBuffer = e.target.result;
+      // Create a Blob URL for the audio player
+      const blobUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: selectedFile.type }));
+      player.src = blobUrl;
 
-    status.textContent = 'Uploaded. Starting analysis...';
-    // set audio player src
-    player.src = res.url;
+      // progress callback shows small UI updates
+      const progress = (msg) => { status.textContent = msg; };
 
-    // progress callback shows small UI updates
-    const progress = (msg) => { status.textContent = msg; };
+      // do analysis client-side (analysis.js)
+      const analysis = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, progress);
 
-    // do analysis client-side (analysis.js)
-    const analysis = await window.dabzAnalysis.analyzeAudioUrl(res.url, progress);
-
-    status.textContent = 'Analysis complete.';
-    bpmResult.textContent = analysis.bpm || '—';
-    keyResult.textContent = analysis.key || '—';
-
+      status.textContent = 'Analysis complete.';
+      bpmResult.textContent = analysis.bpm || '—';
+      keyResult.textContent = analysis.key || '—';
+      uploadBtn.disabled = false;
+    };
+    fileReader.onerror = (err) => {
+      console.error(err);
+      alert('Error reading file.');
+      status.textContent = 'Error reading file.';
+      uploadBtn.disabled = false;
+    };
   } catch (err) {
     console.error(err);
     alert('Error: ' + (err.message || err));
-    status.textContent = 'Error during upload/analysis.';
-  } finally {
+    status.textContent = 'Error during analysis.';
     uploadBtn.disabled = false;
   }
 });
