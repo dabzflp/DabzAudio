@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dabz Audio – Reverb & Delay Time Calculator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>Dabz Audio</h1>
+    <p>Industry‑standard Reverb & Delay Time Calculator</p>
+  </header>
+
+  <main class="container">
+    <section class="bpm-section">
+      <label for="bpm">Song BPM</label>
+      <input type="number" id="bpm" value="120" min="30" max="300" />
+      <button id="calculate">Calculate</button>
+    </section>
+
+    <section class="results">
+      <h2>Reverb Time Suggestions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Reverb Type</th>
+            <th>Pre‑Delay (ms)</th>
+            <th>Decay Time (ms)</th>
+            <th>Total Time (ms)</th>
+          </tr>
+        </thead>
+        <tbody id="reverbResults"></tbody>
+      </table>
+    </section>
+
+    <section class="results">
+      <h2>Delay & LFO Sync Times</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Note Value</th>
+            <th>Normal</th>
+            <th>Dotted</th>
+            <th>Triplet</th>
+          </tr>
+        </thead>
+        <tbody id="delayResults"></tbody>
+      </table>
+    </section>
+
+    <section class="info">
+      <h2>How to use this tool</h2>
+      <p>
+        Enter the BPM of your track and this calculator will generate tempo‑synced
+        delay times and reverb settings commonly used by professional mix engineers.
+        Use these values as starting points and fine‑tune by ear.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© Dabz Audio – Built for musicians & producers</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

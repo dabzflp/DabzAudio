@@ -1,0 +1,89 @@
+/* style.css
+   Charcoal + Orange theme for Dabz Audio.
+*/
+
+/* Colors */
+:root{
+  --charcoal: #2b2b2b;
+  --charcoal-2: #1f1f1f;
+  --orange: #ff7a00;
+  --muted: #9b9b9b;
+  --bg: #111111;
+  --card-bg: #161616;
+}
+
+/* Root background (fills the viewport including notch/home area) */
+html {
+  height: 100%;
+  margin: 0;
+  background-color: var(--bg); /* solid charcoal for safe-area */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Body sits on top and is transparent so html bg shows in safe-areas */
+body {
+  background: transparent;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: 24px;
+  padding-right: 24px;
+  font-family: Inter, system-ui, Arial, sans-serif;
+  color: #fff;
+}
+
+/* Header: ensure it extends into the top safe-area */
+.site-header {
+  display:flex;
+  align-items:center;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+  background: linear-gradient(90deg, var(--charcoal-2), var(--charcoal));
+  border-radius: 10px;
+}
+
+/* Footer: extend into bottom safe-area */
+.site-footer {
+  margin-top: 28px;
+  color: var(--muted);
+  text-align: center;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(0,0,0,0.06), transparent);
+}
+
+/* Header */
+.brand { display:flex; gap:12px; align-items:center; }
+.logo-circle { width:56px; height:56px; border-radius:12px; background:var(--charcoal); display:flex; align-items:center; justify-content:center; color:var(--orange); font-weight:700; font-size:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+.brand-text h1 { font-size:20px; color:var(--orange); }
+.brand-text small { color:var(--muted); display:block; margin-top:2px; }
+
+/* Layout */
+.container { display:grid; grid-template-columns: 1fr 340px; gap: 20px; align-items:start; }
+.uploader { background: var(--card-bg); padding:18px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+.results { display:flex; flex-direction:column; gap:12px; }
+
+/* Cards */
+.card { background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
+.big { font-size:36px; font-weight:700; color:var(--orange); margin-top:8px; }
+
+/* Form */
+input[type="file"] { display:block; margin-bottom:30px; color:var(--muted); 
+margin-top: 30px;}
+button { background:var(--orange); color:var(--charcoal-2); border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600; }
+.status { margin-top:110px; color:var(--muted); }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .container { grid-template-columns: 1fr; }
+  .brand-text h1 { font-size:18px; }
+  .big { font-size:28px; }
+}
+
+@media (max-width: 480px) {
+  body { padding: 12px; }
+  .logo-circle { width:44px; height:44px; font-size:16px; }
+  button { width:100%; }
+}

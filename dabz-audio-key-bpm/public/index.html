@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0c0c0c" />
+
+  <!-- iOS: allow the page to draw under the status bar and make it dark/translucent -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <title>Dabz Audio — Key & BPM Finder</title>
+  <script src="https://unpkg.com/meyda/dist/web/meyda.min.js"></script>
+  <!-- external CSS only -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="logo-circle">DA</div>
+      <div class="brand-text">
+        <h1>Dabz Audio</h1>
+        <small>Next Gen Audio</small>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="uploader">
+      <!-- <h2>Upload audio</h2> -->
+      <p>Drop a file or choose one (wav, mp3, m4a, ogg...).</p>
+
+      <form id="uploadForm">
+        <input type="file" id="audioFile" accept="audio/*" />
+        <button id="uploadBtn" type="button">Upload & Analyze</button>
+      </form>
+
+      <div id="status" class="status">No file selected.</div>
+    </section>
+
+    <section class="results">
+      <!-- <h2>Analysis</h2> -->
+
+      <div class="card">
+        <h3>BPM</h3>
+        <div id="bpmResult" class="big">—</div>
+      </div>
+
+      <div class="card">
+        <h3>Estimated Key</h3>
+        <div id="keyResult" class="big">—</div>
+      </div>
+
+      <div class="card">
+        <h3>Preview</h3>
+        <audio id="player" controls></audio>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    © DabzAudio
+  </footer>
+
+  <!-- client-side JS (no inline) -->
+  <script src="js/analysis.bundle.js"></script>
+  <!-- <script src="js/analysis.js"></script> -->
+  <script src="js/uploader.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
