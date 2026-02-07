@@ -1,79 +1,66 @@
 // Analyze audio from ArrayBuffer (for client-side analysis)
 async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  const ac = new AudioContext();
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const ac = new AudioContext();
 
-  progressCallback("Decoding audio...");
-  const audioBuffer = await ac.decodeAudioData(arrBuffer);
+    progressCallback("Decoding audio...");
+    const audioBuffer = await ac.decodeAudioData(arrBuffer);
+    console.log('Decoded audioBuffer:', audioBuffer);
 
-  // Meyda setup
-  const Meyda = await ensureMeyda();
+    // Meyda setup
+    const Meyda = await ensureMeyda();
+    console.log('Meyda loaded:', !!Meyda);
 
-  progressCallback("Extracting chroma features...");
-  const sampleRate = audioBuffer.sampleRate;
-  const channelData = audioBuffer.numberOfChannels > 0 ? audioBuffer.getChannelData(0) : null;
-  if (!channelData) return { bpm: null, key: "Unknown" };
-
-  const frameSize = 4096;
-  const hopSize = 2048;
-  const chromaSum = new Array(12).fill(0);
-  let frames = 0;
-
-  for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
-    const frame = channelData.slice(i, i + frameSize);
-    const chroma = Meyda.extract("chroma", frame, {
-      bufferSize: frameSize,
-      sampleRate,
-    });
-    if (Array.isArray(chroma) && chroma.length === 12) {
-      for (let k = 0; k < 12; k++) chromaSum[k] += chroma[k];
-      frames++;
+    progressCallback("Extracting chroma features...");
+    const sampleRate = audioBuffer.sampleRate;
+    const channelData = audioBuffer.numberOfChannels > 0 ? audioBuffer.getChannelData(0) : null;
+    console.log('Channel data:', channelData ? channelData.length : 'none');
+    if (!channelData) {
+      console.warn('No channel data');
+      return { bpm: null, key: "Unknown" };
     }
-    if (i % (hopSize * 50) === 0)
-      progressCallback(`Chroma: ${(i / channelData.length * 100).toFixed(1)}%`);
+
+    const frameSize = 4096;
+    const hopSize = 2048;
+    const chromaSum = new Array(12).fill(0);
+    let frames = 0;
+
+    for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
+      const frame = channelData.slice(i, i + frameSize);
+      const chroma = Meyda.extract("chroma", frame, {
+        bufferSize: frameSize,
+        sampleRate,
+      });
+      if (Array.isArray(chroma) && chroma.length === 12) {
+        for (let k = 0; k < 12; k++) chromaSum[k] += chroma[k];
+        frames++;
+      }
+      if (i % (hopSize * 50) === 0)
+        progressCallback(`Chroma: ${(i / channelData.length * 100).toFixed(1)}%`);
+      if (i % (hopSize * 50) === 0) console.log(`Chroma frame ${i}:`, chroma);
+    }
+
+    if (frames === 0) {
+      console.warn('No valid chroma frames');
+      return { bpm: null, key: "Unknown" };
+    }
+    const chromaAvg = chromaSum.map((v) => v / frames);
+    const key = estimateKeyFromChroma(chromaAvg);
+    console.log('Chroma avg:', chromaAvg, 'Estimated key:', key);
+
+    progressCallback("Estimating BPM (Realtime Analyzer)...");
+    const bpm = await estimateBPMWithRealtime(audioBuffer);
+    console.log('Estimated BPM:', bpm);
+
+    ac.close();
+    return { bpm, key };
+  } catch (err) {
+    console.error('analyzeAudioBuffer error:', err);
+    return { bpm: null, key: "Unknown" };
   }
-
-  if (frames === 0) return { bpm: null, key: "Unknown" };
-  const chromaAvg = chromaSum.map((v) => v / frames);
-  const key = estimateKeyFromChroma(chromaAvg);
-
-  progressCallback("Estimating BPM (Realtime Analyzer)...");
-  const bpm = await estimateBPMWithRealtime(audioBuffer);
-
-  ac.close();
-  return { bpm, key };
 }
-async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  const ac = new AudioContext();
-
-  progressCallback("Decoding audio...");
-  const audioBuffer = await ac.decodeAudioData(arrBuffer);
-
-  // ...rest of the analysis code (same as in analyzeAudioUrl)...
-  // Meyda setup, chroma extraction, BPM estimation, etc.
-
-  // (copy the code from analyzeAudioUrl after decoding)
-  // Don't forget to close the AudioContext at the end!
-  // ac.close();
-
-  // Return the result as { bpm, key }
-}async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  const ac = new AudioContext();
-
-  progressCallback("Decoding audio...");
-  const audioBuffer = await ac.decodeAudioData(arrBuffer);
-
-  // ...rest of the analysis code (same as in analyzeAudioUrl)...
-  // Meyda setup, chroma extraction, BPM estimation, etc.
-
-  // (copy the code from analyzeAudioUrl after decoding)
-  // Don't forget to close the AudioContext at the end!
-  // ac.close();
-
-  // Return the result as { bpm, key }
-}/**
+/**
  * analysis.js
  *
  * Client-side audio analysis:
@@ -183,28 +170,24 @@ function estimateKeyFromChroma(chroma) {
 /* ---- New BPM estimation using realtime-bpm-analyzer ---- */
 async function estimateBPMWithRealtime(audioBuffer) {
   try {
-    const mod = await import("realtime-bpm-analyzer");
-    // prefer analyzeFullBuffer if exported
-    if (typeof mod.analyzeFullBuffer === "function") {
-      const res = await mod.analyzeFullBuffer(audioBuffer);
-      if (Array.isArray(res) && res.length) return Math.round(res[0].tempo);
-      return null;
-    }
-    // fallback to default class API
-    const RealtimeBpmAnalyzer = mod.default;
-    if (typeof RealtimeBpmAnalyzer === "function") {
-      const analyzer = new RealtimeBpmAnalyzer({ scriptNodeBufferSize: 4096, pushTime: 500, calculateByFft: true });
+    console.log('BPM estimation: using window.RealTimeBpmAnalyzer');
+    if (typeof window.RealTimeBpmAnalyzer === "function") {
+      const analyzer = new window.RealTimeBpmAnalyzer({ scriptNodeBufferSize: 4096, pushTime: 500, calculateByFft: true });
       const channelData = audioBuffer.getChannelData(0);
       const bufferSize = 4096;
       for (let i = 0; i < channelData.length; i += bufferSize) {
         analyzer.input(channelData.slice(i, i + bufferSize));
       }
       const results = typeof analyzer.getBpm === "function" ? analyzer.getBpm() : null;
+      console.log('BPM estimation: getBpm result:', results);
       if (Array.isArray(results) && results.length) return Math.round(results[0].tempo);
+    } else {
+      console.warn('BPM estimation: RealTimeBpmAnalyzer not found on window');
     }
   } catch (e) {
     console.warn("BPM estimate failed:", e);
   }
+  console.warn('BPM estimation: returning null');
   return null;
 }
 

@@ -34,19 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           // Run the analysis and get BPM + Key
           const res = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, setStatus);
-          console.log('Analysis result:', res);
           setStatus('Done');
           // Display results in the dedicated result cards
           const bpmEl = document.getElementById('bpmResult');
           const keyEl = document.getElementById('keyResult');
           const playerEl = document.getElementById('player');
-          if (res && typeof res === 'object') {
-            if (bpmEl) bpmEl.textContent = (res.bpm !== undefined && res.bpm !== null) ? res.bpm : 'Unknown';
-            if (keyEl) keyEl.textContent = (res.key !== undefined && res.key !== null) ? res.key : 'Unknown';
-          } else {
-            if (bpmEl) bpmEl.textContent = 'Unknown';
-            if (keyEl) keyEl.textContent = 'Unknown';
-          }
+          if (bpmEl) bpmEl.textContent = res.bpm ?? 'Unknown';
+          if (keyEl) keyEl.textContent = res.key ?? 'Unknown';
           if (playerEl) {
             // Create a blob URL for playback
             const blob = new Blob([arrayBuffer], { type: file.type });
