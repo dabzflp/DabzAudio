@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 // Enable CORS for Netlify frontend and Railway backend only
 const allowedOrigins = [
   'https://dabzaudio.netlify.app',
-  'https://dabzaudio-production.up.railway.app'
+  // 'https://dabzaudio-production.up.railway.app'
 ];
 app.use((req, res, next) => {
   const origin = req.headers.origin;
