@@ -28,8 +28,12 @@ body {
 .header {
   padding: 2rem;
   text-align: center;
-  background-color: var(--contrast-color);
+  background:
+    linear-gradient(rgba(20,20,20,0.7), rgba(20,20,20,0.7)),
+    url('../assets/img/dabzaudiobck.png') center/cover no-repeat;
   color: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 
 .header h1 {
@@ -52,10 +56,14 @@ body {
 
 .bpm-section input {
   width: 120px;
-  padding: 0.5rem;
-  background-color: var(--surface-color);
-  color: var(--default-color);
-  border: 1px solid var(--contrast-color);
+  padding: 1.5rem;
+  text-align: center;
+  background:
+    linear-gradient(rgba(20,20,20,0.7), rgba(20,20,20,0.7)),
+    url('../../assets/img/dabzaudiobck.png') center/cover no-repeat;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
   border-radius: 4px;
 }
 
@@ -119,8 +127,12 @@ td {
   text-align: center;
   padding: 1.5rem;
   font-size: 0.9rem;
-  background-color: var(--contrast-color);
+  background:
+    linear-gradient(rgba(20,20,20,0.7), rgba(20,20,20,0.7)),
+    url('../assets/img/dabzaudiobck.png') center/cover no-repeat;
   color: var(--default-color);
+  position: relative;
+  z-index: 1;
 }
 
 /* Responsive */

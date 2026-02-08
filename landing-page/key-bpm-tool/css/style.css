@@ -41,8 +41,12 @@ body {
   padding-top: calc(12px + env(safe-area-inset-top));
   padding-bottom: 12px;
   margin-bottom: 24px;
-  background: linear-gradient(90deg, var(--charcoal-2), var(--charcoal));
+  background: 
+    linear-gradient(rgba(20,20,20,0.7), rgba(20,20,20,0.7)),
+    url('../../assets/img/dabzaudiobck.png') center/cover no-repeat;
   border-radius: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Footer: extend into bottom safe-area */
@@ -51,7 +55,11 @@ body {
   color: var(--muted);
   text-align: center;
   padding-bottom: calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(0,0,0,0.06), transparent);
+  background: 
+    linear-gradient(rgba(20,20,20,0.7), rgba(20,20,20,0.7)),
+    url('../../assets/img/dabzaudiobck.png') center/cover no-repeat;
+  position: relative;
+  z-index: 1;
 }
 
 /* Header */

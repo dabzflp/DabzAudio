@@ -49,8 +49,8 @@ async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
     const key = estimateKeyFromChroma(chromaAvg);
     console.log('Chroma avg:', chromaAvg, 'Estimated key:', key);
 
-    progressCallback("Estimating BPM (Realtime Analyzer)...");
-    const bpm = await estimateBPMWithRealtime(audioBuffer);
+    progressCallback("Estimating BPM (Energy Peaks)...");
+    const bpm = await estimateBPM(audioBuffer);
     console.log('Estimated BPM:', bpm);
 
     ac.close();
@@ -76,9 +76,13 @@ async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
 /* ---- Load Meyda (local copy in /public/js/) ---- */
 async function ensureMeyda() {
   if (window.Meyda) return window.Meyda;
+  // Remove any existing Meyda script tags (CDN or otherwise)
+  Array.from(document.querySelectorAll('script')).forEach(s => {
+    if (s.src && s.src.includes('meyda')) s.remove();
+  });
   await new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "js/meyda.min.js"; // served locally
+    s.src = "js/meyda.min.js"; // always use local
     s.onload = resolve;
     s.onerror = () => reject(new Error("Failed to load Meyda locally"));
     document.head.appendChild(s);
@@ -148,47 +152,92 @@ async function analyzeAudioUrl(audioUrl, progressCallback = () => {}) {
 
 /* ---- Key estimation (Krumhansl-Schmuckler) ---- */
 function estimateKeyFromChroma(chroma) {
+  // Profiles from Krumhansl-Schmuckler
   const majorProfile = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
   const minorProfile = [6.33,2.68,3.52,5.38,2.6,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-
-  const normChroma = normalizeVector(chroma);
-  let best = { name: "Unknown", score: -Infinity };
   const pitchNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
+  // Normalize chroma vector
+  const normChroma = normalizeVector(chroma);
+  // Reduce noise: zero out values below 10% of max
+  const maxVal = Math.max(...normChroma);
+  const cleanedChroma = normChroma.map(v => v < maxVal * 0.1 ? 0 : v);
+
+  let best = { name: "Unknown", score: -Infinity };
+  let secondBest = { name: "Unknown", score: -Infinity };
   for (let root = 0; root < 12; root++) {
     const maj = normalizeVector(rotateArray(majorProfile, root));
     const min = normalizeVector(rotateArray(minorProfile, root));
-    const majScore = dot(normChroma, maj);
-    const minScore = dot(normChroma, min);
-
-    if (majScore > best.score) best = { name: `${pitchNames[root]} major`, score: majScore };
-    if (minScore > best.score) best = { name: `${pitchNames[root]} minor`, score: minScore };
+    const majScore = dot(cleanedChroma, maj);
+    const minScore = dot(cleanedChroma, min);
+    if (majScore > best.score) {
+      secondBest = best;
+      best = { name: `${pitchNames[root]} major`, score: majScore };
+    } else if (majScore > secondBest.score) {
+      secondBest = { name: `${pitchNames[root]} major`, score: majScore };
+    }
+    if (minScore > best.score) {
+      secondBest = best;
+      best = { name: `${pitchNames[root]} minor`, score: minScore };
+    } else if (minScore > secondBest.score) {
+      secondBest = { name: `${pitchNames[root]} minor`, score: minScore };
+    }
   }
-  return best.score < 0.15 ? "Unknown" : best.name;
+  // If ambiguous, report both
+  if (best.score < 0.15) return "Unknown";
+  if (secondBest.score > 0.9 * best.score) return `${best.name} (possible: ${secondBest.name})`;
+  return best.name;
 }
 
-/* ---- New BPM estimation using realtime-bpm-analyzer ---- */
-async function estimateBPMWithRealtime(audioBuffer) {
-  try {
-    console.log('BPM estimation: using window.RealTimeBpmAnalyzer');
-    if (typeof window.RealTimeBpmAnalyzer === "function") {
-      const analyzer = new window.RealTimeBpmAnalyzer({ scriptNodeBufferSize: 4096, pushTime: 500, calculateByFft: true });
-      const channelData = audioBuffer.getChannelData(0);
-      const bufferSize = 4096;
-      for (let i = 0; i < channelData.length; i += bufferSize) {
-        analyzer.input(channelData.slice(i, i + bufferSize));
-      }
-      const results = typeof analyzer.getBpm === "function" ? analyzer.getBpm() : null;
-      console.log('BPM estimation: getBpm result:', results);
-      if (Array.isArray(results) && results.length) return Math.round(results[0].tempo);
-    } else {
-      console.warn('BPM estimation: RealTimeBpmAnalyzer not found on window');
+/* ---- Browser-native BPM estimation using energy peaks ---- */
+async function estimateBPM(audioBuffer) {
+  const channelData = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+  const frameSize = 1024;
+  const hopSize = 512;
+  const energies = [];
+  for (let i = 0; i + frameSize < channelData.length; i += hopSize) {
+    let sum = 0;
+    for (let j = 0; j < frameSize; j++) {
+      const v = channelData[i + j];
+      sum += v * v;
     }
-  } catch (e) {
-    console.warn("BPM estimate failed:", e);
+    energies.push(sum);
   }
-  console.warn('BPM estimation: returning null');
-  return null;
+
+  // Smooth energies (moving average)
+  const smoothEnergies = [];
+  const windowSize = 5;
+  for (let i = 0; i < energies.length; i++) {
+    let sum = 0;
+    for (let j = Math.max(0, i - windowSize); j <= Math.min(energies.length - 1, i + windowSize); j++) {
+      sum += energies[j];
+    }
+    smoothEnergies.push(sum / (Math.min(energies.length - 1, i + windowSize) - Math.max(0, i - windowSize) + 1));
+  }
+
+  // Autocorrelation
+  const maxLag = Math.floor(sampleRate / 60); // up to 60 BPM
+  const minLag = Math.floor(sampleRate / 180); // down to 180 BPM
+  let bestLag = 0;
+  let bestCorr = -Infinity;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let corr = 0;
+    for (let i = 0; i < smoothEnergies.length - lag; i++) {
+      corr += smoothEnergies[i] * smoothEnergies[i + lag];
+    }
+    if (corr > bestCorr) {
+      bestCorr = corr;
+      bestLag = lag;
+    }
+  }
+  if (bestLag === 0) return null;
+  const secondsPerBeat = (bestLag * hopSize) / sampleRate;
+  let bpm = 60 / secondsPerBeat;
+  // Fix half/double tempo
+  while (bpm < 70) bpm *= 2;
+  while (bpm > 180) bpm /= 2;
+  return Math.round(bpm);
 }
 
 /* ---- Utilities ---- */
