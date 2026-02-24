@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dabz Audio Community</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">DA</div>
+      <div>
+        <div class="title">Dabz Audio</div>
+        <div class="sub">Community Hub</div>
+      </div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="forum">Forum</button>
+      <button class="tab" data-tab="blog">Blog</button>
+    </nav>
+
+    <div class="topActions">
+      <button id="adminOpen" class="btn small subtle" title="Admin">Admin</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" id="createPanel">
+      <h3>Create Forum Post</h3>
+      <p class="hint">Blog is read/comment only. Use Forum for questions + answers.</p>
+
+      <label class="label">Category</label>
+      <select id="postCategory" class="input"></select>
+
+      <label class="label">Title</label>
+      <input id="postTitle" class="input" placeholder="e.g. FL Studio buffer crackle..." />
+
+      <label class="label">Content</label>
+      <textarea id="postContent" class="input" rows="6" placeholder="Ask a question or share a fix..."></textarea>
+
+      <label class="label">Name (optional)</label>
+      <input id="postAuthor" class="input" placeholder="Anonymous" />
+
+      <button id="publishBtn" class="btn glow">Post to Forum</button>
+    </aside>
+
+    <section class="feed">
+      <div class="feedHead">
+        <div>
+          <h2 id="feedTitle">Forum</h2>
+          <div class="chips" id="categoryChips"></div>
+        </div>
+        <div class="feedControls">
+          <input id="search" class="input small" placeholder="Search title..." />
+          <button id="refreshBtn" class="btn small">Refresh</button>
+        </div>
+      </div>
+
+      <div id="posts" class="posts"></div>
+
+      <div class="pager">
+        <button id="prevBtn" class="btn small">Prev</button>
+        <div id="pageInfo" class="pageInfo"></div>
+        <button id="nextBtn" class="btn small">Next</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Optional runtime config: create public/config.js to set window.API_BASE before app.js loads -->
+  <script src="config.js"></script>
+
+  <script>
+    // Default API base: same origin unless config.js overrides.
+    if (!window.API_BASE) {
+      window.API_BASE = window.location.origin;
+    }
+  </script>
+
+  <div id="adminOverlay" class="modal hidden">
+    <div class="modal-backdrop" data-close-admin></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="title">Admin Blog Publish</div>
+          <div class="sub">Private · requires admin token</div>
+        </div>
+        <button id="adminClose" class="btn small">Close</button>
+      </div>
+      <div class="modal-body">
+        <label class="label">Admin Token</label>
+        <input id="adminToken" class="input" type="password" placeholder="Paste ADMIN_TOKEN" />
+        <label class="remember"><input type="checkbox" id="rememberAdmin" /> Remember on this device</label>
+
+        <label class="label">Category</label>
+        <select id="adminCategory" class="input"></select>
+
+        <label class="label">Title</label>
+        <input id="adminTitle" class="input" placeholder="Article title" />
+
+        <label class="label">Content</label>
+        <textarea id="adminContent" class="input" rows="8" placeholder="Write your article..."></textarea>
+
+        <label class="label">Author</label>
+        <input id="adminAuthor" class="input" placeholder="Dabz Audio" />
+
+        <label class="label">Image URL (optional)</label>
+        <input id="adminImage" class="input" placeholder="https://..." />
+
+        <label class="label">Or upload image</label>
+        <input id="adminImageFile" class="input" type="file" accept="image/*" />
+        <button id="adminUpload" class="btn small" type="button" style="margin-top:8px;">Upload to Cloudinary</button>
+        <p class="hint">Uploads use your admin token; we only keep the returned URL.</p>
+
+        <div class="modal-actions">
+          <button id="adminPublish" class="btn glow">Publish Blog</button>
+          <span id="adminStatus" class="hint"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

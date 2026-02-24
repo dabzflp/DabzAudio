@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dabz Audio Blog Admin</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">DA</div>
+      <div>
+        <div class="title">Dabz Audio</div>
+        <div class="sub">Blog Admin (Publish Only)</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout single">
+    <aside class="panel">
+      <h3>Publish Blog Article</h3>
+      <p class="hint">This page is for you only. Keep your ADMIN_TOKEN private.</p>
+
+      <label class="label">Admin Token</label>
+      <input id="token" class="input" placeholder="Paste ADMIN_TOKEN..." />
+
+      <label class="label">Category</label>
+      <select id="category" class="input"></select>
+
+      <label class="label">Title</label>
+      <input id="title" class="input" placeholder="Article title..." />
+
+      <label class="label">Content</label>
+      <textarea id="content" class="input" rows="10" placeholder="Write your article..."></textarea>
+
+      <label class="label">Author</label>
+      <input id="author" class="input" placeholder="Dabz Audio" />
+
+      <label class="label">Image URL (optional)</label>
+      <input id="imageUrl" class="input" placeholder="https://... (hero image)" />
+
+      <label class="label">Or upload image</label>
+      <input id="imageFile" type="file" accept="image/*" class="input" />
+      <button id="upload" type="button" class="btn small" style="margin-top:8px;">Upload to Cloudinary</button>
+      <p class="hint">Uploads require your ADMIN_TOKEN; we store only the returned URL.</p>
+
+      <button id="publish" class="btn glow">Publish Blog Post</button>
+      <p id="status" class="hint"></p>
+    </aside>
+  </main>
+
+  <!-- Optional runtime config: create public/config.js to set window.API_BASE before admin.js loads -->
+  <script src="config.js"></script>
+  <script>
+    if (!window.API_BASE) {
+      window.API_BASE = window.location.origin;
+    }
+  </script>
+  <script src="admin.js"></script>
+</body>
+</html>

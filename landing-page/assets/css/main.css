@@ -454,6 +454,12 @@ h6 {
   font-size: 14px;
   position: relative;
 }
+.footer .copyright,
+.footer .copyright p,
+.footer .copyright strong,
+.footer .copyright span {
+  color: #ffffff !important;
+}
 
 .footer .footer-top {
   padding: 50px 0;

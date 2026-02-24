@@ -64,8 +64,8 @@ body {
 
 /* Header */
 .brand { display:flex; gap:12px; align-items:center; }
-.logo-circle { width:56px; height:56px; border-radius:12px; background:var(--charcoal); display:flex; align-items:center; justify-content:center; color:var(--orange); font-weight:700; font-size:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
-.brand-text h1 { font-size:20px; color:var(--orange); }
+.logo-circle { width:56px; height:56px; border-radius:12px; background:var(--charcoal); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+.brand-text h1 { font-size:20px; color:#fff; text-shadow:0 0 12px rgba(0,0,0,0.45); }
 .brand-text small { color:var(--muted); display:block; margin-top:2px; }
 
 /* Layout */
