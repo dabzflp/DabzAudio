@@ -15,7 +15,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { pool } from "./db.js";
+import { pool, connectWithRetry } from "./db.js";
 import { v2 as cloudinary } from "cloudinary";
 import { startAutoposter, runAutopostNow } from "./autoposter.js";
 
@@ -26,7 +26,6 @@ process.on("unhandledRejection", (err) => {
 });
 process.on("uncaughtException", (err) => {
   console.error("❌ UncaughtException", err);
-  process.exit(1);
 });
 
 // Configure Cloudinary (optional for image uploads)
@@ -236,10 +235,9 @@ if (process.env.AUTPOSTER_ENABLED === "true") {
 
 // Quick DB connectivity check on boot (won't crash app if it fails)
 (async () => {
-  try {
-    await pool.query("select 1");
-    console.log("✅ DB connection ok");
-  } catch (err) {
-    console.error("❌ DB connection failed", err);
+  console.log("DB URL present:", !!process.env.DATABASE_URL);
+  const ok = await connectWithRetry(10);
+  if (!ok) {
+    console.error("❌ DB connection failed after retries");
   }
 })();
