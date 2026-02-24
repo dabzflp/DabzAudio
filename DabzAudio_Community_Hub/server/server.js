@@ -21,6 +21,14 @@ import { startAutoposter, runAutopostNow } from "./autoposter.js";
 
 dotenv.config();
 
+process.on("unhandledRejection", (err) => {
+  console.error("❌ UnhandledRejection", err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("❌ UncaughtException", err);
+  process.exit(1);
+});
+
 // Configure Cloudinary (optional for image uploads)
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -225,3 +233,13 @@ app.listen(PORT, () => console.log("✅ DabzAudio Community Hub running on port"
 if (process.env.AUTPOSTER_ENABLED === "true") {
   startAutoposter().catch((err) => console.error("Autoposter failed to start", err));
 }
+
+// Quick DB connectivity check on boot (won't crash app if it fails)
+(async () => {
+  try {
+    await pool.query("select 1");
+    console.log("✅ DB connection ok");
+  } catch (err) {
+    console.error("❌ DB connection failed", err);
+  }
+})();
