@@ -1,0 +1,10 @@
+{
+  "name": "dabzaudio-community-hub-root",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root deploy manifest for Railway",
+  "scripts": {
+    "build": "npm --prefix server ci",
+    "start": "node server/server.js"
+  }
+}
