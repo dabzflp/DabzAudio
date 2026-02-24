@@ -212,7 +212,7 @@ function setAdminStatus(msg){
 }
 
 function openAdmin(){
-  const token = prompt("Enter admin token to continue:", "");
+  const token = prompt("Enter admin token to access admin tools:", "");
   if(!token) return;
   adminToken = token.trim();
 
