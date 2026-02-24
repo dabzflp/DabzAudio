@@ -19,23 +19,22 @@ if (!process.env.DATABASE_URL) {
 }
 
 const isProd = process.env.NODE_ENV === "production";
-let connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL;
 
-// Normalize Railway SSL params to reduce connection-string sslmode warnings.
-if (isProd) {
-  try {
-    const u = new URL(connectionString);
-    u.searchParams.set("sslmode", "require");
-    u.searchParams.set("uselibpqcompat", "true");
-    connectionString = u.toString();
-  } catch {
-    // If URL parsing fails, fall back to the raw string.
+let shouldUseSsl = isProd;
+try {
+  const u = new URL(connectionString);
+  // Railway private networking hosts typically do not need TLS from service->db.
+  if (u.hostname.endsWith(".railway.internal")) {
+    shouldUseSsl = false;
   }
+} catch {
+  // leave default
 }
 
 export const pool = new Pool({
   connectionString,
-  ssl: isProd ? { rejectUnauthorized: false } : false,
+  ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
   keepAlive: true,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
