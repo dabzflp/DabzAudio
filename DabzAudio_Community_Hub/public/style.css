@@ -238,6 +238,7 @@ body{
 .modal{
   position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
   z-index:20;
+  padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
 }
 .modal-backdrop{
   position:absolute; inset:0; background:rgba(0,0,0,.65); backdrop-filter: blur(4px);
@@ -245,14 +246,16 @@ body{
 .modal-card{
   position:relative; z-index:1;
   width: min(640px, 92vw);
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
   background:linear-gradient(180deg, rgba(20,20,20,.95), rgba(12,12,12,.92));
   border:1px solid rgba(60,60,60,.9);
   border-radius:18px;
   padding:16px;
   box-shadow:0 20px 60px rgba(0,0,0,.55);
+  overflow:hidden;
 }
 .modal-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px}
-.modal-body{display:flex; flex-direction:column}
+.modal-body{display:flex; flex-direction:column; overflow:auto; min-height:0}
 .modal-actions{display:flex; align-items:center; gap:10px; margin-top:12px}
 .remember{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; margin-top:6px}
 
@@ -266,6 +269,21 @@ body{
   }
   .input.small{width:100%}
   .replyBox{flex-direction:column}
+
+  .modal{
+    align-items:flex-start;
+  }
+
+  .modal-card{
+    width: 96vw;
+    border-radius:14px;
+    margin-top: max(8px, env(safe-area-inset-top));
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px);
+  }
+
+  .modal-actions{
+    flex-wrap:wrap;
+  }
 }
 
 
