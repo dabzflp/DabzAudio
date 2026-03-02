@@ -239,6 +239,8 @@ body{
   position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
   z-index:20;
   padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
 }
 .modal-backdrop{
   position:absolute; inset:0; background:rgba(0,0,0,.65); backdrop-filter: blur(4px);
@@ -253,10 +255,23 @@ body{
   padding:16px;
   box-shadow:0 20px 60px rgba(0,0,0,.55);
   overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
 .modal-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px}
-.modal-body{display:flex; flex-direction:column; overflow:auto; min-height:0}
-.modal-actions{display:flex; align-items:center; gap:10px; margin-top:12px}
+.modal-head{flex-shrink:0}
+.modal-body{
+  display:flex; flex-direction:column; overflow:auto; min-height:0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+.modal-actions{
+  display:flex; align-items:center; gap:10px; margin-top:12px;
+  position:sticky; bottom:max(0px, env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, rgba(20,20,20,0), rgba(20,20,20,.98) 28%);
+  padding-top:10px;
+  z-index:1;
+}
 .remember{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; margin-top:6px}
 
 @media (max-width: 920px){
@@ -283,6 +298,10 @@ body{
 
   .modal-actions{
     flex-wrap:wrap;
+  }
+
+  .modal-actions .btn.glow{
+    width:100%;
   }
 }
 
