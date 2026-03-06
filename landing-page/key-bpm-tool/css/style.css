@@ -64,6 +64,9 @@ body {
 
 /* Header */
 .brand { display:flex; gap:12px; align-items:center; }
+.brand-link { display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; }
+.brand-link:hover .logo-circle { box-shadow: 0 0 0 2px rgba(255,122,0,0.35), 0 4px 12px rgba(0,0,0,0.6); }
+.brand-link:focus-visible { outline: 2px solid var(--orange); outline-offset: 4px; border-radius: 12px; }
 .logo-circle { width:56px; height:56px; border-radius:12px; background:var(--charcoal); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
 .brand-text h1 { font-size:20px; color:#fff; text-shadow:0 0 12px rgba(0,0,0,0.45); }
 .brand-text small { color:var(--muted); display:block; margin-top:2px; }
