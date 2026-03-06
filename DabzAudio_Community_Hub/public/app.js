@@ -218,7 +218,7 @@ function sanitizeHttpUrl(rawUrl){
 
 function renderContentWithLinks(text){
   const source = String(text || "");
-  const tokenRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
+  const tokenRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<\]\["']+)/gi;
   const parts = [];
   let lastIndex = 0;
 
