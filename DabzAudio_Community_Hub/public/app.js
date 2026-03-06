@@ -175,7 +175,7 @@ async function loadPosts(){
       </div>
       <h3>${escapeHtml(p.title)}</h3>
       ${p.image_url ? `<div class="hero"><img src="${encodeURI(p.image_url)}" alt="" loading="lazy" /></div>` : ""}
-      <p>${escapeHtml(p.content).replace(/\n/g,"<br>")}</p>
+      <p>${p.type === "blog" ? renderContentWithLinks(p.content) : escapeHtml(p.content).replace(/\n/g,"<br>")}</p>
 
       <div class="replyBox">
         <textarea class="input" rows="2" placeholder="Reply… (timestamped)"></textarea>
@@ -204,6 +204,64 @@ function escapeHtml(s){
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
+}
+
+function sanitizeHttpUrl(rawUrl){
+  try{
+    const parsed = new URL(rawUrl);
+    if(parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.href;
+  }catch(e){
+    return null;
+  }
+}
+
+function renderContentWithLinks(text){
+  const source = String(text || "");
+  const tokenRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
+  const parts = [];
+  let lastIndex = 0;
+
+  function pushEscaped(chunk){
+    if(!chunk) return;
+    parts.push(escapeHtml(chunk).replace(/\n/g, "<br>"));
+  }
+
+  let m;
+  while((m = tokenRegex.exec(source)) !== null){
+    pushEscaped(source.slice(lastIndex, m.index));
+
+    if(m[1] && m[2]){
+      const linkText = escapeHtml(m[1]);
+      const safeUrl = sanitizeHttpUrl(m[2]);
+      if(safeUrl){
+        parts.push(`<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${linkText}</a>`);
+      }else{
+        pushEscaped(m[0]);
+      }
+      lastIndex = tokenRegex.lastIndex;
+      continue;
+    }
+
+    const fullUrl = m[3] || "";
+    const trimmedUrl = fullUrl.replace(/[),.!?;:]+$/g, "");
+    const trailing = fullUrl.slice(trimmedUrl.length);
+    const safeUrl = sanitizeHttpUrl(trimmedUrl);
+
+    if(safeUrl){
+      const safeHref = escapeHtml(safeUrl);
+      const safeLabel = escapeHtml(trimmedUrl);
+      parts.push(`<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
+      pushEscaped(trailing);
+    }else{
+      pushEscaped(fullUrl);
+    }
+
+    lastIndex = tokenRegex.lastIndex;
+  }
+
+  pushEscaped(source.slice(lastIndex));
+  return parts.join("");
 }
 
 function setAdminStatus(msg){
