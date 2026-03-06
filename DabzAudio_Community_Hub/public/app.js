@@ -211,10 +211,44 @@ function setAdminStatus(msg){
   if(status) status.textContent = msg;
 }
 
-function openAdmin(){
-  const token = prompt("Enter admin token to access admin tools:", "");
-  if(!token) return;
-  adminToken = token.trim();
+async function verifyAdminToken(token){
+  const res = await fetch(`${API_BASE}/api/admin/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      "x-admin-token": token
+    },
+    body: "{}"
+  });
+
+  return res.ok;
+}
+
+async function openAdmin(){
+  const tokenInputValue = prompt("Enter admin token to access admin tools:", adminToken || "");
+  if(tokenInputValue === null) return;
+
+  const token = tokenInputValue.trim();
+  if(!token){
+    alert("Admin token is required.");
+    return;
+  }
+
+  let isValid = false;
+  try{
+    isValid = await verifyAdminToken(token);
+  }catch(err){
+    console.error(err);
+    alert("Could not verify admin token right now.");
+    return;
+  }
+
+  if(!isValid){
+    alert("Invalid admin token.");
+    return;
+  }
+
+  adminToken = token;
 
   const overlay = el("adminOverlay");
   if(!overlay) return;
@@ -222,6 +256,7 @@ function openAdmin(){
 
   const tokenInput = el("adminToken");
   if(tokenInput) tokenInput.value = adminToken;
+  setAdminStatus("Admin access granted.");
 }
 
 function closeAdmin(){

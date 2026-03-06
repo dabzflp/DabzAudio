@@ -49,6 +49,14 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// Lightweight token check used by the admin gate in the frontend.
+app.post("/api/admin/verify", (req, res) => {
+  if (!requireAdminForBlog(req)) {
+    return res.status(403).json({ ok: false, error: "Invalid admin token" });
+  }
+  return res.json({ ok: true });
+});
+
 function requireAdminForBlog(req) {
   const token = req.headers["x-admin-token"];
   const admin = process.env.ADMIN_TOKEN;
