@@ -32,15 +32,21 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!window.dabzAnalysis || !window.dabzAnalysis.analyzeAudioBuffer) {
             throw new Error('Analysis module not loaded. Include js/analysis.bundle.js');
           }
-          // Run the analysis and get BPM + Key
+          // Run the analysis and get BPM + Key with confidence
           const res = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, setStatus);
           setStatus('Done');
           // Display results in the dedicated result cards
           const bpmEl = document.getElementById('bpmResult');
           const keyEl = document.getElementById('keyResult');
+          const confidenceEl = document.getElementById('keyConfidence');
           const playerEl = document.getElementById('player');
           if (bpmEl) bpmEl.textContent = res.bpm ?? 'Unknown';
           if (keyEl) keyEl.textContent = res.key ?? 'Unknown';
+          // Display confidence as percentage if available
+          if (confidenceEl && res.confidence) {
+            confidenceEl.textContent = `(${(res.confidence * 100).toFixed(0)}% confidence)`;
+            confidenceEl.style.display = 'block';
+          }
           if (playerEl) {
             // Create a blob URL for playback
             const blob = new Blob([arrayBuffer], { type: file.type });
