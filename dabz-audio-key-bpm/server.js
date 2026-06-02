@@ -31,9 +31,13 @@ app.post('/api/key/analyze', upload.single('audiofile'), async (req, res) => {
 
   try {
     const absolutePath = path.join(UPLOADS_DIR, req.file.filename);
-    const openKeyScanUrl = 'http://localhost:58721/analyze/single';
+    const openKeyScanUrl = process.env.OPENKEYSCAN_URL || 'http://localhost:58721/analyze/single';
 
-    console.log('Forwarding file to OpenKeyScan:', absolutePath);
+    if (!process.env.OPENKEYSCAN_URL) {
+      console.warn('OPENKEYSCAN_URL not set; using localhost fallback (development only)');
+    }
+
+    console.log('Forwarding file to OpenKeyScan:', absolutePath, '->', openKeyScanUrl);
 
     const openKeyScanResponse = await fetch(openKeyScanUrl, {
       method: 'POST',
