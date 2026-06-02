@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('Analysis module not loaded. Include js/analysis.bundle.js');
           }
           // Run the analysis and get BPM + Key with confidence
-          const res = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, setStatus);
+          const res = await window.dabzAnalysis.analyzeAudioBuffer(arrayBuffer, setStatus, file.name);
           setStatus('Done');
           // Display results in the dedicated result cards
           const bpmEl = document.getElementById('bpmResult');

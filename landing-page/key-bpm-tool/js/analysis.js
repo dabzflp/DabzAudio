@@ -1,15 +1,27 @@
 // Analyze audio from ArrayBuffer (for client-side analysis)
-async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
+async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}, fileName = null) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const ac = new AudioContext();
+
+    const keyBuffer = arrBuffer.slice(0);
 
     progressCallback("Decoding audio...");
     const audioBuffer = await ac.decodeAudioData(arrBuffer);
     console.log('Decoded audioBuffer:', audioBuffer);
 
     progressCallback("Analyzing key...");
-    const keyResult = await estimateKeyWithEssentia(audioBuffer);
+    let keyResult;
+    if (fileName) {
+      keyResult = await estimateKeyWithOpenKeyScan(keyBuffer, fileName, progressCallback);
+      // If OpenKeyScan returns "Unknown", fall back to Essentia
+      if (keyResult.key === "Unknown" || keyResult.confidence === 0) {
+        console.log('OpenKeyScan failed or returned unknown, falling back to Essentia...');
+        keyResult = await estimateKeyWithEssentia(audioBuffer);
+      }
+    } else {
+      keyResult = await estimateKeyWithEssentia(audioBuffer);
+    }
     console.log('Key detection:', keyResult);
 
     progressCallback("Estimating BPM (Energy Peaks)...");
@@ -34,16 +46,25 @@ async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}) {
  * All analysis runs in the browser (100% client-side)
  */
 
-// Dynamically import TensorFlow.js for browser usage
+// Load TensorFlow.js from CDN for browser usage
 let tf = null;
 let mlModelReady = false;
 
 async function ensureTensorFlow() {
-  if (mlModelReady && tf) return tf;
+  if (mlModelReady && typeof window.tf !== 'undefined') return window.tf;
   try {
-    tf = await import('@tensorflow/tfjs');
+    // Load TensorFlow.js from CDN
+    if (typeof window.tf === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
     mlModelReady = true;
-    return tf;
+    return window.tf;
   } catch (err) {
     console.error('TensorFlow.js not available:', err);
     return null;
@@ -53,18 +74,37 @@ async function ensureTensorFlow() {
 /* ---- Load Meyda (local copy in /public/js/) - kept for backward compatibility ---- */
 async function ensureMeyda() {
   if (window.Meyda) return window.Meyda;
-  // Remove any existing Meyda script tags (CDN or otherwise)
+
+  const localSrc = "js/meyda.min.js";
+  const cdnSrc = "https://cdn.jsdelivr.net/npm/meyda@5.4.0/dist/web/meyda.min.js";
+
+  const loadScript = (src) =>
+    new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error(`Failed to load Meyda from ${src}`));
+      document.head.appendChild(s);
+    });
+
   Array.from(document.querySelectorAll('script')).forEach(s => {
     if (s.src && s.src.includes('meyda')) s.remove();
   });
-  await new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = "js/meyda.min.js"; // always use local
-    s.onload = resolve;
-    s.onerror = () => reject(new Error("Failed to load Meyda locally"));
-    document.head.appendChild(s);
-  });
-  return window.Meyda;
+
+  try {
+    await loadScript(localSrc);
+    return window.Meyda;
+  } catch (err) {
+    console.warn('Local Meyda failed, falling back to CDN:', err);
+  }
+
+  try {
+    await loadScript(cdnSrc);
+    return window.Meyda;
+  } catch (err) {
+    console.error('Meyda not available from CDN either:', err);
+    return null;
+  }
 }
 
 /* ---- Main analysis function ---- */
@@ -95,52 +135,62 @@ async function estimateKeyWithEssentia(audioBuffer) {
     // Load Meyda for chroma extraction
     const Meyda = await ensureMeyda();
     if (!Meyda) return { key: "Unknown", confidence: 0 };
-    
-    // Load TensorFlow
-    const tf = await ensureTensorFlow();
-    
+
+    // Load TensorFlow (not required for Meyda extraction, but kept for compatibility)
+    await ensureTensorFlow();
+
     const channelData = audioBuffer.getChannelData(0);
     const sampleRate = audioBuffer.sampleRate;
-    
-    // Extract chromagram over time
-    const frameSize = 4096;
-    const hopSize = 2048;
-    const chromaFrames = [];
 
-    // Collect all chroma frames
+    let frameSize = 4096;
+    while (frameSize > channelData.length && frameSize > 256) {
+      frameSize = frameSize >> 1;
+    }
+    frameSize = Math.max(256, frameSize);
+    const hopSize = Math.max(128, frameSize >> 1);
+    const chromaFrames = [];
+    const frameEnergies = [];
+
     for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
       const frame = channelData.slice(i, i + frameSize);
-      
-      // Use Meyda's chroma extraction
-      const chroma = Meyda.extract("chroma", frame, {
-        bufferSize: frameSize,
-        sampleRate: sampleRate,
-      });
-      
-      if (Array.isArray(chroma) && chroma.length === 12) {
-        chromaFrames.push(chroma);
+      try {
+        const chroma = Meyda.extract("chroma", frame, {
+          bufferSize: frameSize,
+          sampleRate: sampleRate,
+        });
+        if (Array.isArray(chroma) && chroma.length === 12) {
+          chromaFrames.push(chroma);
+          frameEnergies.push(frame.reduce((sum, sample) => sum + sample * sample, 0));
+        }
+      } catch (err) {
+        console.warn('Meyda chroma extraction failed for a frame:', err);
       }
     }
 
-    if (chromaFrames.length === 0) return { key: "Unknown", confidence: 0 };
-    
-    // Average chroma across frames
-    const chromaAvg = new Array(12).fill(0);
-    for (let frame of chromaFrames) {
-      for (let i = 0; i < 12; i++) {
-        chromaAvg[i] += frame[i];
+    if (chromaFrames.length === 0 && channelData.length > 0) {
+      const paddedFrame = new Float32Array(frameSize);
+      paddedFrame.set(channelData.subarray(0, Math.min(channelData.length, frameSize)));
+      try {
+        const chroma = Meyda.extract("chroma", paddedFrame, {
+          bufferSize: frameSize,
+          sampleRate: sampleRate,
+        });
+        if (Array.isArray(chroma) && chroma.length === 12) {
+          chromaFrames.push(chroma);
+          frameEnergies.push(paddedFrame.reduce((sum, sample) => sum + sample * sample, 0));
+        }
+      } catch (err) {
+        console.warn('Fallback Meyda chroma extraction failed:', err);
       }
     }
-    for (let i = 0; i < 12; i++) {
-      chromaAvg[i] /= chromaFrames.length;
+
+    if (chromaFrames.length === 0) {
+      console.warn('No chroma frames extracted; returning unknown key.');
+      return { key: "Unknown", confidence: 0 };
     }
-    
-    // Normalize chroma
-    const chromaNorm = normalizeVector(chromaAvg);
-    
-    // Use machine-learning based key detection via voting ensemble
-    const result = mlKeyDetection(chromaNorm, chromaFrames);
-    
+
+    const result = mlKeyDetection(chromaFrames, frameEnergies);
+
     return {
       key: result.key,
       confidence: result.confidence,
@@ -153,47 +203,78 @@ async function estimateKeyWithEssentia(audioBuffer) {
 }
 
 /* ---- ML-based key detection using ensemble voting ---- */
-function mlKeyDetection(chromaNorm, chromaFrames) {
+function mlKeyDetection(chromaFrames, frameEnergies = []) {
   const pitchNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  
-  // Get predictions from multiple algorithms and combine them
-  const ksResult = scoreKeyWithKrumhanslSchm(chromaNorm);
-  const cqtResult = scoreKeyWithConstantQ(chromaNorm);
-  
-  // Combine results: if both agree, high confidence; if different, lower confidence
-  let keyScores = new Array(24).fill(0); // 12 major + 12 minor
-  
-  // Add Krumhansl score (weight: 0.6)
-  addKeyScore(keyScores, ksResult.name, 0.6, pitchNames);
-  
-  // Add Constant-Q score (weight: 0.4)
-  addKeyScore(keyScores, cqtResult.name, 0.4, pitchNames);
-  
-  // Find best key
+  const majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const minorProfile = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+  if (chromaFrames.length === 0) {
+    return { key: "Unknown", score: 0, confidence: 0 };
+  }
+
+  const keyScores = new Array(24).fill(0);
+  let totalWeight = 0;
+
+  for (let idx = 0; idx < chromaFrames.length; idx++) {
+    const frame = chromaFrames[idx];
+    const energy = frameEnergies[idx] || 1;
+    const weight = Math.log1p(Math.max(energy, 0));
+    totalWeight += weight;
+    
+    // Normalize chroma to emphasize peaks and reduce noise
+    const frameNorm = normalizeVector(frame);
+    
+    // Apply soft thresholding to reduce low-energy chroma bins
+    const maxChroma = Math.max(...frameNorm);
+    const threshold = maxChroma * 0.15;
+    const thresholdedFrame = frameNorm.map(v => Math.max(0, v - threshold));
+    const cleanedFrame = normalizeVector(thresholdedFrame.some(v => v > 0) ? thresholdedFrame : frameNorm);
+
+    for (let root = 0; root < 12; root++) {
+      const majProfile = normalizeVector(rotateArray(majorProfile, root));
+      const minProfile = normalizeVector(rotateArray(minorProfile, root));
+      const majScore = pearsonCorrelation(cleanedFrame, majProfile);
+      const minScore = pearsonCorrelation(cleanedFrame, minProfile);
+      keyScores[root] += majScore * weight;
+      keyScores[root + 12] += minScore * weight;
+    }
+  }
+
+  if (totalWeight === 0) totalWeight = chromaFrames.length || 1;
+  const normalizedScores = keyScores.map(score => score / totalWeight);
+
   let bestIdx = 0;
-  let bestScore = keyScores[0];
+  let bestScore = normalizedScores[0];
   for (let i = 1; i < 24; i++) {
-    if (keyScores[i] > bestScore) {
-      bestScore = keyScores[i];
+    if (normalizedScores[i] > bestScore) {
+      bestScore = normalizedScores[i];
       bestIdx = i;
     }
   }
-  
-  // Convert index back to key name
+
   const root = bestIdx % 12;
   const isMinor = bestIdx >= 12;
   const keyName = `${pitchNames[root]} ${isMinor ? 'minor' : 'major'}`;
-  
-  // Calculate confidence based on score spread
-  const sorted = keyScores.slice().sort((a, b) => b - a);
+
+  const scoredKeys = normalizedScores.map((score, i) => {
+    const root = i % 12;
+    const isMinor = i >= 12;
+    return { key: `${pitchNames[root]} ${isMinor ? 'minor' : 'major'}`, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const sorted = scoredKeys.map(item => item.score);
   const gap = sorted[0] - sorted[1];
-  const confidence = Math.min(1.0, gap / 0.3); // Normalize gap
-  
+  const confidence = Math.min(1.0, Math.max(0, gap / 0.3));
+
+  console.log('Key candidate scores:', scoredKeys.slice(0, 6));
   return { key: keyName, score: bestScore, confidence: confidence };
 }
 
-function addKeyScore(keyScores, keyName, weight, pitchNames) {
-  const parts = keyName.split(' ');
+function addKeyScore(keyScores, result, weight, pitchNames) {
+  if (!result || typeof result.key !== 'string' || result.key.trim() === '') return;
+  const parts = result.key.split(' ');
+  if (parts.length < 2) return;
+
   const note = parts[0];
   const mode = parts[1];
   
@@ -201,36 +282,34 @@ function addKeyScore(keyScores, keyName, weight, pitchNames) {
   if (noteIdx === -1) return;
   
   const keyIdx = mode === 'minor' ? noteIdx + 12 : noteIdx;
-  keyScores[keyIdx] += weight;
+  const normalizedScore = typeof result.score === 'number' ? result.score : 0;
+  keyScores[keyIdx] += normalizedScore * weight;
 }
 
 /* ---- Constant-Q Transform based key detection ---- */
 function scoreKeyWithConstantQ(chroma) {
-  // Alternative scoring using spectral centroid and energy distribution
-  // This provides a different perspective on key, helping disambiguate
-  
+  // Alternative scoring using a slightly reweighted chroma profile
   const majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
   const minorProfile = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
   const pitchNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   
-  // Apply slight boosting to lower frequencies (more prominent in key detection)
   const weightedChroma = chroma.map((v, i) => v * (1 + (i % 4) * 0.05));
   const normChroma = normalizeVector(weightedChroma);
   
-  let best = { name: "Unknown", score: -Infinity };
+  let best = { key: "Unknown", score: -Infinity };
   
   for (let root = 0; root < 12; root++) {
     const maj = normalizeVector(rotateArray(majorProfile, root));
     const min = normalizeVector(rotateArray(minorProfile, root));
     
-    const majScore = dot(normChroma, maj);
-    const minScore = dot(normChroma, min);
+    const majScore = pearsonCorrelation(normChroma, maj);
+    const minScore = pearsonCorrelation(normChroma, min);
     
     if (majScore > best.score) {
-      best = { name: `${pitchNames[root]} major`, score: majScore };
+      best = { key: `${pitchNames[root]} major`, score: majScore };
     }
     if (minScore > best.score) {
-      best = { name: `${pitchNames[root]} minor`, score: minScore };
+      best = { key: `${pitchNames[root]} minor`, score: minScore };
     }
   }
   
@@ -252,31 +331,31 @@ function scoreKeyWithKrumhanslSchm(chroma) {
   const cleanedChroma = normChroma.map(v => v < threshold ? 0 : v);
   const reNormChroma = normalizeVector(cleanedChroma);
 
-  let best = { name: "Unknown", score: -Infinity };
-  let secondBest = { name: "Unknown", score: -Infinity };
+  let best = { key: "Unknown", score: -Infinity };
+  let secondBest = { key: "Unknown", score: -Infinity };
   
   // Try all 24 keys (12 major + 12 minor)
   for (let root = 0; root < 12; root++) {
     const maj = normalizeVector(rotateArray(majorProfile, root));
     const min = normalizeVector(rotateArray(minorProfile, root));
     
-    const majScore = dot(reNormChroma, maj);
-    const minScore = dot(reNormChroma, min);
+    const majScore = pearsonCorrelation(reNormChroma, maj);
+    const minScore = pearsonCorrelation(reNormChroma, min);
     
     // Update best/second best for major
     if (majScore > best.score) {
       secondBest = { ...best };
-      best = { name: `${pitchNames[root]} major`, score: majScore };
+      best = { key: `${pitchNames[root]} major`, score: majScore };
     } else if (majScore > secondBest.score) {
-      secondBest = { name: `${pitchNames[root]} major`, score: majScore };
+      secondBest = { key: `${pitchNames[root]} major`, score: majScore };
     }
     
     // Update best/second best for minor
     if (minScore > best.score) {
       secondBest = { ...best };
-      best = { name: `${pitchNames[root]} minor`, score: minScore };
+      best = { key: `${pitchNames[root]} minor`, score: minScore };
     } else if (minScore > secondBest.score) {
-      secondBest = { name: `${pitchNames[root]} minor`, score: minScore };
+      secondBest = { key: `${pitchNames[root]} minor`, score: minScore };
     }
   }
   
@@ -286,7 +365,7 @@ function scoreKeyWithKrumhanslSchm(chroma) {
   // If top two are too close, mark as ambiguous with lower confidence
   if (gap < 0.08) {
     return { 
-      key: `${best.name} or ${secondBest.name}`, 
+      key: `${best.key} or ${secondBest.key}`, 
       score: best.score, 
       confidence: 0.4 
     };
@@ -295,12 +374,31 @@ function scoreKeyWithKrumhanslSchm(chroma) {
   // Confidence scales with the gap
   const confidence = Math.max(0.5, Math.min(1.0, gap / 0.3));
   
-  return { key: best.name, score: best.score, confidence: confidence };
+  return { key: best.key, score: best.score, confidence: confidence };
 }
 
 /* ---- Utility functions ---- */
 function rotateArray(arr, n) {
   return arr.slice(n).concat(arr.slice(0, n));
+}
+
+function pearsonCorrelation(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
+  const n = a.length;
+  const meanA = a.reduce((sum, v) => sum + v, 0) / n;
+  const meanB = b.reduce((sum, v) => sum + v, 0) / n;
+  let num = 0;
+  let sumSqA = 0;
+  let sumSqB = 0;
+  for (let i = 0; i < n; i++) {
+    const da = a[i] - meanA;
+    const db = b[i] - meanB;
+    num += da * db;
+    sumSqA += da * da;
+    sumSqB += db * db;
+  }
+  const den = Math.sqrt(sumSqA * sumSqB);
+  return den === 0 ? 0 : num / den;
 }
 
 function dot(a, b) {
@@ -310,6 +408,220 @@ function dot(a, b) {
 function normalizeVector(v) {
   const s = Math.sqrt(v.reduce((a, b) => a + b * b, 0));
   return v.map((x) => x / (s || 1));
+}
+
+function getWaveFileName(fileName = 'audio') {
+  const cleanName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_ ]/g, '_');
+  return `${cleanName || 'audio'}.wav`;
+}
+
+async function convertArrayBufferToWavBlob(arrBuffer, fileName = 'audio') {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ac = new AudioContext();
+  const audioBuffer = await ac.decodeAudioData(arrBuffer.slice(0));
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const numSamples = audioBuffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataLength = numSamples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+
+  function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  function floatTo16BitPCM(output, offset, input) {
+    for (let i = 0; i < input.length; i++, offset += 2) {
+      let s = Math.max(-1, Math.min(1, input[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+  }
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bytesPerSample * 8, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  const interleaved = new Float32Array(numSamples * numChannels);
+  if (numChannels === 1) {
+    interleaved.set(audioBuffer.getChannelData(0));
+  } else {
+    const channelData = [];
+    for (let c = 0; c < numChannels; c++) {
+      channelData.push(audioBuffer.getChannelData(c));
+    }
+    for (let i = 0; i < numSamples; i++) {
+      for (let c = 0; c < numChannels; c++) {
+        interleaved[i * numChannels + c] = channelData[c][i];
+      }
+    }
+  }
+
+  floatTo16BitPCM(view, 44, interleaved);
+  ac.close();
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function convertFlatToSharp(note) {
+  const map = {
+    'Cb': 'B',
+    'Db': 'C#',
+    'Eb': 'D#',
+    'Fb': 'E',
+    'Gb': 'F#',
+    'Ab': 'G#',
+    'Bb': 'A#',
+  };
+  return map[note] || note;
+}
+
+function normalizeKeyName(key) {
+  const cleaned = key
+    .trim()
+    .replace(/♯/g, '#')
+    .replace(/♭/g, 'b')
+    .replace(/(?:\bmaj\b|\bmajor\b)/gi, 'major')
+    .replace(/(?:\bmin\b|\bminor\b)/gi, 'minor')
+    .replace(/\s+/g, ' ');
+
+  const match = cleaned.match(/^([A-G])([#b]?)(?:\s+(major|minor))$/i);
+  if (!match) return cleaned;
+
+  const root = convertFlatToSharp(match[1].toUpperCase() + (match[2] || ''));
+  return `${root} ${match[3].toLowerCase()}`;
+}
+
+function normalizeKeyAbbrev(key) {
+  const cleaned = key
+    .trim()
+    .replace(/♯/g, '#')
+    .replace(/♭/g, 'b')
+    .replace(/\s+/g, '');
+
+  const match = cleaned.match(/^([A-Ga-g])([#b]?)(maj|major|min|minor|m)$/i);
+  if (!match) return cleaned;
+
+  const root = convertFlatToSharp(match[1].toUpperCase() + (match[2] || ''));
+  const mode = /^m/i.test(match[3]) ? 'min' : 'maj';
+  return `${root}${mode}`;
+}
+
+function formatOpenKeyNotation(key) {
+  if (!key || typeof key !== 'string') return key;
+  const normalized = key.trim();
+  const code = normalized.replace(/\s+/g, '').toLowerCase();
+
+  const codeMap = {
+    '1m': 'A♭ minor',
+    '2m': 'E♭ minor',
+    '3m': 'B♭ minor',
+    '4m': 'F minor',
+    '5m': 'C minor',
+    '6m': 'G minor',
+    '7m': 'D minor',
+    '8m': 'A minor',
+    '9m': 'E minor',
+    '10m': 'B minor',
+    '11m': 'F♯ minor',
+    '12m': 'C♯ minor',
+    '1d': 'B major',
+    '2d': 'F♯ major',
+    '3d': 'D♭ major',
+    '4d': 'A♭ major',
+    '5d': 'E♭ major',
+    '6d': 'B♭ major',
+    '7d': 'F major',
+    '8d': 'C major',
+    '9d': 'G major',
+    '10d': 'D major',
+    '11d': 'A major',
+    '12d': 'E major',
+    '1a': 'A♭ minor',
+    '2a': 'E♭ minor',
+    '3a': 'B♭ minor',
+    '4a': 'F minor',
+    '5a': 'C minor',
+    '6a': 'G minor',
+    '7a': 'D minor',
+    '8a': 'A minor',
+    '9a': 'E minor',
+    '10a': 'B minor',
+    '11a': 'F♯ minor',
+    '12a': 'C♯ minor',
+    '1b': 'B major',
+    '2b': 'F♯ major',
+    '3b': 'D♭ major',
+    '4b': 'A♭ major',
+    '5b': 'E♭ major',
+    '6b': 'B♭ major',
+    '7b': 'F major',
+    '8b': 'C major',
+    '9b': 'G major',
+    '10b': 'D major',
+    '11b': 'A major',
+    '12b': 'E major',
+  };
+
+  const translated = codeMap[code];
+  if (translated) {
+    return normalizeKeyAbbrev(translated);
+  }
+
+  if (/(?:^|\s)[A-G](?:#|b|♯|♭)?\s+(?:major|minor)(?:\s|$)/i.test(normalized)) {
+    return normalizeKeyAbbrev(normalized);
+  }
+
+  const abbrev = normalizeKeyAbbrev(normalized);
+  return abbrev || normalized;
+}
+
+async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback = () => {}) {
+  try {
+    progressCallback('loading...');
+    const wavFileName = getWaveFileName(fileName || 'audio');
+    const wavBlob = await convertArrayBufferToWavBlob(arrBuffer, wavFileName);
+
+    progressCallback('loading...');
+    const formData = new FormData();
+    formData.append('audiofile', wavBlob, wavFileName);
+
+    const response = await fetch('/api/key/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenKeyScan backend error: ${response.status} ${errorBody}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || 'OpenKeyScan analysis failed');
+    }
+
+    const formattedKey = formatOpenKeyNotation(data.key || data.result || 'Unknown');
+    return {
+      key: formattedKey || 'Unknown',
+      confidence: typeof data.confidence === 'number' ? data.confidence : 1,
+    };
+  } catch (err) {
+    console.error('OpenKeyScan key detection error:', err);
+    return { key: 'Unknown', confidence: 0 };
+  }
 }
 
 /* ---- Browser-native BPM estimation using energy peaks ---- */
