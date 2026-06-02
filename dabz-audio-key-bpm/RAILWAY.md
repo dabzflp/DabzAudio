@@ -37,3 +37,25 @@ Notes
   - Use the browser-only fallback (the front-end can use `estimateKeyWithEssentia`) and avoid setting `OPENKEYSCAN_URL`.
 
 - If you prefer the front-end to call Railway directly, configure Netlify redirects or set `window.API_BASE` to your Railway URL.
+
+CLI shortcut
+
+1. Install and login to the Railway CLI: https://railway.app/docs/cli
+
+```bash
+railway login
+railway link # run this inside the project directory or follow prompts to link the project
+```
+
+2. Run the helper script to set variables (replace URL):
+
+```bash
+cd dabz-audio-key-bpm
+./scripts/set-railway-env.sh "https://your-railway-app.up.railway.app/analyze/single" production
+```
+
+3. Update Netlify redirect
+
+ - Open `landing-page/key-bpm-tool/_redirects` and replace `YOUR_RAILWAY_URL` with your Railway app host (e.g. `your-railway-app.up.railway.app`). Commit and push.
+
+After these steps, Netlify site calls `/api/key/analyze` and Netlify will proxy those requests to Railway.

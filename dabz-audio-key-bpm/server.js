@@ -6,6 +6,18 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure `fetch` is available in Node environments that lack a global fetch (older Node versions)
+if (typeof fetch === 'undefined') {
+  try {
+    // cross-fetch works in CommonJS and ESM environments
+    // eslint-disable-next-line global-require
+    global.fetch = require('cross-fetch');
+    console.log('Global fetch polyfilled using cross-fetch');
+  } catch (err) {
+    console.warn('cross-fetch not installed; please run `npm install` to enable backend OpenKeyScan forwarding if using older Node versions.');
+  }
+}
+
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
