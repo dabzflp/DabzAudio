@@ -43,7 +43,7 @@ app.post('/api/key/analyze', upload.single('audiofile'), async (req, res) => {
 
   try {
     const absolutePath = path.join(UPLOADS_DIR, req.file.filename);
-    const openKeyScanUrl = process.env.OPENKEYSCAN_URL || 'https://openkeyscan-analyzer-production.up.railway.app/analyze/single';
+    const openKeyScanUrl = process.env.OPENKEYSCAN_URL || 'http://localhost:58721/analyze/single';
 
     if (!process.env.OPENKEYSCAN_URL) {
       console.warn('OPENKEYSCAN_URL not set; using localhost fallback (development only)');
