@@ -596,7 +596,8 @@ async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback 
 
     progressCallback('loading...');
     const formData = new FormData();
-    formData.append('audiofile', wavBlob, wavFileName);
+    // OpenKeyScan's /analyze/single expects a multipart field named "file".
+    formData.append('file', wavBlob, wavFileName);
 
     const response = await fetch('/api/key/analyze', {
       method: 'POST',
@@ -609,8 +610,11 @@ async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback 
     }
 
     const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.message || 'OpenKeyScan analysis failed');
+    // OpenKeyScan returns { status: 'success', key, camelot, ... }. Older/proxied
+    // responses may use { success: true, key }. Treat any of these as success.
+    const succeeded = data.status === 'success' || data.success === true || Boolean(data.key || data.result);
+    if (!succeeded) {
+      throw new Error(data.message || data.detail || 'OpenKeyScan analysis failed');
     }
 
     const formattedKey = formatOpenKeyNotation(data.key || data.result || 'Unknown');

@@ -1,0 +1,2 @@
+/api/key/analyze  https://openkeyscan-analyzer-production.up.railway.app/analyze/single  200
+/api/*  https://openkeyscan-analyzer-production.up.railway.app/:splat  200
