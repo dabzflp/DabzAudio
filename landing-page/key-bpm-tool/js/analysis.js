@@ -415,13 +415,46 @@ function getWaveFileName(fileName = 'audio') {
   return `${cleanName || 'audio'}.wav`;
 }
 
+// Upload to the analyzer goes through a proxy (Netlify) that rejects request
+// bodies larger than ~10 MiB. A full-length stereo 44.1 kHz WAV easily exceeds
+// that, which made longer songs fail in production and silently fall back to the
+// in-browser estimator. Key detection only needs pitch content, so we downmix to
+// mono, resample to a modest rate, and cap the duration to a centered window so
+// the payload stays comfortably under the limit while preserving the detected key.
+const KEY_UPLOAD_SAMPLE_RATE = 16000;
+const KEY_UPLOAD_MAX_BYTES = 9.5 * 1024 * 1024;
+
 async function convertArrayBufferToWavBlob(arrBuffer, fileName = 'audio') {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  const ac = new AudioContext();
-  const audioBuffer = await ac.decodeAudioData(arrBuffer.slice(0));
-  const numChannels = audioBuffer.numberOfChannels;
-  const sampleRate = audioBuffer.sampleRate;
-  const numSamples = audioBuffer.length;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const OfflineAudioContextClass =
+    window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ac = new AudioContextClass();
+  const decoded = await ac.decodeAudioData(arrBuffer.slice(0));
+  ac.close();
+
+  const maxSamples = Math.floor((KEY_UPLOAD_MAX_BYTES - 44) / 2); // mono, 16-bit
+  const maxDuration = maxSamples / KEY_UPLOAD_SAMPLE_RATE;
+
+  let offsetSeconds = 0;
+  let durationSeconds = decoded.duration;
+  if (durationSeconds > maxDuration) {
+    // Analyze a centered window of the track when it's too long to upload whole.
+    offsetSeconds = (decoded.duration - maxDuration) / 2;
+    durationSeconds = maxDuration;
+  }
+
+  const frameCount = Math.max(1, Math.ceil(durationSeconds * KEY_UPLOAD_SAMPLE_RATE));
+  const offline = new OfflineAudioContextClass(1, frameCount, KEY_UPLOAD_SAMPLE_RATE);
+  const source = offline.createBufferSource();
+  source.buffer = decoded;
+  source.connect(offline.destination);
+  source.start(0, offsetSeconds, durationSeconds);
+  const rendered = await offline.startRendering();
+
+  const channel = rendered.getChannelData(0);
+  const numChannels = 1;
+  const sampleRate = KEY_UPLOAD_SAMPLE_RATE;
+  const numSamples = channel.length;
   const bytesPerSample = 2;
   const blockAlign = numChannels * bytesPerSample;
   const dataLength = numSamples * blockAlign;
@@ -431,13 +464,6 @@ async function convertArrayBufferToWavBlob(arrBuffer, fileName = 'audio') {
   function writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
-
-  function floatTo16BitPCM(output, offset, input) {
-    for (let i = 0; i < input.length; i++, offset += 2) {
-      let s = Math.max(-1, Math.min(1, input[i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
     }
   }
 
@@ -455,23 +481,12 @@ async function convertArrayBufferToWavBlob(arrBuffer, fileName = 'audio') {
   writeString(view, 36, 'data');
   view.setUint32(40, dataLength, true);
 
-  const interleaved = new Float32Array(numSamples * numChannels);
-  if (numChannels === 1) {
-    interleaved.set(audioBuffer.getChannelData(0));
-  } else {
-    const channelData = [];
-    for (let c = 0; c < numChannels; c++) {
-      channelData.push(audioBuffer.getChannelData(c));
-    }
-    for (let i = 0; i < numSamples; i++) {
-      for (let c = 0; c < numChannels; c++) {
-        interleaved[i * numChannels + c] = channelData[c][i];
-      }
-    }
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, channel[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
   }
 
-  floatTo16BitPCM(view, 44, interleaved);
-  ac.close();
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
@@ -515,7 +530,9 @@ function normalizeKeyAbbrev(key) {
   if (!match) return cleaned;
 
   const root = convertFlatToSharp(match[1].toUpperCase() + (match[2] || ''));
-  const mode = /^m/i.test(match[3]) ? 'min' : 'maj';
+  // "maj"/"major" -> maj; everything else ("m", "min", "minor") -> min.
+  // (A plain "m" means minor.) Testing for /^m/ here wrongly matched "major".
+  const mode = /^maj/i.test(match[3]) ? 'maj' : 'min';
   return `${root}${mode}`;
 }
 
