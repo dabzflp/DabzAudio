@@ -36,13 +36,14 @@ app.use('/dabz-audio-key-bpm', express.static(path.join(__dirname, './public')))
 app.use('/dabz-audio-reverb-delay-calculator', express.static(path.join(__dirname, '../dabz-audio-reverb-delay-calculator')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-app.post('/api/key/analyze', upload.single('audiofile'), async (req, res) => {
+app.post('/api/key/analyze', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
+  const absolutePath = path.join(UPLOADS_DIR, req.file.filename);
+
   try {
-    const absolutePath = path.join(UPLOADS_DIR, req.file.filename);
     const openKeyScanUrl = process.env.OPENKEYSCAN_URL || 'http://localhost:58721/analyze/single';
 
     if (!process.env.OPENKEYSCAN_URL) {
@@ -51,12 +52,17 @@ app.post('/api/key/analyze', upload.single('audiofile'), async (req, res) => {
 
     console.log('Forwarding file to OpenKeyScan:', absolutePath, '->', openKeyScanUrl);
 
+    // OpenKeyScan's /analyze/single expects the actual file as a multipart upload
+    // under the field name "file" -- not a JSON file path. Passing a path only
+    // works when the analyzer shares this machine's filesystem (local dev), which
+    // is why production (a separate host) was failing.
+    const fileBuffer = fs.readFileSync(absolutePath);
+    const form = new FormData();
+    form.append('file', new Blob([fileBuffer]), req.file.originalname || req.file.filename);
+
     const openKeyScanResponse = await fetch(openKeyScanUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ file: absolutePath })
+      body: form
     });
 
     if (!openKeyScanResponse.ok) {
@@ -67,10 +73,14 @@ app.post('/api/key/analyze', upload.single('audiofile'), async (req, res) => {
 
     const data = await openKeyScanResponse.json();
     const key = data.key || data.result || null;
-    return res.json({ success: true, key, raw: data, file: absolutePath });
+    // Pass through OpenKeyScan's fields (key, camelot, openkey, ...) and keep the
+    // legacy `success` flag so the front-end works against either response shape.
+    return res.json({ success: true, ...data, key });
   } catch (error) {
     console.error('OpenKeyScan call failed:', error);
     return res.status(500).json({ success: false, message: 'OpenKeyScan call failed', error: error.message });
+  } finally {
+    fs.unlink(absolutePath, () => {});
   }
 });
 
