@@ -530,7 +530,9 @@ function normalizeKeyAbbrev(key) {
   if (!match) return cleaned;
 
   const root = convertFlatToSharp(match[1].toUpperCase() + (match[2] || ''));
-  const mode = /^m/i.test(match[3]) ? 'min' : 'maj';
+  // "maj"/"major" -> maj; everything else ("m", "min", "minor") -> min.
+  // (A plain "m" means minor.) Testing for /^m/ here wrongly matched "major".
+  const mode = /^maj/i.test(match[3]) ? 'maj' : 'min';
   return `${root}${mode}`;
 }
 
