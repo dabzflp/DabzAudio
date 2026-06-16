@@ -697,4 +697,4 @@ async function estimateBPM(audioBuffer) {
 }
 
 /* ---- Expose to app ---- */
-window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyWithEssentia };
+window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyWithEssentia, formatOpenKeyNotation };
