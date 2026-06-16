@@ -167,8 +167,10 @@
       formData.append('file', wavBlob, 'live.wav');
 
       const response = await fetch('/api/key/analyze', { method: 'POST', body: formData });
+      if (!listening) return; // stopped while the request was in flight
       if (!response.ok) return; // transient; keep listening
       const data = await response.json();
+      if (!listening) return; // stopped while parsing
       const succeeded =
         data.status === 'success' || data.success === true || Boolean(data.key || data.result);
       if (!succeeded) return;
