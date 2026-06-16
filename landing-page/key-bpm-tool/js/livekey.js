@@ -258,7 +258,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     btn = document.getElementById('liveKeyBtn');
     statusEl = document.getElementById('liveKeyStatus');
-    keyEl = document.getElementById('keyResult');
+    keyEl = document.getElementById('liveKeyResult');
     if (!btn) return;
     labelEl = btn.querySelector('.live-key-label');
     btn.addEventListener('click', toggle);
