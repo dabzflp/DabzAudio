@@ -86,6 +86,56 @@ margin-top: 30px;}
 button { background:var(--orange); color:var(--charcoal-2); border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600; }
 .status { margin-top:110px; color:var(--muted); }
 
+/* Live key detection (microphone) */
+.live-key-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--charcoal);
+  color: var(--orange);
+  border: 1px solid rgba(255,122,0,0.45);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+.live-key-btn:hover { background: #333; }
+.live-key-btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.live-key-btn .live-key-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Active / listening state: orange fill + pulsing ring */
+.live-key-btn.is-listening {
+  background: var(--orange);
+  color: var(--charcoal-2);
+  border-color: var(--orange);
+  animation: liveKeyPulse 1.4s ease-out infinite;
+}
+.live-key-btn.is-listening .live-key-icon {
+  animation: liveKeyMicPulse 1s ease-in-out infinite;
+}
+.live-key-btn:disabled { opacity: 0.6; cursor: default; animation: none; }
+.live-key-status { margin-top: 8px; color: var(--muted); font-size: 13px; min-height: 16px; }
+.live-key-status.is-error { color: #ff5a5a; }
+
+@keyframes liveKeyPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,122,0,0.55); }
+  70%  { box-shadow: 0 0 0 12px rgba(255,122,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,122,0,0); }
+}
+@keyframes liveKeyMicPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-key-btn.is-listening,
+  .live-key-btn.is-listening .live-key-icon { animation: none; }
+}
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
   .container { grid-template-columns: 1fr; }
