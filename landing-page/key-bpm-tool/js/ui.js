@@ -42,6 +42,16 @@ document.addEventListener('DOMContentLoaded', () => {
           const playerEl = document.getElementById('player');
           if (bpmEl) bpmEl.textContent = res.bpm ?? 'Unknown';
           if (keyEl) keyEl.textContent = res.key ?? 'Unknown';
+          // Capture results for the on-demand PDF report (additive; no-op if absent).
+          if (window.dabzReport && typeof window.dabzReport.setFileResult === 'function') {
+            window.dabzReport.setFileResult({
+              name: file.name,
+              key: res.key,
+              camelot: res.camelot || null,
+              confidence: res.confidence,
+              bpm: res.bpm,
+            });
+          }
           // Display confidence as percentage if available
           if (confidenceEl && res.confidence) {
             confidenceEl.textContent = `(${(res.confidence * 100).toFixed(0)}% confidence)`;

@@ -3,5 +3,6 @@ window.RealTimeBpmAnalyzer = RealTimeBpmAnalyzer;
 window.RealTimeBpmAnalyzer.analyze = RealTimeBpmAnalyzer.analyze;
 
 import '../../landing-page/key-bpm-tool/js/analysis.js';
+import '../../landing-page/key-bpm-tool/js/report.js';
 import '../../landing-page/key-bpm-tool/js/ui.js';
 import '../../landing-page/key-bpm-tool/js/livekey.js';
