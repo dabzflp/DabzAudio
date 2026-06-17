@@ -40,9 +40,19 @@ const corsOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+// Allow the configured origins, plus Netlify deploy previews
+// (deploy-preview-*--<site>.netlify.app) so PR previews can call the API.
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // non-browser clients (curl, server-to-server)
+  if (!corsOrigins.length) return true;
+  if (corsOrigins.includes(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+--dabzaudio\.netlify\.app$/i.test(origin)) return true;
+  return false;
+}
 app.use(
   cors({
-    origin: corsOrigins.length ? corsOrigins : true,
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     credentials: true
   })
 );
