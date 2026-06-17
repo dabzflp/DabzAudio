@@ -1,5 +1,4 @@
 // Lyric Book frontend config.
-// Local dev: the API server serves this frontend same-origin, so leave blank.
-// Production (Netlify): set this to the Railway service URL, e.g.
-//   window.LB_API_BASE = "https://dabzaudio-lyricbook-production.up.railway.app";
-window.LB_API_BASE = "";
+// On Netlify the frontend is served cross-origin from the Railway API, so point
+// at the Railway service URL. For same-origin local dev, set this to "".
+window.LB_API_BASE = "https://dabzaudio-production-7fd4.up.railway.app";
