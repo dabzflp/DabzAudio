@@ -36,6 +36,7 @@
 
   let recentKeys = [];
   let lastDisplayedKey = null;
+  let keyCamelot = {}; // formatted key -> camelot (for the report)
 
   // ---- DOM ----
   let btn = null;
@@ -149,6 +150,10 @@
     if (bestCount >= SMOOTHING_MIN_AGREE && best && best !== lastDisplayedKey) {
       lastDisplayedKey = best;
       if (keyEl) keyEl.textContent = best;
+      // Capture for the on-demand PDF report (additive; no-op if absent).
+      if (window.dabzReport && typeof window.dabzReport.setLiveResult === 'function') {
+        window.dabzReport.setLiveResult({ key: best, camelot: keyCamelot[best] || null });
+      }
     }
   }
 
@@ -177,6 +182,7 @@
 
       const formatted = formatKey(data.key || data.result || 'Unknown');
       if (formatted && formatted !== 'Unknown') {
+        if (data.camelot) keyCamelot[formatted] = data.camelot;
         applySmoothing(formatted);
         if (lastDisplayedKey) setStatus('Listening… detecting key live');
       }
@@ -216,6 +222,7 @@
     chunkSamples = 0;
     recentKeys = [];
     lastDisplayedKey = null;
+    keyCamelot = {};
 
     sourceNode = audioContext.createMediaStreamSource(mediaStream);
     const bufferSize = 4096;

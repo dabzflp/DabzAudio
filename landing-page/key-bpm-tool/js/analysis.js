@@ -29,10 +29,10 @@ async function analyzeAudioBuffer(arrBuffer, progressCallback = () => {}, fileNa
     console.log('Estimated BPM:', bpm);
 
     ac.close();
-    return { bpm, key: keyResult.key, confidence: keyResult.confidence };
+    return { bpm, key: keyResult.key, confidence: keyResult.confidence, camelot: keyResult.camelot || null };
   } catch (err) {
     console.error('analyzeAudioBuffer error:', err);
-    return { bpm: null, key: "Unknown", confidence: 0 };
+    return { bpm: null, key: "Unknown", confidence: 0, camelot: null };
   }
 }
 /**
@@ -638,6 +638,7 @@ async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback 
     return {
       key: formattedKey || 'Unknown',
       confidence: typeof data.confidence === 'number' ? data.confidence : 1,
+      camelot: data.camelot || null,
     };
   } catch (err) {
     console.error('OpenKeyScan key detection error:', err);
