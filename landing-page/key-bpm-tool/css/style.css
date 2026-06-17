@@ -122,12 +122,16 @@ button { background:var(--orange); color:var(--charcoal-2); border:none; padding
 .live-key-status { margin-top: 8px; color: var(--muted); font-size: 13px; min-height: 16px; }
 .live-key-status.is-error { color: #ff5a5a; }
 
+/* Button row: keep Upload & Analyze and Download report aligned */
+.btn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-row > button { margin: 0; }
+.btn-row > #uploadBtn { border: 1px solid transparent; }
+
 /* Download report button (appears after an analysis) */
 .download-report-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: 10px;
   padding: 10px 14px;
   border-radius: 8px;
   background: var(--charcoal);

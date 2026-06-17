@@ -11,7 +11,6 @@
   'use strict';
 
   var JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  var LOGO_URL = '../assets/img/logo.png';
 
   // Latest results captured from the page.
   var state = {
@@ -22,7 +21,6 @@
   var btn = null;
   var labelEl = null;
   var jsPdfPromise = null;
-  var logoPromise = null;
 
   function hasData() {
     return Boolean(state.file || state.live);
@@ -65,29 +63,6 @@
     return jsPdfPromise;
   }
 
-  function ensureLogo() {
-    if (!logoPromise) {
-      logoPromise = fetch(LOGO_URL)
-        .then(function (r) { return r.ok ? r.blob() : Promise.reject(new Error('no logo')); })
-        .then(function (blob) {
-          return new Promise(function (resolve) {
-            var reader = new FileReader();
-            reader.onload = function () {
-              var dataUrl = reader.result;
-              var img = new Image();
-              img.onload = function () { resolve({ dataUrl: dataUrl, w: img.naturalWidth, h: img.naturalHeight }); };
-              img.onerror = function () { resolve({ dataUrl: dataUrl, w: 0, h: 0 }); };
-              img.src = dataUrl;
-            };
-            reader.onerror = function () { resolve(null); };
-            reader.readAsDataURL(blob);
-          });
-        })
-        .catch(function () { return null; });
-    }
-    return logoPromise;
-  }
-
   // ---- Formatting helpers ----
   function fmtPct(c) {
     if (typeof c !== 'number' || !isFinite(c)) return null;
@@ -106,7 +81,7 @@
   }
 
   // ---- PDF build ----
-  function buildPdf(jsPDF, logo) {
+  function buildPdf(jsPDF) {
     var doc = new jsPDF({ unit: 'mm', format: 'a4' });
     var pageW = doc.internal.pageSize.getWidth();
     var margin = 16;
@@ -117,13 +92,15 @@
     doc.setFillColor(255, 122, 0);
     doc.rect(0, 30, pageW, 1.6, 'F');
 
-    var textX = margin;
-    if (logo && logo.dataUrl) {
-      var logoH = 15;
-      var logoW = logo.w && logo.h ? (logo.w / logo.h) * logoH : 15;
-      doc.addImage(logo.dataUrl, 'PNG', margin, 7.5, logoW, logoH);
-      textX = margin + logoW + 6;
-    }
+    // "DA" badge (orange rounded square) — matches the site header logo.
+    var badge = 14;
+    doc.setFillColor(255, 122, 0);
+    doc.roundedRect(margin, 8, badge, badge, 3, 3, 'F');
+    doc.setTextColor(43, 43, 43);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('DA', margin + badge / 2, 16.8, { align: 'center' });
+    var textX = margin + badge + 6;
 
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -284,11 +261,9 @@
   function onDownload() {
     if (!hasData()) return;
     setBusy(true);
-    Promise.all([ensureJsPdf(), ensureLogo()])
-      .then(function (results) {
-        var jsPDF = results[0];
-        var logo = results[1];
-        var doc = buildPdf(jsPDF, logo);
+    ensureJsPdf()
+      .then(function (jsPDF) {
+        var doc = buildPdf(jsPDF);
         doc.save('DabzAudio-Report-' + fileBaseName() + '.pdf');
       })
       .catch(function (err) {
