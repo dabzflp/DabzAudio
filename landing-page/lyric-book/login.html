@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Sign in | DabzAudio Lyric Book</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../index.html" style="text-decoration:none">
+      <div class="logo-circle">DA</div>
+      <div class="brand-text"><b>DabzAudio</b><small>Lyric Book</small></div>
+    </a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </header>
+
+  <div class="auth-wrap">
+    <form class="auth-card" id="loginForm" novalidate>
+      <h1>Welcome back</h1>
+      <p class="sub">Sign in to your Lyric Book.</p>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" required />
+        <div class="hint" style="text-align:right"><a href="forgot.html">Forgot password?</a></div>
+      </div>
+
+      <button class="btn block" type="submit" id="submitBtn">Sign in</button>
+      <div class="msg" id="msg"></div>
+      <div class="auth-foot">New here? <a href="signup.html">Create an artist account</a></div>
+    </form>
+  </div>
+
+  <script src="js/login.js"></script>
+</body>
+</html>

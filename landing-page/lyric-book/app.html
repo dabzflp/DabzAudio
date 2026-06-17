@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Lyric Book | DabzAudio</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../index.html" style="text-decoration:none">
+      <div class="logo-circle">DA</div>
+      <div class="brand-text"><b>DabzAudio</b><small>Lyric Book</small></div>
+    </a>
+    <div class="header-actions">
+      <span class="who" id="who"></span>
+      <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <button class="btn block" id="newBtn" type="button">+ New lyric</button>
+      </div>
+      <ul class="lyric-list" id="lyricList"></ul>
+    </aside>
+
+    <section class="editor">
+      <div class="editor-main">
+        <div class="editor-bar">
+          <input class="title-input" id="titleInput" placeholder="Untitled" maxlength="200" />
+          <span class="save-state" id="saveState"></span>
+          <button class="btn danger small" id="deleteBtn" type="button">Delete</button>
+        </div>
+        <textarea class="body-input" id="bodyInput" placeholder="Start writing your lyrics…&#10;&#10;Tip: pick a word in the Suggestions panel to find rhymes, or check the syllable count per line for your flow."></textarea>
+      </div>
+
+      <aside class="suggest">
+        <h3>Suggestions</h3>
+        <p class="sub">Real rhymes &amp; syllable counts — to help your flow, not write for you.</p>
+
+        <div class="suggest-section">
+          <div class="suggest-input">
+            <input id="rhymeWord" placeholder="Type a word…" />
+            <button class="btn small" id="rhymeBtn" type="button">Find</button>
+          </div>
+          <button class="btn ghost small" id="lastWordBtn" type="button" style="margin-top:8px;width:100%">Rhyme last word I typed</button>
+        </div>
+
+        <div class="suggest-section" id="rhymeResults" style="display:none">
+          <div class="label">Rhymes</div>
+          <div class="chip-group" id="rhymeChips"></div>
+          <div class="label" style="margin-top:12px">Near rhymes</div>
+          <div class="chip-group" id="nearChips"></div>
+        </div>
+
+        <div class="suggest-section">
+          <div class="label">Rhythm — syllables per line</div>
+          <div class="rhythm-box" id="rhythmBox">
+            <div class="empty-note" style="padding:6px">Start typing to see your line rhythm.</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script src="js/suggest.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
