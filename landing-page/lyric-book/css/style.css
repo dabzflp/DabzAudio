@@ -88,6 +88,21 @@ a:hover { text-decoration: underline; }
 .btn.danger:hover { background: rgba(255,82,82,0.1); filter: none; }
 
 /* ---------- Auth pages ---------- */
+/* Use the landing-page hero image as a full-screen backdrop, dimmed so the
+   card stays readable and nothing overlaps. */
+body.auth-bg {
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.55), rgba(17, 17, 17, 0.72)),
+    url("../../assets/img/dabzaudiobck.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+body.auth-bg .site-header {
+  background: transparent;
+  border-bottom: none;
+}
 .auth-wrap {
   min-height: calc(100vh - 78px);
   display: flex; align-items: center; justify-content: center;
