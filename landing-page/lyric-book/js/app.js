@@ -9,7 +9,6 @@
     logoutBtn: document.getElementById("logoutBtn"),
     avatarBtn: document.getElementById("avatarBtn"),
     avatarImg: document.getElementById("avatarImg"),
-    avatarPrompt: document.getElementById("avatarPrompt"),
     avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
     list: document.getElementById("lyricList"),
@@ -237,15 +236,12 @@
   /* ---------- Profile picture ---------- */
   function renderAvatar(url, name) {
     if (url) {
-      els.avatarImg.style.backgroundImage = `url("${url}")`;
+      // bust cache so a freshly-replaced photo shows immediately
+      els.avatarBtn.style.backgroundImage = `url("${url}?t=${Date.now()}")`;
       els.avatarImg.textContent = "";
-      els.avatarBtn.classList.add("has-photo");
-      els.avatarPrompt.textContent = "Change";
     } else {
-      els.avatarImg.style.backgroundImage = "";
+      els.avatarBtn.style.backgroundImage = "";
       els.avatarImg.textContent = initials(name);
-      els.avatarBtn.classList.remove("has-photo");
-      els.avatarPrompt.textContent = "Add photo";
     }
   }
 
@@ -266,18 +262,38 @@
       alert("Please choose a PNG, JPG, or WebP image.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert("That image is too large. Please choose one under 5MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => uploadAvatar(reader.result);
-    reader.readAsDataURL(file);
+    // Downscale to a small square in the browser before upload so large
+    // photos never exceed the request size limit.
+    downscaleImage(file, 512)
+      .then(uploadAvatar)
+      .catch(() => alert("Sorry, that image could not be read. Try another one."));
+  }
+
+  function downscaleImage(file, max) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   async function uploadAvatar(dataUrl) {
     els.avatarBtn.classList.add("uploading");
-    els.avatarPrompt.textContent = "Uploading…";
     try {
       const data = await window.LB.apiFetch("/api/profile/avatar", {
         method: "POST",
