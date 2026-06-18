@@ -22,11 +22,21 @@ import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 
+import { v2 as cloudinary } from "cloudinary";
+
 import { pool, connectWithRetry } from "./db.js";
 import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
 import { sendPasswordReset, emailEnabled } from "./email.js";
 
 dotenv.config();
+
+// Cloudinary for profile-picture uploads (optional: if unset, avatar upload
+// returns a clear error but the rest of the app works).
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 process.on("unhandledRejection", (err) => console.error("UnhandledRejection", err));
 process.on("uncaughtException", (err) => console.error("UncaughtException", err));
@@ -56,7 +66,8 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json({ limit: "1mb" }));
+// Allow base64 image payloads for avatar uploads (default 100kb is too small).
+app.use(express.json({ limit: "8mb" }));
 app.use(cookieParser());
 
 // Serve the frontend statically too (handy for local dev / standalone deploy).
@@ -70,7 +81,8 @@ function sanitizeProfile(row) {
     artistName: row.artist_name,
     genre: row.genre,
     influences: row.influences,
-    experience: row.experience
+    experience: row.experience,
+    avatarUrl: row.avatar_url || ""
   };
 }
 
@@ -177,7 +189,7 @@ app.post("/api/auth/logout", (req, res) => {
 app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience
+      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url
        FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
       [req.user.id]
@@ -207,13 +219,57 @@ app.put("/api/profile", requireAuth, async (req, res) => {
       `UPDATE lb_profiles
        SET display_name = $2, artist_name = $3, genre = $4, influences = $5, experience = $6, updated_at = NOW()
        WHERE user_id = $1
-       RETURNING display_name, artist_name, genre, influences, experience`,
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url`,
       [req.user.id, displayName, artistName, genre, influences, experience]
     );
     res.json({ profile: sanitizeProfile(rows[0]) });
   } catch (err) {
     console.error("profile error", err);
     res.status(500).json({ error: "Could not save profile." });
+  }
+});
+
+// Upload (or replace) the signed-in artist's profile picture.
+// Accepts a base64 data URL; stores it on Cloudinary in lyricbook/avatars
+// and saves the secure URL on the profile.
+app.post("/api/profile/avatar", requireAuth, async (req, res) => {
+  try {
+    if (!cloudinary.config().cloud_name) {
+      return res.status(503).json({ error: "Image uploads are not configured yet." });
+    }
+    const { imageBase64 } = req.body || {};
+    if (!imageBase64 || typeof imageBase64 !== "string") {
+      return res.status(400).json({ error: "No image provided." });
+    }
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(imageBase64)) {
+      return res.status(400).json({ error: "Unsupported image type." });
+    }
+    if (imageBase64.length > 8 * 1024 * 1024) {
+      return res.status(400).json({ error: "Image too large (max ~5MB)." });
+    }
+
+    const result = await cloudinary.uploader.upload(imageBase64, {
+      folder: "lyricbook/avatars",
+      public_id: `user_${req.user.id}`,
+      overwrite: true,
+      resource_type: "image",
+      transformation: [
+        { width: 256, height: 256, crop: "fill", gravity: "face" },
+        { quality: "auto", fetch_format: "auto" }
+      ]
+    });
+
+    const url = result.secure_url;
+    const { rows } = await pool.query(
+      `UPDATE lb_profiles SET avatar_url = $2, updated_at = NOW()
+       WHERE user_id = $1
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url`,
+      [req.user.id, url]
+    );
+    res.json({ profile: sanitizeProfile(rows[0]) });
+  } catch (err) {
+    console.error("avatar upload error", err);
+    res.status(500).json({ error: "Could not upload image." });
   }
 });
 

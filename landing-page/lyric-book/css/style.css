@@ -50,6 +50,27 @@ a:hover { text-decoration: underline; }
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .header-actions .who { color: var(--muted); font-size: 13px; }
 
+/* Profile picture button in the header */
+.avatar-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: transparent; border: none; cursor: pointer;
+  padding: 3px 8px 3px 3px; border-radius: 999px;
+  color: var(--muted);
+}
+.avatar-btn:hover { background: rgba(255,255,255,0.05); }
+.avatar-img {
+  width: 36px; height: 36px; border-radius: 50%;
+  background-color: var(--charcoal); color: var(--orange);
+  background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px; flex-shrink: 0;
+  border: 2px solid var(--orange);
+}
+.avatar-prompt { font-size: 12px; white-space: nowrap; }
+.avatar-btn.has-photo .avatar-prompt { opacity: 0; transition: opacity .15s; }
+.avatar-btn.has-photo:hover .avatar-prompt { opacity: 1; }
+.avatar-btn.uploading { opacity: 0.6; pointer-events: none; }
+
 /* ---------- Buttons ---------- */
 .btn {
   background: var(--orange); color: var(--charcoal-2);

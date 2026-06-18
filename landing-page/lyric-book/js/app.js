@@ -7,6 +7,10 @@
   const els = {
     who: document.getElementById("who"),
     logoutBtn: document.getElementById("logoutBtn"),
+    avatarBtn: document.getElementById("avatarBtn"),
+    avatarImg: document.getElementById("avatarImg"),
+    avatarPrompt: document.getElementById("avatarPrompt"),
+    avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
     list: document.getElementById("lyricList"),
     title: document.getElementById("titleInput"),
@@ -34,6 +38,7 @@
       const me = await window.LB.apiFetch("/api/auth/me");
       const name = (me.profile && (me.profile.artistName || me.profile.displayName)) || me.user.email;
       els.who.textContent = name;
+      renderAvatar(me.profile && me.profile.avatarUrl, name);
     } catch {
       window.LB.clearToken();
       location.replace("login.html");
@@ -47,6 +52,8 @@
 
   function wire() {
     els.logoutBtn.addEventListener("click", logout);
+    els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
+    els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
     els.deleteBtn.addEventListener("click", deleteCurrent);
     els.title.addEventListener("input", onEdit);
@@ -225,6 +232,65 @@
     } catch {}
     window.LB.clearToken();
     location.replace("login.html");
+  }
+
+  /* ---------- Profile picture ---------- */
+  function renderAvatar(url, name) {
+    if (url) {
+      els.avatarImg.style.backgroundImage = `url("${url}")`;
+      els.avatarImg.textContent = "";
+      els.avatarBtn.classList.add("has-photo");
+      els.avatarPrompt.textContent = "Change";
+    } else {
+      els.avatarImg.style.backgroundImage = "";
+      els.avatarImg.textContent = initials(name);
+      els.avatarBtn.classList.remove("has-photo");
+      els.avatarPrompt.textContent = "Add photo";
+    }
+  }
+
+  function initials(name) {
+    const s = String(name || "").trim();
+    if (!s) return "DA";
+    const parts = s.split(/\s+/);
+    const a = parts[0][0] || "";
+    const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (a + b).toUpperCase() || s.slice(0, 2).toUpperCase();
+  }
+
+  function onAvatarPicked(e) {
+    const file = e.target.files && e.target.files[0];
+    els.avatarInput.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+      alert("Please choose a PNG, JPG, or WebP image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("That image is too large. Please choose one under 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => uploadAvatar(reader.result);
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadAvatar(dataUrl) {
+    els.avatarBtn.classList.add("uploading");
+    els.avatarPrompt.textContent = "Uploading…";
+    try {
+      const data = await window.LB.apiFetch("/api/profile/avatar", {
+        method: "POST",
+        body: JSON.stringify({ imageBase64: dataUrl })
+      });
+      const name = (data.profile && (data.profile.artistName || data.profile.displayName)) || els.who.textContent;
+      renderAvatar(data.profile && data.profile.avatarUrl, name);
+    } catch (err) {
+      alert(err.message || "Could not upload image.");
+      renderAvatar(null, els.who.textContent);
+    } finally {
+      els.avatarBtn.classList.remove("uploading");
+    }
   }
 
   /* ---------- Suggestions ---------- */
