@@ -7,6 +7,9 @@
   const els = {
     who: document.getElementById("who"),
     logoutBtn: document.getElementById("logoutBtn"),
+    avatarBtn: document.getElementById("avatarBtn"),
+    avatarImg: document.getElementById("avatarImg"),
+    avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
     list: document.getElementById("lyricList"),
     title: document.getElementById("titleInput"),
@@ -34,6 +37,7 @@
       const me = await window.LB.apiFetch("/api/auth/me");
       const name = (me.profile && (me.profile.artistName || me.profile.displayName)) || me.user.email;
       els.who.textContent = name;
+      renderAvatar(me.profile && me.profile.avatarUrl, name);
     } catch {
       window.LB.clearToken();
       location.replace("login.html");
@@ -47,6 +51,8 @@
 
   function wire() {
     els.logoutBtn.addEventListener("click", logout);
+    els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
+    els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
     els.deleteBtn.addEventListener("click", deleteCurrent);
     els.title.addEventListener("input", onEdit);
@@ -225,6 +231,82 @@
     } catch {}
     window.LB.clearToken();
     location.replace("login.html");
+  }
+
+  /* ---------- Profile picture ---------- */
+  function renderAvatar(url, name) {
+    if (url) {
+      // bust cache so a freshly-replaced photo shows immediately
+      els.avatarBtn.style.backgroundImage = `url("${url}?t=${Date.now()}")`;
+      els.avatarImg.textContent = "";
+    } else {
+      els.avatarBtn.style.backgroundImage = "";
+      els.avatarImg.textContent = initials(name);
+    }
+  }
+
+  function initials(name) {
+    const s = String(name || "").trim();
+    if (!s) return "DA";
+    const parts = s.split(/\s+/);
+    const a = parts[0][0] || "";
+    const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (a + b).toUpperCase() || s.slice(0, 2).toUpperCase();
+  }
+
+  function onAvatarPicked(e) {
+    const file = e.target.files && e.target.files[0];
+    els.avatarInput.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+      alert("Please choose a PNG, JPG, or WebP image.");
+      return;
+    }
+    // Downscale to a small square in the browser before upload so large
+    // photos never exceed the request size limit.
+    downscaleImage(file, 512)
+      .then(uploadAvatar)
+      .catch(() => alert("Sorry, that image could not be read. Try another one."));
+  }
+
+  function downscaleImage(file, max) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadAvatar(dataUrl) {
+    els.avatarBtn.classList.add("uploading");
+    try {
+      const data = await window.LB.apiFetch("/api/profile/avatar", {
+        method: "POST",
+        body: JSON.stringify({ imageBase64: dataUrl })
+      });
+      const name = (data.profile && (data.profile.artistName || data.profile.displayName)) || els.who.textContent;
+      renderAvatar(data.profile && data.profile.avatarUrl, name);
+    } catch (err) {
+      alert(err.message || "Could not upload image.");
+      renderAvatar(null, els.who.textContent);
+    } finally {
+      els.avatarBtn.classList.remove("uploading");
+    }
   }
 
   /* ---------- Suggestions ---------- */

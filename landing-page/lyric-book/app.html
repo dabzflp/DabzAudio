@@ -12,10 +12,16 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="../index.html" style="text-decoration:none">
-      <div class="logo-circle">DA</div>
-      <div class="brand-text"><b>DabzAudio</b><small>Lyric Book</small></div>
-    </a>
+    <div class="brand">
+      <button class="logo-circle" id="avatarBtn" type="button" title="Click to add or change your profile photo">
+        <span class="logo-initials" id="avatarImg">DA</span>
+        <span class="logo-cam" aria-hidden="true">Photo</span>
+      </button>
+      <a class="brand-text" href="../index.html" style="text-decoration:none">
+        <b>DabzAudio</b><small>Lyric Book</small>
+      </a>
+    </div>
+    <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" hidden />
     <div class="header-actions">
       <span class="who" id="who"></span>
       <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>

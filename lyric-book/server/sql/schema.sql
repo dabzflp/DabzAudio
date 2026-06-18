@@ -18,8 +18,12 @@ CREATE TABLE IF NOT EXISTS lb_profiles (
   genre TEXT NOT NULL DEFAULT '',
   influences TEXT NOT NULL DEFAULT '',
   experience TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add avatar_url for profiles created before this column existed.
+ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS lb_lyrics (
   id BIGSERIAL PRIMARY KEY,

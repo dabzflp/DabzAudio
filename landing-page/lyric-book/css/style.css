@@ -38,13 +38,27 @@ a:hover { text-decoration: underline; }
   z-index: 20;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
+/* The brand "DA" circle doubles as the clickable profile photo. */
 .logo-circle {
+  position: relative; overflow: hidden;
   width: 44px; height: 44px; border-radius: 11px;
-  background: var(--charcoal); color: var(--orange);
+  background-color: var(--charcoal); color: var(--orange);
+  background-size: cover; background-position: center;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 17px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  border: none; padding: 0; cursor: pointer;
 }
+.logo-circle .logo-cam {
+  position: absolute; inset: 0; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  opacity: 0; transition: opacity .15s;
+}
+.logo-circle:hover .logo-cam,
+.logo-circle:focus-visible .logo-cam { opacity: 1; }
+.logo-circle.uploading { opacity: 0.6; pointer-events: none; }
 .brand-text b { font-size: 16px; color: #fff; display: block; line-height: 1.1; }
 .brand-text small { color: var(--muted); font-size: 12px; }
 .header-actions { display: flex; align-items: center; gap: 12px; }
@@ -74,6 +88,21 @@ a:hover { text-decoration: underline; }
 .btn.danger:hover { background: rgba(255,82,82,0.1); filter: none; }
 
 /* ---------- Auth pages ---------- */
+/* Use the landing-page hero image as a full-screen backdrop, dimmed so the
+   card stays readable and nothing overlaps. */
+body.auth-bg {
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.55), rgba(17, 17, 17, 0.72)),
+    url("../../assets/img/dabzaudiobck.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+body.auth-bg .site-header {
+  background: transparent;
+  border-bottom: none;
+}
 .auth-wrap {
   min-height: calc(100vh - 78px);
   display: flex; align-items: center; justify-content: center;
