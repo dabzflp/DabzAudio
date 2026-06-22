@@ -26,7 +26,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 import { pool, connectWithRetry } from "./db.js";
 import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
-import { sendPasswordReset, emailEnabled } from "./email.js";
+import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
 
 dotenv.config();
 
@@ -92,6 +92,61 @@ function appBaseUrl(req) {
   return `${proto}://${req.get("host")}`;
 }
 
+// Attach any pending invites addressed to this email to the user's account
+// (so an invite sent before they registered shows up once they sign in).
+async function linkPendingInvites(userId, email) {
+  if (!email) return;
+  try {
+    await pool.query(
+      `UPDATE lb_lyric_collaborators
+       SET user_id = $1
+       WHERE user_id IS NULL AND LOWER(invited_email) = LOWER($2)`,
+      [userId, email]
+    );
+  } catch (err) {
+    console.error("linkPendingInvites error", err);
+  }
+}
+
+// Resolve a user's access to a lyric.
+// Returns { role: 'owner'|'editor'|'viewer', canEdit, owner } or null if no access.
+async function getLyricAccess(lyricId, userId) {
+  const { rows } = await pool.query(
+    `SELECT l.user_id AS owner_id,
+            c.role AS collab_role,
+            c.status AS collab_status
+       FROM lb_lyrics l
+       LEFT JOIN lb_lyric_collaborators c
+         ON c.lyric_id = l.id AND c.user_id = $2
+      WHERE l.id = $1`,
+    [lyricId, userId]
+  );
+  const row = rows[0];
+  if (!row) return null; // lyric does not exist
+  if (String(row.owner_id) === String(userId)) {
+    return { role: "owner", canEdit: true, ownerId: row.owner_id };
+  }
+  if (row.collab_status === "accepted") {
+    const role = row.collab_role === "viewer" ? "viewer" : "editor";
+    return { role, canEdit: role === "editor", ownerId: row.owner_id };
+  }
+  return null; // no access (or invite still pending)
+}
+
+async function displayNameForUser(userId, fallbackEmail) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name
+         FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
+        WHERE u.id = $1`,
+      [userId]
+    );
+    return (rows[0] && rows[0].name) || fallbackEmail || "A DabzAudio artist";
+  } catch {
+    return fallbackEmail || "A DabzAudio artist";
+  }
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, email: emailEnabled(), time: new Date().toISOString() });
 });
@@ -147,6 +202,8 @@ app.post("/api/auth/signup", async (req, res) => {
       client.release();
     }
 
+    await linkPendingInvites(user.id, user.email);
+
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, cookieOptions());
     res.status(201).json({ token, user: { id: user.id, email: user.email } });
@@ -172,6 +229,8 @@ app.post("/api/auth/login", async (req, res) => {
     const ok = await bcrypt.compare(String(password), user.password_hash);
     if (!ok) return res.status(401).json({ error: "Invalid email or password." });
 
+    await linkPendingInvites(user.id, user.email);
+
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, cookieOptions());
     res.json({ token, user: { id: user.id, email: user.email } });
@@ -188,6 +247,7 @@ app.post("/api/auth/logout", (req, res) => {
 
 app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
+    await linkPendingInvites(req.user.id, req.user.email);
     const { rows } = await pool.query(
       `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url
        FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
@@ -352,9 +412,21 @@ app.post("/api/auth/reset", async (req, res) => {
 
 app.get("/api/lyrics", requireAuth, async (req, res) => {
   try {
+    // Lyrics the user owns, plus lyrics shared with them (accepted only).
     const { rows } = await pool.query(
-      `SELECT id, title, updated_at, created_at FROM lb_lyrics
-       WHERE user_id = $1 ORDER BY updated_at DESC`,
+      `SELECT l.id, l.title, l.updated_at, l.created_at,
+              TRUE AS owned, 'owner' AS role,
+              (SELECT COUNT(*) FROM lb_lyric_collaborators c WHERE c.lyric_id = l.id) AS collaborator_count
+         FROM lb_lyrics l
+        WHERE l.user_id = $1
+       UNION ALL
+       SELECT l.id, l.title, l.updated_at, l.created_at,
+              FALSE AS owned, c.role,
+              0 AS collaborator_count
+         FROM lb_lyrics l
+         JOIN lb_lyric_collaborators c ON c.lyric_id = l.id
+        WHERE c.user_id = $1 AND c.status = 'accepted'
+        ORDER BY updated_at DESC`,
       [req.user.id]
     );
     res.json({ lyrics: rows });
@@ -381,12 +453,14 @@ app.post("/api/lyrics", requireAuth, async (req, res) => {
 
 app.get("/api/lyrics/:id", requireAuth, async (req, res) => {
   try {
+    const access = await getLyricAccess(req.params.id, req.user.id);
+    if (!access) return res.status(404).json({ error: "Lyric not found." });
     const { rows } = await pool.query(
-      "SELECT id, title, body, created_at, updated_at FROM lb_lyrics WHERE id = $1 AND user_id = $2",
-      [req.params.id, req.user.id]
+      "SELECT id, title, body, created_at, updated_at FROM lb_lyrics WHERE id = $1",
+      [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "Lyric not found." });
-    res.json({ lyric: rows[0] });
+    res.json({ lyric: rows[0], role: access.role, canEdit: access.canEdit });
   } catch (err) {
     console.error("get lyric error", err);
     res.status(500).json({ error: "Could not load lyric." });
@@ -395,22 +469,28 @@ app.get("/api/lyrics/:id", requireAuth, async (req, res) => {
 
 app.put("/api/lyrics/:id", requireAuth, async (req, res) => {
   try {
+    const access = await getLyricAccess(req.params.id, req.user.id);
+    if (!access) return res.status(404).json({ error: "Lyric not found." });
+    if (!access.canEdit) {
+      return res.status(403).json({ error: "You have view-only access to this lyric." });
+    }
     const { title, body } = req.body || {};
     const { rows } = await pool.query(
       `UPDATE lb_lyrics
-       SET title = COALESCE($3, title), body = COALESCE($4, body), updated_at = NOW()
-       WHERE id = $1 AND user_id = $2
+       SET title = COALESCE($2, title), body = COALESCE($3, body), updated_at = NOW()
+       WHERE id = $1
        RETURNING id, title, body, created_at, updated_at`,
-      [req.params.id, req.user.id, title != null ? String(title).slice(0, 200) : null, body]
+      [req.params.id, title != null ? String(title).slice(0, 200) : null, body]
     );
     if (!rows.length) return res.status(404).json({ error: "Lyric not found." });
-    res.json({ lyric: rows[0] });
+    res.json({ lyric: rows[0], role: access.role, canEdit: access.canEdit });
   } catch (err) {
     console.error("update lyric error", err);
     res.status(500).json({ error: "Could not save lyric." });
   }
 });
 
+// Only the owner can permanently delete a lyric.
 app.delete("/api/lyrics/:id", requireAuth, async (req, res) => {
   try {
     const { rowCount } = await pool.query(
@@ -422,6 +502,252 @@ app.delete("/api/lyrics/:id", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("delete lyric error", err);
     res.status(500).json({ error: "Could not delete lyric." });
+  }
+});
+
+/* ----------------------- SHARING / COLLAB ----------------------- */
+
+// List collaborators on a lyric (owner only).
+app.get("/api/lyrics/:id/collaborators", requireAuth, async (req, res) => {
+  try {
+    const owned = await pool.query(
+      "SELECT id FROM lb_lyrics WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    if (!owned.rows.length) {
+      return res.status(403).json({ error: "Only the owner can manage sharing." });
+    }
+    const { rows } = await pool.query(
+      `SELECT c.id, c.invited_email, c.role, c.status, c.created_at, c.accepted_at,
+              COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name,
+              p.avatar_url
+         FROM lb_lyric_collaborators c
+         LEFT JOIN lb_users u ON u.id = c.user_id
+         LEFT JOIN lb_profiles p ON p.user_id = c.user_id
+        WHERE c.lyric_id = $1
+        ORDER BY c.created_at ASC`,
+      [req.params.id]
+    );
+    res.json({
+      collaborators: rows.map((r) => ({
+        id: r.id,
+        email: r.invited_email,
+        name: r.name || r.invited_email,
+        avatarUrl: r.avatar_url || "",
+        role: r.role,
+        status: r.status
+      }))
+    });
+  } catch (err) {
+    console.error("list collaborators error", err);
+    res.status(500).json({ error: "Could not load collaborators." });
+  }
+});
+
+// Invite someone to collaborate on a lyric (owner only).
+app.post("/api/lyrics/:id/share", requireAuth, async (req, res) => {
+  try {
+    let { email, role = "editor" } = req.body || {};
+    email = String(email || "").trim().toLowerCase();
+    role = role === "viewer" ? "viewer" : "editor";
+    if (!email || !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "Enter a valid email address." });
+    }
+
+    const owned = await pool.query(
+      "SELECT id, title FROM lb_lyrics WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    const lyric = owned.rows[0];
+    if (!lyric) {
+      return res.status(403).json({ error: "Only the owner can share this lyric." });
+    }
+    if (email === String(req.user.email).toLowerCase()) {
+      return res.status(400).json({ error: "You already own this lyric." });
+    }
+
+    // Is the invitee already a registered user?
+    const existing = await pool.query("SELECT id FROM lb_users WHERE email = $1", [email]);
+    const inviteeUserId = existing.rows[0] ? existing.rows[0].id : null;
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
+    // Upsert the invite (re-inviting the same email updates role/token).
+    await pool.query(
+      `INSERT INTO lb_lyric_collaborators
+         (lyric_id, user_id, invited_email, role, status, token_hash, expires_at, invited_by)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)
+       ON CONFLICT (lyric_id, LOWER(invited_email))
+       DO UPDATE SET role = EXCLUDED.role,
+                     token_hash = EXCLUDED.token_hash,
+                     expires_at = EXCLUDED.expires_at,
+                     invited_by = EXCLUDED.invited_by,
+                     user_id = COALESCE(lb_lyric_collaborators.user_id, EXCLUDED.user_id)`,
+      [lyric.id, inviteeUserId, email, role, tokenHash, expires, req.user.id]
+    );
+
+    const inviterName = await displayNameForUser(req.user.id, req.user.email);
+    const base = appBaseUrl(req);
+    const acceptUrl = inviteeUserId
+      ? `${base}/app.html?invite=${rawToken}`
+      : `${base}/signup.html?invite=${rawToken}&email=${encodeURIComponent(email)}`;
+
+    let emailSent = false;
+    try {
+      const r = await sendShareInvite(email, {
+        inviterName,
+        lyricTitle: lyric.title,
+        acceptUrl,
+        hasAccount: !!inviteeUserId
+      });
+      emailSent = !!(r && r.sent);
+    } catch (e) {
+      console.error("share email error", e);
+    }
+
+    res.status(201).json({
+      ok: true,
+      hasAccount: !!inviteeUserId,
+      emailSent,
+      message: inviteeUserId
+        ? "Invite sent. They'll see it next time they open the Lyric Book."
+        : "Invite sent. They'll be prompted to create an account first."
+    });
+  } catch (err) {
+    console.error("share error", err);
+    res.status(500).json({ error: "Could not share this lyric." });
+  }
+});
+
+// Accept an invite via the emailed token (must be signed in as the invited email).
+app.post("/api/lyrics/share/accept", requireAuth, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return res.status(400).json({ error: "Missing invite token." });
+    const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+    const { rows } = await pool.query(
+      `SELECT id, lyric_id, invited_email, expires_at
+         FROM lb_lyric_collaborators
+        WHERE token_hash = $1
+        ORDER BY id DESC LIMIT 1`,
+      [tokenHash]
+    );
+    const invite = rows[0];
+    if (!invite) return res.status(400).json({ error: "This invite is invalid or has expired." });
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return res.status(400).json({ error: "This invite has expired." });
+    }
+    if (String(invite.invited_email).toLowerCase() !== String(req.user.email).toLowerCase()) {
+      return res.status(403).json({
+        error: `This invite was sent to ${invite.invited_email}. Sign in with that email to accept.`
+      });
+    }
+    await pool.query(
+      `UPDATE lb_lyric_collaborators
+         SET status = 'accepted', user_id = $2, token_hash = NULL, accepted_at = NOW()
+       WHERE id = $1`,
+      [invite.id, req.user.id]
+    );
+    res.json({ ok: true, lyricId: invite.lyric_id });
+  } catch (err) {
+    console.error("accept invite error", err);
+    res.status(500).json({ error: "Could not accept this invite." });
+  }
+});
+
+// Pending invites addressed to the signed-in user (in-app notifications).
+app.get("/api/invites", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.id, c.role, l.title,
+              COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), owner.email) AS inviter
+         FROM lb_lyric_collaborators c
+         JOIN lb_lyrics l ON l.id = c.lyric_id
+         LEFT JOIN lb_users owner ON owner.id = c.invited_by
+         LEFT JOIN lb_profiles p ON p.user_id = c.invited_by
+        WHERE c.status = 'pending'
+          AND (c.user_id = $1 OR LOWER(c.invited_email) = LOWER($2))
+        ORDER BY c.created_at DESC`,
+      [req.user.id, req.user.email]
+    );
+    res.json({
+      invites: rows.map((r) => ({
+        id: r.id,
+        title: r.title || "Untitled",
+        role: r.role,
+        inviter: r.inviter || "A DabzAudio artist"
+      }))
+    });
+  } catch (err) {
+    console.error("list invites error", err);
+    res.status(500).json({ error: "Could not load invites." });
+  }
+});
+
+// Accept a pending invite by its id (from the in-app invites list).
+app.post("/api/invites/:id/accept", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE lb_lyric_collaborators
+         SET status = 'accepted', user_id = $1, token_hash = NULL, accepted_at = NOW()
+       WHERE id = $2 AND status = 'pending'
+         AND (user_id = $1 OR LOWER(invited_email) = LOWER($3))
+       RETURNING lyric_id`,
+      [req.user.id, req.params.id, req.user.email]
+    );
+    if (!rows.length) return res.status(404).json({ error: "Invite not found." });
+    res.json({ ok: true, lyricId: rows[0].lyric_id });
+  } catch (err) {
+    console.error("accept invite by id error", err);
+    res.status(500).json({ error: "Could not accept this invite." });
+  }
+});
+
+// Decline a pending invite addressed to the signed-in user.
+app.post("/api/invites/:id/decline", requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM lb_lyric_collaborators
+        WHERE id = $1 AND status = 'pending'
+          AND (user_id = $2 OR LOWER(invited_email) = LOWER($3))`,
+      [req.params.id, req.user.id, req.user.email]
+    );
+    if (!rowCount) return res.status(404).json({ error: "Invite not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("decline invite error", err);
+    res.status(500).json({ error: "Could not decline this invite." });
+  }
+});
+
+// Stop sharing: owner removes a collaborator, or a collaborator removes themselves.
+app.delete("/api/lyrics/:id/share/:collabId", requireAuth, async (req, res) => {
+  try {
+    const owned = await pool.query(
+      "SELECT id FROM lb_lyrics WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    const isOwner = owned.rows.length > 0;
+    let result;
+    if (isOwner) {
+      result = await pool.query(
+        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2",
+        [req.params.collabId, req.params.id]
+      );
+    } else {
+      // A collaborator can remove only their own membership (leave).
+      result = await pool.query(
+        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2 AND user_id = $3",
+        [req.params.collabId, req.params.id, req.user.id]
+      );
+    }
+    if (!result.rowCount) return res.status(404).json({ error: "Collaborator not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("stop sharing error", err);
+    res.status(500).json({ error: "Could not update sharing." });
   }
 });
 

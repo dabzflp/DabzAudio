@@ -23,6 +23,10 @@
     </div>
     <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" hidden />
     <div class="header-actions">
+      <button class="bell-btn" id="invitesBtn" type="button" title="Collaboration invites" hidden>
+        <span aria-hidden="true">🔔</span>
+        <span class="bell-count" id="invitesCount">0</span>
+      </button>
       <span class="who" id="who"></span>
       <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>
     </div>
@@ -40,7 +44,9 @@
       <div class="editor-main">
         <div class="editor-bar">
           <input class="title-input" id="titleInput" placeholder="Untitled" maxlength="200" />
+          <span class="role-pill" id="rolePill" hidden></span>
           <span class="save-state" id="saveState"></span>
+          <button class="btn ghost small" id="shareBtn" type="button" hidden>Share</button>
           <button class="btn danger small" id="deleteBtn" type="button">Delete</button>
         </div>
         <textarea class="body-input" id="bodyInput" placeholder="Start writing your lyrics…&#10;&#10;Tip: pick a word in the Suggestions panel to find rhymes, or check the syllable count per line for your flow."></textarea>
@@ -73,6 +79,40 @@
         </div>
       </aside>
     </section>
+  </div>
+
+  <!-- Share modal -->
+  <div class="modal-overlay" id="shareModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Share lyric</h3>
+        <button class="modal-close" id="shareClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub" id="shareSub">Invite someone by email. They'll only get access to this one lyric.</p>
+      <form class="share-form" id="shareForm">
+        <input type="email" id="shareEmail" placeholder="name@email.com" autocomplete="off" required />
+        <select id="shareRole">
+          <option value="editor">Can edit</option>
+          <option value="viewer">Can view</option>
+        </select>
+        <button class="btn small" id="shareSend" type="submit">Send</button>
+      </form>
+      <div class="msg" id="shareMsg"></div>
+      <div class="collab-list-head">People with access</div>
+      <ul class="collab-list" id="collabList"></ul>
+    </div>
+  </div>
+
+  <!-- Invites modal -->
+  <div class="modal-overlay" id="invitesModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Collaboration invites</h3>
+        <button class="modal-close" id="invitesClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub">Lyrics other artists want to write with you.</p>
+      <ul class="invite-list" id="inviteList"></ul>
+    </div>
   </div>
 
   <script src="js/suggest.js"></script>

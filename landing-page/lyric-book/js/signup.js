@@ -7,6 +7,22 @@
   const msg = document.getElementById("msg");
   const btn = document.getElementById("submitBtn");
 
+  // If the user arrived from a collaboration invite, prefill their email and
+  // carry the token through so the lyric is accepted right after signup.
+  const params = new URLSearchParams(location.search);
+  const inviteToken = params.get("invite") || "";
+  const invitedEmail = params.get("email") || "";
+  if (invitedEmail) {
+    const emailInput = document.getElementById("email");
+    emailInput.value = invitedEmail;
+  }
+  if (inviteToken) {
+    const note = document.createElement("p");
+    note.className = "msg ok";
+    note.textContent = "You've been invited to collaborate on a lyric — create your account to open it.";
+    form.parentNode.insertBefore(note, form);
+  }
+
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
     msg.className = "msg";
@@ -38,7 +54,7 @@
         body: JSON.stringify(payload)
       });
       window.LB.setToken(data.token);
-      location.replace("app.html");
+      location.replace(inviteToken ? "app.html?invite=" + encodeURIComponent(inviteToken) : "app.html");
     } catch (err) {
       fail(err.message || "Could not create account.");
       btn.disabled = false;

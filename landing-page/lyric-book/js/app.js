@@ -1,4 +1,15 @@
 (function () {
+  // Capture a collaboration invite token from the URL before any auth redirect,
+  // so it survives a trip through the login page.
+  (function captureInvite() {
+    const p = new URLSearchParams(location.search);
+    const token = p.get("invite");
+    if (token) {
+      localStorage.setItem("lb_pending_invite", token);
+      history.replaceState(null, "", location.pathname);
+    }
+  })();
+
   if (!window.LB.isAuthed()) {
     location.replace("login.html");
     return;
@@ -16,19 +27,35 @@
     body: document.getElementById("bodyInput"),
     saveState: document.getElementById("saveState"),
     deleteBtn: document.getElementById("deleteBtn"),
+    shareBtn: document.getElementById("shareBtn"),
+    rolePill: document.getElementById("rolePill"),
     rhymeWord: document.getElementById("rhymeWord"),
     rhymeBtn: document.getElementById("rhymeBtn"),
     lastWordBtn: document.getElementById("lastWordBtn"),
     rhymeResults: document.getElementById("rhymeResults"),
     rhymeChips: document.getElementById("rhymeChips"),
     nearChips: document.getElementById("nearChips"),
-    rhythmBox: document.getElementById("rhythmBox")
+    rhythmBox: document.getElementById("rhythmBox"),
+    // collaboration
+    invitesBtn: document.getElementById("invitesBtn"),
+    invitesCount: document.getElementById("invitesCount"),
+    shareModal: document.getElementById("shareModal"),
+    shareClose: document.getElementById("shareClose"),
+    shareForm: document.getElementById("shareForm"),
+    shareEmail: document.getElementById("shareEmail"),
+    shareRole: document.getElementById("shareRole"),
+    shareMsg: document.getElementById("shareMsg"),
+    collabList: document.getElementById("collabList"),
+    invitesModal: document.getElementById("invitesModal"),
+    invitesClose: document.getElementById("invitesClose"),
+    inviteList: document.getElementById("inviteList")
   };
 
   let lyrics = [];
   let currentId = null;
   let saveTimer = null;
   let dirty = false;
+  let canEdit = true; // access level for the currently open lyric
 
   init();
 
@@ -43,10 +70,27 @@
       location.replace("login.html");
       return;
     }
+    await acceptPendingInvite();
     await loadList();
     if (lyrics.length) selectLyric(lyrics[0].id);
     else setEditorEnabled(false);
     wire();
+    loadInvites();
+  }
+
+  // If the user arrived from an emailed accept link, accept it now.
+  async function acceptPendingInvite() {
+    const token = localStorage.getItem("lb_pending_invite");
+    if (!token) return;
+    localStorage.removeItem("lb_pending_invite");
+    try {
+      await window.LB.apiFetch("/api/lyrics/share/accept", {
+        method: "POST",
+        body: JSON.stringify({ token })
+      });
+    } catch (err) {
+      alert(err.message || "That invite link is no longer valid.");
+    }
   }
 
   function wire() {
@@ -75,6 +119,18 @@
       }
     });
     window.addEventListener("beforeunload", flushSave);
+
+    // Collaboration
+    els.shareBtn.addEventListener("click", openShare);
+    els.shareClose.addEventListener("click", () => closeModal(els.shareModal));
+    els.shareForm.addEventListener("submit", sendInvite);
+    els.invitesBtn.addEventListener("click", openInvites);
+    els.invitesClose.addEventListener("click", () => closeModal(els.invitesModal));
+    [els.shareModal, els.invitesModal].forEach((m) => {
+      m.addEventListener("click", (e) => {
+        if (e.target === m) closeModal(m);
+      });
+    });
   }
 
   async function loadList() {
@@ -99,6 +155,17 @@
       const t = document.createElement("div");
       t.className = "t";
       t.textContent = ly.title || "Untitled";
+      if (ly.owned === false) {
+        const b = document.createElement("span");
+        b.className = "badge";
+        b.textContent = ly.role === "viewer" ? "View" : "Shared";
+        t.appendChild(b);
+      } else if (Number(ly.collaborator_count) > 0) {
+        const b = document.createElement("span");
+        b.className = "badge muted";
+        b.textContent = ly.collaborator_count + " shared";
+        t.appendChild(b);
+      }
       const d = document.createElement("div");
       d.className = "d";
       d.textContent = "Updated " + formatDate(ly.updated_at);
@@ -117,12 +184,30 @@
       currentId = id;
       els.title.value = data.lyric.title || "";
       els.body.value = data.lyric.body || "";
+      applyAccess(data.role || "owner", data.canEdit !== false);
       setEditorEnabled(true);
       setSaveState("Saved");
       renderRhythm();
       renderList();
     } catch (err) {
       setSaveState(err.message || "Could not open");
+    }
+  }
+
+  // Adapt the editor UI to the user's access level for the open lyric.
+  function applyAccess(role, editable) {
+    canEdit = editable;
+    const isOwner = role === "owner";
+    els.shareBtn.hidden = !isOwner;
+    els.deleteBtn.hidden = !isOwner;
+    els.title.readOnly = !editable;
+    els.body.readOnly = !editable;
+    if (isOwner) {
+      els.rolePill.hidden = true;
+    } else {
+      els.rolePill.hidden = false;
+      els.rolePill.textContent = editable ? "Shared • can edit" : "View only";
+      els.rolePill.classList.toggle("view", !editable);
     }
   }
 
@@ -137,12 +222,16 @@
         id: data.lyric.id,
         title: data.lyric.title,
         updated_at: data.lyric.updated_at,
-        created_at: data.lyric.created_at
+        created_at: data.lyric.created_at,
+        owned: true,
+        role: "owner",
+        collaborator_count: 0
       });
       currentId = data.lyric.id;
       renderList();
       els.title.value = data.lyric.title;
       els.body.value = "";
+      applyAccess("owner", true);
       setEditorEnabled(true);
       setSaveState("Saved");
       renderRhythm();
@@ -217,7 +306,12 @@
     els.title.disabled = !on;
     els.body.disabled = !on;
     els.deleteBtn.disabled = !on;
-    if (!on) setSaveState("");
+    if (!on) {
+      setSaveState("");
+      els.shareBtn.hidden = true;
+      els.deleteBtn.hidden = true;
+      els.rolePill.hidden = true;
+    }
   }
 
   function setSaveState(text) {
@@ -339,7 +433,7 @@
   }
 
   function insertWord(word) {
-    if (els.body.disabled) return;
+    if (els.body.disabled || els.body.readOnly || !canEdit) return;
     const start = els.body.selectionStart;
     const end = els.body.selectionEnd;
     const val = els.body.value;
@@ -380,6 +474,190 @@
       div.appendChild(b);
       els.rhythmBox.appendChild(div);
     });
+  }
+
+  /* ---------- Collaboration ---------- */
+  function closeModal(m) {
+    m.hidden = true;
+  }
+
+  function openShare() {
+    if (!currentId) return;
+    els.shareMsg.textContent = "";
+    els.shareMsg.className = "msg";
+    els.shareEmail.value = "";
+    els.shareRole.value = "editor";
+    els.shareModal.hidden = false;
+    els.shareEmail.focus();
+    loadCollaborators();
+  }
+
+  async function loadCollaborators() {
+    els.collabList.innerHTML = "";
+    try {
+      const data = await window.LB.apiFetch("/api/lyrics/" + currentId + "/collaborators");
+      renderCollaborators(data.collaborators || []);
+    } catch (err) {
+      els.collabList.innerHTML = `<li class="empty-note" style="padding:8px">${err.message || "Could not load."}</li>`;
+    }
+  }
+
+  function renderCollaborators(rows) {
+    els.collabList.innerHTML = "";
+    rows.forEach((c) => {
+      const li = document.createElement("li");
+      li.className = "collab-row";
+
+      const av = document.createElement("div");
+      av.className = "collab-av";
+      if (c.avatarUrl) av.style.backgroundImage = `url("${c.avatarUrl}")`;
+      else av.textContent = initials(c.name);
+
+      const meta = document.createElement("div");
+      meta.className = "collab-meta";
+      const n = document.createElement("div");
+      n.className = "n";
+      n.textContent = c.name;
+      const e = document.createElement("div");
+      e.className = "e";
+      e.textContent = c.email + " · " + (c.role === "viewer" ? "can view" : "can edit");
+      meta.appendChild(n);
+      meta.appendChild(e);
+
+      const tag = document.createElement("span");
+      tag.className = "collab-tag" + (c.status === "pending" ? " pending" : "");
+      tag.textContent = c.status === "pending" ? "Pending" : "Accepted";
+
+      const rm = document.createElement("button");
+      rm.className = "link-btn";
+      rm.type = "button";
+      rm.textContent = "Remove";
+      rm.addEventListener("click", () => removeCollaborator(c.id, c.name));
+
+      li.appendChild(av);
+      li.appendChild(meta);
+      li.appendChild(tag);
+      li.appendChild(rm);
+      els.collabList.appendChild(li);
+    });
+  }
+
+  async function sendInvite(e) {
+    e.preventDefault();
+    const email = els.shareEmail.value.trim();
+    const role = els.shareRole.value;
+    if (!email) return;
+    els.shareMsg.className = "msg";
+    els.shareMsg.textContent = "Sending…";
+    try {
+      const data = await window.LB.apiFetch("/api/lyrics/" + currentId + "/share", {
+        method: "POST",
+        body: JSON.stringify({ email, role })
+      });
+      els.shareMsg.className = "msg ok";
+      els.shareMsg.textContent = data.message || "Invite sent.";
+      els.shareEmail.value = "";
+      loadCollaborators();
+      // reflect "shared" badge on the owner's list item
+      const ly = lyrics.find((l) => l.id === currentId);
+      if (ly) ly.collaborator_count = Number(ly.collaborator_count || 0) + 1;
+      renderList();
+    } catch (err) {
+      els.shareMsg.className = "msg err";
+      els.shareMsg.textContent = err.message || "Could not send invite.";
+    }
+  }
+
+  async function removeCollaborator(collabId, name) {
+    if (!confirm(`Remove ${name}'s access to this lyric?`)) return;
+    try {
+      await window.LB.apiFetch("/api/lyrics/" + currentId + "/share/" + collabId, {
+        method: "DELETE"
+      });
+      loadCollaborators();
+      const ly = lyrics.find((l) => l.id === currentId);
+      if (ly) ly.collaborator_count = Math.max(0, Number(ly.collaborator_count || 1) - 1);
+      renderList();
+    } catch (err) {
+      els.shareMsg.className = "msg err";
+      els.shareMsg.textContent = err.message || "Could not remove.";
+    }
+  }
+
+  function openInvites() {
+    els.invitesModal.hidden = false;
+    loadInvites();
+  }
+
+  async function loadInvites() {
+    let invites = [];
+    try {
+      const data = await window.LB.apiFetch("/api/invites");
+      invites = data.invites || [];
+    } catch {
+      invites = [];
+    }
+    els.invitesCount.textContent = invites.length;
+    els.invitesBtn.hidden = invites.length === 0;
+    if (!els.invitesModal.hidden) renderInvites(invites);
+  }
+
+  function renderInvites(invites) {
+    els.inviteList.innerHTML = "";
+    invites.forEach((inv) => {
+      const li = document.createElement("li");
+      li.className = "invite-row";
+      const meta = document.createElement("div");
+      meta.className = "collab-meta";
+      const n = document.createElement("div");
+      n.className = "n";
+      n.textContent = inv.title;
+      const e = document.createElement("div");
+      e.className = "e";
+      e.textContent = `${inv.inviter} · ${inv.role === "viewer" ? "view only" : "can edit"}`;
+      meta.appendChild(n);
+      meta.appendChild(e);
+
+      const actions = document.createElement("div");
+      actions.className = "invite-actions";
+      const acc = document.createElement("button");
+      acc.className = "btn small";
+      acc.type = "button";
+      acc.textContent = "Accept";
+      acc.addEventListener("click", () => acceptInvite(inv.id));
+      const dec = document.createElement("button");
+      dec.className = "btn subtle small";
+      dec.type = "button";
+      dec.textContent = "Decline";
+      dec.addEventListener("click", () => declineInvite(inv.id));
+      actions.appendChild(acc);
+      actions.appendChild(dec);
+
+      li.appendChild(meta);
+      li.appendChild(actions);
+      els.inviteList.appendChild(li);
+    });
+  }
+
+  async function acceptInvite(id) {
+    try {
+      const data = await window.LB.apiFetch("/api/invites/" + id + "/accept", { method: "POST" });
+      closeModal(els.invitesModal);
+      await loadList();
+      loadInvites();
+      if (data.lyricId) selectLyric(data.lyricId);
+    } catch (err) {
+      alert(err.message || "Could not accept invite.");
+    }
+  }
+
+  async function declineInvite(id) {
+    try {
+      await window.LB.apiFetch("/api/invites/" + id + "/decline", { method: "POST" });
+      loadInvites();
+    } catch (err) {
+      alert(err.message || "Could not decline invite.");
+    }
   }
 
   function formatDate(iso) {
