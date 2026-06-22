@@ -146,6 +146,7 @@ body.auth-bg .site-header {
 .msg { margin-top: 14px; font-size: 13px; min-height: 17px; }
 .msg.err { color: var(--danger); }
 .msg.ok { color: var(--ok); }
+.invite-note { margin: 0 0 16px; }
 
 /* ---------- App (dashboard + editor) ---------- */
 .app-shell { display: flex; min-height: calc(100vh - 78px); }
