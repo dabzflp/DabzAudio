@@ -18,9 +18,9 @@
   }
   if (inviteToken) {
     const note = document.createElement("p");
-    note.className = "msg ok";
+    note.className = "msg ok invite-note";
     note.textContent = "You've been invited to collaborate on a lyric — create your account to open it.";
-    form.parentNode.insertBefore(note, form);
+    form.insertBefore(note, form.firstChild);
   }
 
   form.addEventListener("submit", async function (e) {
