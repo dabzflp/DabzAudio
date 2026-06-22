@@ -220,3 +220,80 @@ body.auth-bg .site-header {
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
 }
+
+/* ---------- Collaboration ---------- */
+.bell-btn {
+  position: relative; background: transparent; border: 1px solid var(--line);
+  color: #ddd; border-radius: 10px; padding: 6px 9px; cursor: pointer; font-size: 15px;
+}
+.bell-btn:hover { background: rgba(255,255,255,0.05); }
+.bell-count {
+  position: absolute; top: -6px; right: -6px; background: var(--orange);
+  color: var(--charcoal-2); font-size: 10px; font-weight: 700; min-width: 16px;
+  height: 16px; line-height: 16px; border-radius: 999px; padding: 0 4px; text-align: center;
+}
+
+.role-pill {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 9px; white-space: nowrap; flex-shrink: 0;
+}
+.role-pill.view { color: #ffc46b; border-color: rgba(255,196,107,0.4); }
+
+.lyric-item .badge {
+  display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--orange); border: 1px solid rgba(255,122,0,0.4); border-radius: 999px;
+  padding: 1px 7px; margin-left: 6px; vertical-align: middle;
+}
+.lyric-item .badge.muted { color: var(--muted); border-color: var(--line); }
+
+/* ---------- Modals ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+}
+.modal {
+  background: var(--card-bg); border: 1px solid var(--line); border-radius: 14px;
+  width: 100%; max-width: 460px; padding: 22px; box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; }
+.modal-head h3 { margin: 0; font-size: 18px; }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+.modal-close:hover { color: #fff; }
+.modal .sub { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
+
+.share-form { display: flex; gap: 8px; }
+.share-form input[type="email"] {
+  flex: 1; min-width: 0; background: #0f0f0f; border: 1px solid var(--line);
+  color: #eee; border-radius: 9px; padding: 9px 11px; font-size: 14px;
+}
+.share-form input[type="email"]:focus { outline: none; border-color: var(--orange); }
+.share-form select {
+  background: #0f0f0f; border: 1px solid var(--line); color: #eee;
+  border-radius: 9px; padding: 9px 8px; font-size: 13px;
+}
+
+.collab-list-head, .invite-list:empty::after {
+  font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.collab-list-head { margin: 18px 0 8px; }
+.collab-list, .invite-list { list-style: none; margin: 0; padding: 0; max-height: 230px; overflow-y: auto; }
+.collab-list:empty::after { content: "No one yet — add a collaborator above."; color: var(--muted); font-size: 13px; }
+.invite-list:empty::after { content: "No pending invites."; text-transform: none; }
+
+.collab-row, .invite-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line);
+}
+.collab-av {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background-size: cover;
+  background-position: center; background-color: var(--charcoal); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+}
+.collab-meta { flex: 1; min-width: 0; }
+.collab-meta .n { font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.collab-meta .e { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.collab-tag { font-size: 11px; color: var(--muted); margin-right: 4px; white-space: nowrap; }
+.collab-tag.pending { color: #ffc46b; }
+.link-btn { background: none; border: none; color: var(--danger); font-size: 13px; cursor: pointer; padding: 4px; }
+.link-btn:hover { text-decoration: underline; }
+.invite-actions { display: flex; gap: 6px; }

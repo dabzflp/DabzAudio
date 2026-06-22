@@ -46,3 +46,28 @@ CREATE TABLE IF NOT EXISTS lb_reset_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_lb_lyrics_user_updated ON lb_lyrics(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lb_reset_tokens_user ON lb_reset_tokens(user_id);
+
+-- Collaborators on a lyric (sharing). One row per invited email per lyric.
+-- Handles both registered users (user_id set) and people who have no account
+-- yet (user_id stays NULL until they sign up with the invited email).
+-- Access to a lyric = owner OR a row here with status='accepted'.
+CREATE TABLE IF NOT EXISTS lb_lyric_collaborators (
+  id BIGSERIAL PRIMARY KEY,
+  lyric_id BIGINT NOT NULL REFERENCES lb_lyrics(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES lb_users(id) ON DELETE CASCADE,
+  invited_email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'editor',      -- 'viewer' | 'editor'
+  status TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'accepted'
+  token_hash TEXT,                          -- hashed accept-link token (cleared on accept)
+  expires_at TIMESTAMPTZ,
+  invited_by BIGINT REFERENCES lb_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ
+);
+
+-- One invite per (lyric, email), case-insensitive.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_collab_lyric_email
+  ON lb_lyric_collaborators(lyric_id, LOWER(invited_email));
+CREATE INDEX IF NOT EXISTS idx_lb_collab_user ON lb_lyric_collaborators(user_id);
+CREATE INDEX IF NOT EXISTS idx_lb_collab_email ON lb_lyric_collaborators(LOWER(invited_email));
+CREATE INDEX IF NOT EXISTS idx_lb_collab_lyric ON lb_lyric_collaborators(lyric_id);
