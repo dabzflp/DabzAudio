@@ -252,6 +252,7 @@ body.auth-bg .site-header {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
 }
+.modal-overlay[hidden] { display: none; }
 .modal {
   background: var(--card-bg); border: 1px solid var(--line); border-radius: 14px;
   width: 100%; max-width: 460px; padding: 22px; box-shadow: 0 18px 50px rgba(0,0,0,0.5);
