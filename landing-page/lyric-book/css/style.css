@@ -90,14 +90,18 @@ a:hover { text-decoration: underline; }
 /* ---------- Auth pages ---------- */
 /* Use the landing-page hero image as a full-screen backdrop, dimmed so the
    card stays readable and nothing overlaps. */
-body.auth-bg {
+body.auth-bg { position: relative; }
+/* Fixed pseudo-element instead of `background-attachment: fixed`, which iOS
+   Safari renders incorrectly (zoomed / not covering the viewport). */
+body.auth-bg::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1;
   background-image:
     linear-gradient(rgba(17, 17, 17, 0.55), rgba(17, 17, 17, 0.72)),
     url("../../assets/img/dabzaudiobck.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
 }
 body.auth-bg .site-header {
   background: transparent;
