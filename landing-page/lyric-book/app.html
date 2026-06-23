@@ -45,6 +45,7 @@
         <div class="editor-bar">
           <input class="title-input" id="titleInput" placeholder="Untitled" maxlength="200" />
           <span class="role-pill" id="rolePill" hidden></span>
+          <span class="presence" id="presence" title="People editing now"></span>
           <span class="save-state" id="saveState"></span>
           <button class="btn ghost small" id="shareBtn" type="button" hidden>Share</button>
           <button class="btn danger small" id="deleteBtn" type="button">Delete</button>
@@ -115,6 +116,7 @@
     </div>
   </div>
 
+  <script type="module" src="js/collab.js"></script>
   <script src="js/suggest.js"></script>
   <script src="js/app.js"></script>
 </body>

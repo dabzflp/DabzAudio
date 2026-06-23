@@ -71,3 +71,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_collab_lyric_email
 CREATE INDEX IF NOT EXISTS idx_lb_collab_user ON lb_lyric_collaborators(user_id);
 CREATE INDEX IF NOT EXISTS idx_lb_collab_email ON lb_lyric_collaborators(LOWER(invited_email));
 CREATE INDEX IF NOT EXISTS idx_lb_collab_lyric ON lb_lyric_collaborators(lyric_id);
+
+-- Real-time editing (Layer 2): the binary Yjs (CRDT) document state for a lyric.
+-- This is the authoritative state for live collaboration. The plaintext mirror
+-- in lb_lyrics.title/body is kept in sync on every debounced save so the REST
+-- API, sidebar list, and rhyme/rhythm tools keep working unchanged.
+CREATE TABLE IF NOT EXISTS lb_lyric_docs (
+  lyric_id BIGINT PRIMARY KEY REFERENCES lb_lyrics(id) ON DELETE CASCADE,
+  state BYTEA NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -28,6 +28,10 @@ export function cookieOptions() {
   };
 }
 
+export function verifyToken(token) {
+  return jwt.verify(token, JWT_SECRET);
+}
+
 function extractToken(req) {
   const header = req.headers["authorization"] || "";
   if (header.startsWith("Bearer ")) return header.slice(7).trim();
