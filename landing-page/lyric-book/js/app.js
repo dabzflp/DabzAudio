@@ -29,6 +29,7 @@
     deleteBtn: document.getElementById("deleteBtn"),
     shareBtn: document.getElementById("shareBtn"),
     rolePill: document.getElementById("rolePill"),
+    presence: document.getElementById("presence"),
     rhymeWord: document.getElementById("rhymeWord"),
     rhymeBtn: document.getElementById("rhymeBtn"),
     lastWordBtn: document.getElementById("lastWordBtn"),
@@ -56,6 +57,17 @@
   let saveTimer = null;
   let dirty = false;
   let canEdit = true; // access level for the currently open lyric
+
+  // Real-time collaboration (Layer 2). The collab module may load slightly after
+  // this script (it pulls in a bundled Yjs/Socket.io vendor module), so we queue
+  // the lyric to connect and open it once the module signals readiness.
+  let collabPendingId = null;
+  function collabReady() {
+    return !!window.LBCollab;
+  }
+  window.addEventListener("lbcollab-ready", () => {
+    if (collabPendingId != null) openCollab(collabPendingId);
+  });
 
   init();
 
@@ -179,6 +191,7 @@
   async function selectLyric(id) {
     if (id === currentId) return;
     flushSave();
+    closeCollab();
     try {
       const data = await window.LB.apiFetch("/api/lyrics/" + id);
       currentId = id;
@@ -189,6 +202,7 @@
       setSaveState("Saved");
       renderRhythm();
       renderList();
+      openCollab(id);
     } catch (err) {
       setSaveState(err.message || "Could not open");
     }
@@ -235,6 +249,8 @@
       setEditorEnabled(true);
       setSaveState("Saved");
       renderRhythm();
+      closeCollab();
+      openCollab(currentId);
       els.title.focus();
       els.title.select();
     } catch (err) {
@@ -250,6 +266,7 @@
     const id = currentId;
     try {
       await window.LB.apiFetch("/api/lyrics/" + id, { method: "DELETE" });
+      closeCollab();
       lyrics = lyrics.filter((l) => l.id !== id);
       currentId = null;
       if (lyrics.length) selectLyric(lyrics[0].id);
@@ -266,6 +283,9 @@
   }
 
   function onEdit() {
+    // When the realtime session is live it owns syncing + persistence, so we
+    // skip the REST autosave to avoid double-writes. Otherwise fall back to it.
+    if (collabActive()) return;
     dirty = true;
     setSaveState("Saving…");
     if (saveTimer) clearTimeout(saveTimer);
@@ -302,6 +322,75 @@
     if (dirty) save();
   }
 
+  /* ---------- Real-time collaboration (Layer 2) ---------- */
+  function collabActive() {
+    return !!(window.LBCollab && window.LBCollab.isActive());
+  }
+
+  function openCollab(lyricId) {
+    collabPendingId = null;
+    if (!collabReady()) {
+      // Module not loaded yet — remember which lyric to connect once it is.
+      collabPendingId = lyricId;
+      return;
+    }
+    const apiBase = (window.LB_API_BASE || "").replace(/\/$/, "");
+    window.LBCollab.open({
+      lyricId,
+      token: window.LB.getToken(),
+      apiBase,
+      titleInput: els.title,
+      bodyInput: els.body,
+      onStatus: onCollabStatus,
+      onPresence: renderPresence,
+      onRemoteText: () => renderRhythm()
+    });
+  }
+
+  function closeCollab() {
+    collabPendingId = null;
+    if (window.LBCollab) window.LBCollab.close();
+    renderPresence([]);
+  }
+
+  function onCollabStatus(status) {
+    if (status === "synced") setSaveState("Live");
+    else if (status === "offline" || status === "reconnecting") setSaveState("Offline — reconnecting…");
+    else if (status === "error") setSaveState("Saved"); // silently fall back to REST autosave
+  }
+
+  function renderPresence(users) {
+    if (!els.presence) return;
+    els.presence.innerHTML = "";
+    // De-duplicate by name (a user may have multiple tabs).
+    const seen = new Set();
+    users.forEach((u) => {
+      const info = u.user || {};
+      const key = info.name || u.clientId;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const dot = document.createElement("span");
+      dot.className = "presence-av";
+      dot.title = (info.name || "Collaborator") + " · editing now";
+      dot.style.background = colorFor(key);
+      if (info.avatarUrl) {
+        dot.style.backgroundImage = `url("${info.avatarUrl}")`;
+        dot.textContent = "";
+      } else {
+        dot.textContent = initials(info.name);
+      }
+      els.presence.appendChild(dot);
+    });
+  }
+
+  function colorFor(key) {
+    const palette = ["#ff7a18", "#2d9cdb", "#27ae60", "#9b51e0", "#eb5757", "#f2c94c", "#56ccf2"];
+    let h = 0;
+    const s = String(key);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
+  }
+
   function setEditorEnabled(on) {
     els.title.disabled = !on;
     els.body.disabled = !on;
@@ -320,6 +409,7 @@
 
   async function logout() {
     flushSave();
+    closeCollab();
     try {
       await window.LB.apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
@@ -444,8 +534,9 @@
     const pos = start + insert.length;
     els.body.focus();
     els.body.setSelectionRange(pos, pos);
-    onEdit();
-    renderRhythm();
+    // Dispatch a real input event so both the REST autosave path and the
+    // realtime (Yjs) binding pick up this programmatic change uniformly.
+    els.body.dispatchEvent(new Event("input"));
   }
 
   function renderRhythm() {

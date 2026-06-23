@@ -24,9 +24,13 @@ import { fileURLToPath } from "url";
 
 import { v2 as cloudinary } from "cloudinary";
 
+import http from "http";
+
 import { pool, connectWithRetry } from "./db.js";
 import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
 import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
+import { getLyricAccess, displayNameForUser } from "./access.js";
+import { initCollab } from "./collab.js";
 
 dotenv.config();
 
@@ -53,7 +57,7 @@ const corsOrigins = (process.env.CORS_ORIGIN || "")
 
 // Allow the configured origins, plus Netlify deploy previews
 // (deploy-preview-*--<site>.netlify.app) so PR previews can call the API.
-function isAllowedOrigin(origin) {
+export function isAllowedOrigin(origin) {
   if (!origin) return true; // non-browser clients (curl, server-to-server)
   if (!corsOrigins.length) return true;
   if (corsOrigins.includes(origin)) return true;
@@ -105,45 +109,6 @@ async function linkPendingInvites(userId, email) {
     );
   } catch (err) {
     console.error("linkPendingInvites error", err);
-  }
-}
-
-// Resolve a user's access to a lyric.
-// Returns { role: 'owner'|'editor'|'viewer', canEdit, owner } or null if no access.
-async function getLyricAccess(lyricId, userId) {
-  const { rows } = await pool.query(
-    `SELECT l.user_id AS owner_id,
-            c.role AS collab_role,
-            c.status AS collab_status
-       FROM lb_lyrics l
-       LEFT JOIN lb_lyric_collaborators c
-         ON c.lyric_id = l.id AND c.user_id = $2
-      WHERE l.id = $1`,
-    [lyricId, userId]
-  );
-  const row = rows[0];
-  if (!row) return null; // lyric does not exist
-  if (String(row.owner_id) === String(userId)) {
-    return { role: "owner", canEdit: true, ownerId: row.owner_id };
-  }
-  if (row.collab_status === "accepted") {
-    const role = row.collab_role === "viewer" ? "viewer" : "editor";
-    return { role, canEdit: role === "editor", ownerId: row.owner_id };
-  }
-  return null; // no access (or invite still pending)
-}
-
-async function displayNameForUser(userId, fallbackEmail) {
-  try {
-    const { rows } = await pool.query(
-      `SELECT COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name
-         FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
-        WHERE u.id = $1`,
-      [userId]
-    );
-    return (rows[0] && rows[0].name) || fallbackEmail || "A DabzAudio artist";
-  } catch {
-    return fallbackEmail || "A DabzAudio artist";
   }
 }
 
@@ -588,7 +553,7 @@ app.post("/api/lyrics/:id/share", requireAuth, async (req, res) => {
       [lyric.id, inviteeUserId, email, role, tokenHash, expires, req.user.id]
     );
 
-    const inviterName = await displayNameForUser(req.user.id, req.user.email);
+    const inviterName = (await displayNameForUser(req.user.id, req.user.email)).name;
     const base = appBaseUrl(req);
     const acceptUrl = inviteeUserId
       ? `${base}/app.html?invite=${rawToken}`
@@ -752,7 +717,13 @@ app.delete("/api/lyrics/:id/share/:collabId", requireAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
+const httpServer = http.createServer(app);
+
+// Real-time collaborative editing (Layer 2): attaches a Socket.io server that
+// shares this HTTP server, so REST + WebSockets run on the same port/origin.
+initCollab(httpServer, isAllowedOrigin);
+
 connectWithRetry().then((ok) => {
   if (!ok) console.error("⚠️  Starting without confirmed DB connection.");
-  app.listen(PORT, () => console.log(`✅ Lyric Book API on :${PORT}`));
+  httpServer.listen(PORT, () => console.log(`✅ Lyric Book API + realtime on :${PORT}`));
 });
