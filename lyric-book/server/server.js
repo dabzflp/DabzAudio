@@ -30,7 +30,7 @@ import { pool, connectWithRetry } from "./db.js";
 import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
 import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
-import { initCollab } from "./collab.js";
+import { initCollab, revokeCollabAccess } from "./collab.js";
 
 dotenv.config();
 
@@ -698,17 +698,22 @@ app.delete("/api/lyrics/:id/share/:collabId", requireAuth, async (req, res) => {
     let result;
     if (isOwner) {
       result = await pool.query(
-        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2",
+        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2 RETURNING user_id",
         [req.params.collabId, req.params.id]
       );
     } else {
       // A collaborator can remove only their own membership (leave).
       result = await pool.query(
-        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2 AND user_id = $3",
+        "DELETE FROM lb_lyric_collaborators WHERE id = $1 AND lyric_id = $2 AND user_id = $3 RETURNING user_id",
         [req.params.collabId, req.params.id, req.user.id]
       );
     }
     if (!result.rowCount) return res.status(404).json({ error: "Collaborator not found." });
+
+    // Kick the removed user from the live collab room (if connected)
+    const removedUserId = result.rows[0].user_id;
+    revokeCollabAccess(Number(req.params.id), removedUserId);
+
     res.json({ ok: true });
   } catch (err) {
     console.error("stop sharing error", err);

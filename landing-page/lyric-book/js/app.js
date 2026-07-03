@@ -353,10 +353,14 @@
     renderPresence([]);
   }
 
-  function onCollabStatus(status) {
+  function onCollabStatus(status, code) {
     if (status === "synced") setSaveState("Live");
     else if (status === "offline" || status === "reconnecting") setSaveState("Offline — reconnecting…");
-    else if (status === "error") setSaveState("Saved"); // silently fall back to REST autosave
+    else if (status === "error" && code === "access_revoked") {
+      closeCollab();
+      alert("Your access to this lyric has been removed by the owner.");
+      loadLyrics(); // refresh sidebar (lyric will no longer appear)
+    } else if (status === "error") setSaveState("Saved"); // silently fall back to REST autosave
   }
 
   function renderPresence(users) {
