@@ -1,0 +1,255 @@
+/* =====================================================================
+   DabzAudio — shared "liquid glass" theme
+   Applied on top of each tool's own stylesheet (loaded AFTER it) so the
+   whole product shares one futuristic, frosted-glass look while keeping
+   the existing palette (accent #ff7a00, dark background) and hero image.
+
+   Nothing here is gated by a tool — selectors are namespaced to each
+   tool's own classes, so a page only picks up the rules for markup it
+   actually contains. The full-screen backdrop is opt-in via
+   `<body class="dabz-glass">` (auth pages already have `.auth-bg`).
+   ===================================================================== */
+
+:root {
+  --dg-glass-bg: rgba(22, 22, 24, 0.55);
+  --dg-glass-strong: rgba(20, 20, 22, 0.72);
+  --dg-border: rgba(255, 255, 255, 0.14);
+  --dg-highlight: rgba(255, 255, 255, 0.30);
+  --dg-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --dg-accent: #ff7a00;
+  --dg-accent-glow: rgba(255, 122, 0, 0.45);
+  --dg-blur: 18px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Full-screen backdrop: hero image + dark veil + orange aurora          */
+/* --------------------------------------------------------------------- */
+body.dabz-glass,
+body.auth-bg {
+  background: transparent !important;
+  position: relative;
+}
+/* The element is position:fixed so it stays put on scroll WITHOUT
+   background-attachment:fixed (which iOS Safari renders incorrectly). */
+body.dabz-glass::before,
+body.auth-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    radial-gradient(42% 42% at 18% 20%, rgba(255, 122, 0, 0.22), transparent 60%),
+    radial-gradient(38% 38% at 84% 16%, rgba(255, 168, 76, 0.16), transparent 62%),
+    radial-gradient(50% 50% at 72% 88%, rgba(255, 90, 0, 0.16), transparent 60%),
+    linear-gradient(rgba(12, 12, 14, 0.80), rgba(12, 12, 14, 0.90)),
+    url("../img/dabzaudiobck.png");
+  background-size: cover, cover, cover, cover, cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* Slow-drifting aurora sheen above the backdrop, below content. */
+body.dabz-glass::after,
+body.auth-bg::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 40% at 25% 30%, rgba(255, 122, 0, 0.10), transparent 60%),
+    radial-gradient(40% 40% at 75% 70%, rgba(255, 140, 40, 0.08), transparent 60%);
+  filter: blur(30px);
+  animation: dg-aurora 24s ease-in-out infinite alternate;
+}
+@keyframes dg-aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 2%, 0) scale(1.03); }
+}
+
+/* Glass helper — reusable */
+.dg-glass {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border: 1px solid var(--dg-border) !important;
+  box-shadow: var(--dg-shadow), inset 0 1px 0 var(--dg-highlight) !important;
+}
+
+/* =====================================================================
+   KEY & BPM TOOL   (.site-header/.uploader/.results .card/.site-footer)
+   ===================================================================== */
+body.dabz-glass .site-header,
+body.dabz-glass .site-footer {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border: 1px solid var(--dg-border);
+  box-shadow: var(--dg-shadow), inset 0 1px 0 var(--dg-highlight);
+  border-radius: 18px;
+}
+body.dabz-glass .logo-circle {
+  background: radial-gradient(circle at 32% 28%, #ffb163 0%, #ff7a00 48%, #e56600 100%);
+  color: #1a1207;
+  box-shadow: 0 6px 18px rgba(255, 122, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+body.dabz-glass .brand-text h1 {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd9b3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body.dabz-glass .uploader,
+body.dabz-glass .results .card {
+  position: relative;
+  background: var(--dg-glass-bg);
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border: 1px solid var(--dg-border);
+  box-shadow: var(--dg-shadow), inset 0 1px 0 var(--dg-highlight);
+  border-radius: 18px;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+}
+body.dabz-glass .results .card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 122, 0, 0.4);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 32px rgba(255, 122, 0, 0.18), inset 0 1px 0 var(--dg-highlight);
+}
+body.dabz-glass .big { text-shadow: 0 0 24px rgba(255, 122, 0, 0.35); }
+
+/* =====================================================================
+   REVERB & DELAY CALCULATOR   (.header/.container/.results/table/.info/.footer)
+   ===================================================================== */
+body.dabz-glass .header {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border: 1px solid var(--dg-border);
+  box-shadow: var(--dg-shadow), inset 0 1px 0 var(--dg-highlight);
+  border-radius: 18px;
+  margin: 16px 16px 0;
+}
+body.dabz-glass .header h1 {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd9b3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+body.dabz-glass .bpm-section input {
+  background: var(--dg-glass-strong) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--dg-border) !important;
+  box-shadow: inset 0 1px 0 var(--dg-highlight);
+}
+body.dabz-glass .bpm-section button {
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(255, 122, 0, 0.35);
+}
+body.dabz-glass .results,
+body.dabz-glass .info {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border: 1px solid var(--dg-border);
+  box-shadow: var(--dg-shadow), inset 0 1px 0 var(--dg-highlight);
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+body.dabz-glass .results table { background: transparent; }
+body.dabz-glass .results th {
+  background: rgba(255, 122, 0, 0.14);
+  color: #ffd9b3;
+  border-bottom: 1px solid var(--dg-border);
+}
+body.dabz-glass .results td { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+body.dabz-glass .footer {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border-top: 1px solid var(--dg-border);
+}
+
+/* =====================================================================
+   LYRIC BOOK   (auth cards, buttons, app shell, editor, modals)
+   ===================================================================== */
+
+/* Header — frosted bar */
+.site-header {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border-bottom: 1px solid var(--dg-border) !important;
+}
+
+/* Primary buttons get a warm glow */
+.btn:not(.ghost):not(.subtle):not(.danger) {
+  background: radial-gradient(circle at 30% 20%, #ffb163 0%, #ff7a00 55%, #e56600 100%);
+  box-shadow: 0 8px 22px rgba(255, 122, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Auth card — frosted glass panel */
+.auth-card {
+  background: var(--dg-glass-bg) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid var(--dg-border) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--dg-highlight) !important;
+}
+.auth-card h1 {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd9b3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.field input, .field select, .field textarea,
+.share-form input[type="email"], .share-form select,
+.suggest-input input, .body-input {
+  background: rgba(12, 12, 14, 0.55) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--dg-border) !important;
+}
+
+/* App shell — glass sidebar / suggest panel over the backdrop */
+body.dabz-glass .sidebar,
+body.dabz-glass .suggest {
+  background: rgba(14, 14, 16, 0.55) !important;
+  -webkit-backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--dg-blur)) saturate(160%);
+  border-color: var(--dg-border) !important;
+}
+body.dabz-glass .body-input {
+  background: rgba(12, 12, 14, 0.5) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+body.dabz-glass .lyric-item.active {
+  background: rgba(255, 122, 0, 0.16);
+  border-color: rgba(255, 122, 0, 0.4);
+}
+body.dabz-glass .rhythm-box,
+body.dabz-glass .chip {
+  background: rgba(12, 12, 14, 0.5);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--dg-border);
+}
+
+/* Modals — deeper glass */
+.modal {
+  background: var(--dg-glass-strong) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
+  backdrop-filter: blur(26px) saturate(170%);
+  border: 1px solid var(--dg-border) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 var(--dg-highlight) !important;
+}
+.modal-overlay { background: rgba(0, 0, 0, 0.5); }
+
+/* --------------------------------------------------------------------- */
+/* Respect reduced-motion                                                */
+/* --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  body.dabz-glass::after,
+  body.auth-bg::after { animation: none; }
+}

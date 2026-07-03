@@ -40,7 +40,7 @@
       answer:
         "The <strong>Key &amp; BPM Analysis</strong> tool detects the musical key and tempo of any audio file. " +
         "Just upload a track and it returns the key/scale and BPM so you can match samples, build harmonies and beat-match. " +
-        "<a href='key-bpm-tool/index.html'>Open Key &amp; BPM Analysis →</a>"
+        "<a href='/key-bpm-tool/index.html'>Open Key &amp; BPM Analysis →</a>"
     },
     {
       id: "reverb",
@@ -48,7 +48,7 @@
       answer:
         "The <strong>Reverb &amp; Delay Calculator</strong> gives you tempo-synced effect times. " +
         "Enter your song's BPM and it returns delay/reverb times in milliseconds for each note value (1/4, 1/8, dotted, triplet…), so your FX lock perfectly to the groove. " +
-        "<a href='reverb-delay-calculator/index.html'>Open Reverb &amp; Delay →</a>"
+        "<a href='/reverb-delay-calculator/index.html'>Open Reverb &amp; Delay →</a>"
     },
     {
       id: "lyric",
@@ -60,7 +60,7 @@
         "<li>Real <strong>rhyme suggestions</strong> and <strong>syllable/rhythm</strong> counts per line</li>" +
         "<li><strong>Share &amp; co-write</strong> — invite others to collaborate in real time (Google-Docs style)</li>" +
         "<li>Add a profile picture and manage your artist profile</li>" +
-        "</ul><a href='lyric-book/index.html'>Open Lyric Book →</a>"
+        "</ul><a href='/lyric-book/index.html'>Open Lyric Book →</a>"
     },
     {
       id: "collab",
@@ -102,7 +102,7 @@
       id: "contact",
       keywords: ["contact", "support", "help", "feedback", "email us", "reach", "phone", "get in touch"],
       answer:
-        "Happy to help! You can reach the team via the <a href='#contact'>Feedback form</a> on this page, or email " +
+        "Happy to help! You can reach the team via the <a href='/index.html#contact'>Feedback form</a> on our homepage, or email " +
         "<strong>dabzaudio@dabzflp.com</strong>. What are you trying to do?"
     },
     {
@@ -131,7 +131,7 @@
   var FALLBACK =
     "I'm not fully sure about that one. I can tell you about <strong>DabzAudio</strong> and how to use the " +
     "<strong>Key &amp; BPM</strong> tool, <strong>Reverb &amp; Delay</strong> calculator, or the <strong>Lyric Book</strong> " +
-    "(writing, rhymes, real-time collaboration). Try asking about one of those, or use the <a href='#contact'>Feedback form</a> to reach a human.";
+    "(writing, rhymes, real-time collaboration). Try asking about one of those, or use the <a href='/index.html#contact'>Feedback form</a> to reach a human.";
 
   // ---- Matching -------------------------------------------------------
   function findAnswer(raw) {
