@@ -179,6 +179,25 @@ function getOrCreateRoom(lyricId) {
   return room;
 }
 
+// --------------- Public helpers ---------------
+
+/**
+ * Immediately disconnect a user from a lyric's collab room.
+ * Called when sharing is revoked so the removed user stops receiving
+ * real-time updates the moment access is removed.
+ */
+export function revokeCollabAccess(lyricId, userId) {
+  const room = rooms.get(lyricId);
+  if (!room) return;
+  for (const [sid, entry] of room.sockets) {
+    if (entry.userId === userId) {
+      entry.socket.emit("err", { code: "access_revoked" });
+      entry.socket.disconnect(true);
+      // removeSocket is called by the "disconnect" event handler
+    }
+  }
+}
+
 // --------------- Socket.io init ---------------
 
 export function initCollab(httpServer, isAllowedOrigin) {
