@@ -1,0 +1,250 @@
+/* =====================================================================
+   DabzAudio — Ask Dabz assistant
+   Floating circular launcher + liquid-glass chat panel.
+   ===================================================================== */
+
+.dz-agent, .dz-agent * { box-sizing: border-box; }
+
+.dz-agent {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  font-family: "Poppins", system-ui, sans-serif;
+}
+
+/* Floating launcher circle -------------------------------------------- */
+.dz-agent-launcher {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: radial-gradient(circle at 32% 28%, #ffb163 0%, #ff7a00 45%, #e56600 100%);
+  box-shadow: 0 12px 34px rgba(255, 122, 0, 0.45),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #1a1207;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.dz-agent-launcher:hover { transform: scale(1.08); box-shadow: 0 16px 44px rgba(255, 122, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.5); }
+.dz-agent-launcher:active { transform: scale(0.96); }
+.dz-agent-launcher svg { width: 30px; height: 30px; }
+
+/* Pulsing rings to draw the eye */
+.dz-agent-launcher::before,
+.dz-agent-launcher::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 122, 0, 0.5);
+  animation: dz-pulse 2.6s ease-out infinite;
+  pointer-events: none;
+}
+.dz-agent-launcher::after { animation-delay: 1.3s; }
+@keyframes dz-pulse {
+  0%   { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dz-agent-launcher::before, .dz-agent-launcher::after { animation: none; display: none; }
+}
+
+/* Little "Ask Dabz" nudge label */
+.dz-agent-tip {
+  position: absolute;
+  right: 76px;
+  bottom: 16px;
+  white-space: nowrap;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(20, 20, 22, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.dz-agent[data-open="false"] .dz-agent-launcher:hover ~ .dz-agent-tip,
+.dz-agent[data-tip="true"] .dz-agent-tip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Chat panel --------------------------------------------------------- */
+.dz-agent-panel {
+  position: absolute;
+  right: 0;
+  bottom: 80px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 560px;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(18, 18, 20, 0.72);
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
+  backdrop-filter: blur(26px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transform-origin: bottom right;
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dz-agent[data-open="true"] .dz-agent-panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Panel header */
+.dz-agent-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(120deg, rgba(255, 122, 0, 0.18), transparent);
+}
+.dz-agent-head .dz-orb {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffb163, #ff7a00 60%, #e56600);
+  box-shadow: 0 4px 14px rgba(255, 122, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.5);
+  display: grid; place-items: center; color: #1a1207; flex-shrink: 0;
+}
+.dz-agent-head .dz-orb svg { width: 20px; height: 20px; }
+.dz-agent-head h4 { margin: 0; font-size: 15px; font-weight: 600; color: #fff; font-family: "Poppins", sans-serif; }
+.dz-agent-head p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.6); }
+.dz-agent-head .dz-status { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3ad07a; margin-right:5px; box-shadow:0 0 8px #3ad07a; }
+.dz-agent-close {
+  margin-left: auto;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff; cursor: pointer;
+  display: grid; place-items: center;
+  transition: background 0.2s ease;
+}
+.dz-agent-close:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* Message list */
+.dz-agent-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+.dz-agent-body::-webkit-scrollbar { width: 6px; }
+.dz-agent-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+.dz-msg { max-width: 84%; padding: 11px 14px; font-size: 14px; line-height: 1.5; border-radius: 16px; animation: dz-msg-in 0.3s ease; }
+@keyframes dz-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.dz-msg.bot {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  border-bottom-left-radius: 5px;
+}
+.dz-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(120deg, var(--accent-color, #ff7a00), #ff9d3c);
+  color: #1a1207;
+  font-weight: 500;
+  border-bottom-right-radius: 5px;
+}
+.dz-msg a { color: var(--accent-color, #ff7a00); font-weight: 600; text-decoration: underline; }
+.dz-msg.bot strong { color: #fff; }
+.dz-msg ul { margin: 6px 0 0; padding-left: 18px; }
+.dz-msg li { margin: 3px 0; }
+
+/* Typing indicator */
+.dz-typing { display: inline-flex; gap: 4px; align-items: center; padding: 13px 16px; }
+.dz-typing span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.6); animation: dz-bounce 1.2s infinite ease-in-out; }
+.dz-typing span:nth-child(2) { animation-delay: 0.15s; }
+.dz-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dz-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+/* Quick-reply chips */
+.dz-agent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 12px;
+}
+.dz-chip {
+  font-size: 12.5px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 0, 0.4);
+  background: rgba(255, 122, 0, 0.1);
+  color: #ffd9b3;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+  font-family: "Poppins", sans-serif;
+}
+.dz-chip:hover { background: rgba(255, 122, 0, 0.22); transform: translateY(-1px); }
+
+/* Composer */
+.dz-agent-foot {
+  display: flex;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dz-agent-foot input {
+  flex: 1;
+  padding: 12px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  font-family: "Poppins", sans-serif;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dz-agent-foot input::placeholder { color: rgba(255,255,255,0.45); }
+.dz-agent-foot input:focus { border-color: var(--accent-color, #ff7a00); box-shadow: 0 0 0 3px rgba(255,122,0,0.15); }
+.dz-agent-send {
+  width: 46px; height: 46px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 0;
+  background: linear-gradient(120deg, var(--accent-color, #ff7a00), #ff9d3c);
+  color: #1a1207;
+  cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 8px 22px rgba(255, 122, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+.dz-agent-send:hover { transform: scale(1.06); }
+.dz-agent-send:active { transform: scale(0.94); }
+.dz-agent-send svg { width: 20px; height: 20px; }
+
+.dz-agent-foot-note { text-align:center; font-size:10.5px; color:rgba(255,255,255,0.4); padding: 0 0 10px; }
+
+@media (max-width: 480px) {
+  .dz-agent { right: 16px; bottom: 16px; }
+  .dz-agent-panel { width: calc(100vw - 24px); height: calc(100vh - 110px); }
+}

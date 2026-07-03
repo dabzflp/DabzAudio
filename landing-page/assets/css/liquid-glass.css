@@ -1,0 +1,340 @@
+/* =====================================================================
+   DabzAudio — Liquid Glass theme
+   A futuristic "Apple liquid-glass" overlay on top of main.css.
+   Keeps the existing palette (accent #ff7a00, dark background) and the
+   hero image / video. Loaded AFTER main.css so it overrides selectively.
+   ===================================================================== */
+
+:root {
+  --glass-bg: rgba(22, 22, 24, 0.55);
+  --glass-bg-strong: rgba(20, 20, 22, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-highlight: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --accent-glow: rgba(255, 122, 0, 0.55);
+  --accent-soft: rgba(255, 122, 0, 0.12);
+  --blur: 18px;
+}
+
+/* Smooth typography + selection */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: var(--accent-glow);
+  color: #fff;
+}
+
+/* Animated aurora glow that sits behind everything ------------------- */
+body.index-page::before {
+  content: "";
+  position: fixed;
+  inset: -20% -20% -20% -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 42% at 18% 22%, rgba(255, 122, 0, 0.20), transparent 60%),
+    radial-gradient(38% 38% at 82% 18%, rgba(255, 160, 60, 0.16), transparent 62%),
+    radial-gradient(46% 46% at 70% 85%, rgba(255, 90, 0, 0.14), transparent 60%);
+  filter: blur(30px);
+  animation: aurora-drift 22s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 2%, 0) scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.index-page::before { animation: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Header — frosted floating glass bar                                  */
+/* ------------------------------------------------------------------ */
+.header {
+  background: transparent !important;
+  transition: padding 0.35s ease, background 0.35s ease;
+  padding: 14px 0;
+}
+.header .container-fluid {
+  margin: 0 auto;
+  max-width: 1240px;
+  padding: 10px 22px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+  backdrop-filter: blur(var(--blur)) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+}
+
+.sitename {
+  background: linear-gradient(120deg, #fff 0%, var(--accent-color) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+}
+
+.navmenu a,
+.navmenu a:focus {
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 8px 16px !important;
+  transition: color 0.25s ease, background 0.25s ease;
+}
+.navmenu a:hover {
+  background: var(--accent-soft);
+  color: #fff !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero — cinematic depth + gradient wash                              */
+/* ------------------------------------------------------------------ */
+.hero { overflow: hidden; }
+
+.hero img {
+  transform: scale(1.05);
+  animation: hero-zoom 26s ease-in-out infinite alternate;
+}
+@keyframes hero-zoom {
+  from { transform: scale(1.05); }
+  to   { transform: scale(1.14); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero img { animation: none; }
+}
+
+/* Richer, more futuristic overlay than the flat wash */
+.hero:before {
+  background:
+    linear-gradient(180deg, rgba(10, 10, 12, 0.35) 0%, rgba(10, 10, 12, 0.55) 55%, rgba(10, 10, 12, 0.85) 100%),
+    radial-gradient(60% 50% at 50% 38%, rgba(255, 122, 0, 0.18), transparent 70%) !important;
+}
+
+.hero h2 {
+  font-size: 68px;
+  letter-spacing: -1.5px;
+  background: linear-gradient(180deg, #ffffff 0%, #ffd9b3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 60px rgba(255, 122, 0, 0.25);
+}
+.hero h2 span {
+  -webkit-text-fill-color: var(--accent-color);
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+
+/* Tagline under the hero heading (added in markup) */
+.hero .hero-tagline {
+  margin: 18px auto 0;
+  max-width: 620px;
+  font-size: 19px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: var(--nav-font);
+  font-weight: 300;
+}
+
+/* Glass tool cards ------------------------------------------------- */
+.hero .icon-box {
+  position: relative;
+  border-radius: 22px;
+  padding: 34px 22px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+  backdrop-filter: blur(var(--blur)) saturate(160%);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.4s ease, border-color 0.4s ease;
+}
+/* Liquid sheen that sweeps across on hover */
+.hero .icon-box::before {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.10) 50%, transparent 60%);
+  transform: translateX(-30%) rotate(8deg);
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.7s ease;
+  pointer-events: none;
+}
+.hero .icon-box:hover {
+  transform: translateY(-8px);
+  border-color: color-mix(in srgb, var(--accent-color), transparent 40%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
+              0 0 40px rgba(255, 122, 0, 0.22),
+              inset 0 1px 0 var(--glass-highlight);
+}
+.hero .icon-box:hover::before {
+  opacity: 1;
+  transform: translateX(20%) rotate(8deg);
+}
+.hero .icon-box i {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 122, 0, 0.28), rgba(255, 122, 0, 0.06));
+  border: 1px solid color-mix(in srgb, var(--accent-color), transparent 60%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.4s ease;
+}
+.hero .icon-box:hover i {
+  transform: scale(1.08) translateY(-2px);
+}
+
+/* ------------------------------------------------------------------ */
+/* About / video — floating glass frame                               */
+/* ------------------------------------------------------------------ */
+.about .mobo-size {
+  position: relative;
+  z-index: 3;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: 26px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+}
+.about .mobo-size video {
+  border-radius: 16px !important;
+  opacity: 1 !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Section titles                                                      */
+/* ------------------------------------------------------------------ */
+.section-title p {
+  color: #fff;
+  background: linear-gradient(180deg, #fff 0%, #ffd9b3 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Contact section — glass cards, glass inputs                         */
+/* ------------------------------------------------------------------ */
+.contact { position: relative; z-index: 1; }
+
+.contact .mb-4 iframe {
+  border-radius: 20px;
+  border: 1px solid var(--glass-border) !important;
+  filter: grayscale(0.2) contrast(1.05);
+}
+
+.contact .info-item {
+  border-radius: 18px;
+  padding: 22px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  transition: transform 0.35s ease, border-color 0.35s ease;
+}
+.contact .info-item:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent-color), transparent 50%);
+}
+.contact .info-item i {
+  background: radial-gradient(circle at 30% 25%, rgba(255, 122, 0, 0.3), rgba(255, 122, 0, 0.05));
+  color: var(--accent-color);
+  border-radius: 14px;
+}
+
+.contact .php-email-form {
+  border-radius: 24px;
+  padding: 28px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+}
+.contact .php-email-form .form-control,
+.contact .php-email-form input,
+.contact .php-email-form textarea {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: #fff !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.contact .php-email-form .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+.contact .php-email-form .form-control:focus {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft) !important;
+}
+.contact .php-email-form button[type=submit] {
+  background: linear-gradient(120deg, var(--accent-color), #ff9d3c);
+  color: #10100f;
+  font-weight: 700;
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 40px;
+  box-shadow: 0 10px 30px rgba(255, 122, 0, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.contact .php-email-form button[type=submit]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(255, 122, 0, 0.5);
+}
+
+/* ------------------------------------------------------------------ */
+/* Footer newsletter — glass                                          */
+/* ------------------------------------------------------------------ */
+.footer .footer-newsletter .newsletter-form {
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+.footer .footer-newsletter .newsletter-form input[type=submit] {
+  background: linear-gradient(120deg, var(--accent-color), #ff9d3c);
+  color: #10100f;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* Scroll-top button — glass pill                                     */
+/* ------------------------------------------------------------------ */
+.scroll-top {
+  right: 26px !important;
+  bottom: 100px !important; /* sit above the Ask Dabz launcher */
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px !important;
+}
+.scroll-top i { color: var(--accent-color); }
+
+/* Make main content sit above the aurora layer */
+.main, .header, .footer { position: relative; z-index: 1; }
+
+/* Responsive hero sizing */
+@media (max-width: 768px) {
+  .hero h2 { font-size: 40px; }
+  .hero .hero-tagline { font-size: 16px; }
+  .header .container-fluid { border-radius: 16px; padding: 8px 14px; }
+}
