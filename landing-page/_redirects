@@ -3,5 +3,8 @@
 
 # Community Hub — serve the Railway app under dabzaudio.com/community-hub
 # (keeps the address bar on our domain; hub API calls go direct to Railway, CORS *)
-/community-hub    /community-hub/    301!
+# Proxy rule MUST come first: Netlify normalizes trailing slashes, so a
+# "/community-hub -> /community-hub/" redirect would also catch "/community-hub/"
+# and loop. Matching the proxy first means the slashed URL is served directly.
 /community-hub/*  https://dabzaudio-production.up.railway.app/:splat  200
+/community-hub    /community-hub/  301
