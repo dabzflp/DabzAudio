@@ -1,2 +1,7 @@
 /api/key/analyze  https://openkeyscan-analyzer-production.up.railway.app/analyze/single  200
 /api/*  https://openkeyscan-analyzer-production.up.railway.app/:splat  200
+
+# Community Hub — serve the Railway app under dabzaudio.com/community-hub
+# (keeps the address bar on our domain; hub API calls go direct to Railway, CORS *)
+/community-hub    /community-hub/    301!
+/community-hub/*  https://dabzaudio-production.up.railway.app/:splat  200

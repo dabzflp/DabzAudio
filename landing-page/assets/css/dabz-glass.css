@@ -1,0 +1,131 @@
+/* =====================================================================
+   DabzAudio — shared "liquid glass" accents (LIGHT / ~20-30% version)
+   ---------------------------------------------------------------------
+   Loaded AFTER each tool's own stylesheet. Intentionally subtle: it does
+   NOT take over backgrounds or layout — it only adds a faint depth glow,
+   a light frosted-glass touch on existing panels, and the unified "DA."
+   brand mark so every tool matches the landing page. No big margins or
+   full-screen backdrops (those caused the empty gaps before).
+   ===================================================================== */
+
+:root {
+  --dg-accent: #ff7a00;
+  --dg-glass-bg: rgba(255, 255, 255, 0.04);
+  --dg-border: rgba(255, 255, 255, 0.10);
+  --dg-highlight: rgba(255, 255, 255, 0.18);
+  --dg-blur: 8px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Unified "DA." brand mark — identical to the landing page header       */
+/* --------------------------------------------------------------------- */
+.dabz-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  line-height: 1;
+  text-decoration: none;
+}
+.dabz-brand .sitename,
+.dabz-brand .dot {
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+.dabz-brand .sitename {
+  letter-spacing: 0.5px;
+  background: linear-gradient(120deg, #ffffff 0%, var(--dg-accent) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dabz-brand .dot { color: var(--dg-accent); }
+.dabz-brand:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Faint depth glow behind content (very low opacity — subtle only)      */
+/* --------------------------------------------------------------------- */
+body.dabz-lite::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 45% at 82% 8%, rgba(255, 122, 0, 0.07), transparent 60%),
+    radial-gradient(50% 40% at 10% 92%, rgba(255, 122, 0, 0.05), transparent 60%);
+}
+
+/* Reusable light frosted-glass touch */
+.dg-frost {
+  background: var(--dg-glass-bg);
+  -webkit-backdrop-filter: blur(var(--dg-blur));
+  backdrop-filter: blur(var(--dg-blur));
+  border: 1px solid var(--dg-border);
+  box-shadow: inset 0 1px 0 var(--dg-highlight);
+}
+
+/* =====================================================================
+   KEY & BPM TOOL — subtle frost on the cards/uploader
+   ===================================================================== */
+body.dabz-lite .uploader,
+body.dabz-lite .results .card {
+  -webkit-backdrop-filter: blur(var(--dg-blur));
+  backdrop-filter: blur(var(--dg-blur));
+  border: 1px solid var(--dg-border);
+  box-shadow: inset 0 1px 0 var(--dg-highlight);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+body.dabz-lite .results .card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 122, 0, 0.35);
+  box-shadow: inset 0 1px 0 var(--dg-highlight), 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+/* =====================================================================
+   REVERB & DELAY — subtle frost on tables + info, no layout gaps
+   ===================================================================== */
+/* subtle only — no wrapping box (that caused cramped headings / gaps) */
+body.dabz-lite .results table {
+  border: 1px solid var(--dg-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+body.dabz-lite .results th {
+  background: rgba(255, 122, 0, 0.10);
+  color: #ffd9b3;
+}
+body.dabz-lite .info {
+  box-shadow: inset 0 1px 0 var(--dg-highlight);
+}
+body.dabz-lite .bpm-section input {
+  background: rgba(20, 20, 22, 0.6);
+  -webkit-backdrop-filter: blur(var(--dg-blur));
+  backdrop-filter: blur(var(--dg-blur));
+  border: 1px solid var(--dg-border);
+}
+
+/* =====================================================================
+   LYRIC BOOK — subtle frost on cards, sidebar, suggest, modals
+   ===================================================================== */
+body.dabz-lite .auth-card,
+body.dabz-lite .sidebar,
+body.dabz-lite .suggest,
+body.dabz-lite .modal {
+  -webkit-backdrop-filter: blur(var(--dg-blur));
+  backdrop-filter: blur(var(--dg-blur));
+  border: 1px solid var(--dg-border);
+  box-shadow: inset 0 1px 0 var(--dg-highlight);
+}
+
+/* --------------------------------------------------------------------- */
+/* Reduced-motion: nothing animated here, but keep the contract          */
+/* --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  body.dabz-lite .results .card { transition: none; }
+}
