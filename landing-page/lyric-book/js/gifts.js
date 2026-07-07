@@ -11,6 +11,7 @@
 
   const els = {
     giftsBtn: document.getElementById("giftsBtn"),
+    giftAnyBtn: document.getElementById("giftAnyBtn"),
     giftBtn: document.getElementById("giftBtn"),
     // Gift modal
     giftModal: document.getElementById("giftModal"),
@@ -62,6 +63,7 @@
     if (!config.enabled) return; // gifting not configured on the server
 
     els.giftsBtn.hidden = false;
+    if (els.giftAnyBtn) els.giftAnyBtn.hidden = false;
     els.giftCurrency.textContent = config.currency.toUpperCase();
     els.giftAmount.min = config.minAmount;
     els.giftAmount.max = config.maxAmount;
@@ -72,6 +74,7 @@
 
   function wire() {
     els.giftsBtn.addEventListener("click", openGiftsModal);
+    if (els.giftAnyBtn) els.giftAnyBtn.addEventListener("click", () => openGiftModal({ fromLyric: false }));
     els.giftBtn.addEventListener("click", () => openGiftModal({ fromLyric: true }));
     els.sendGiftBtn.addEventListener("click", () => { hide(els.giftsModal); openGiftModal({ fromLyric: false }); });
     els.giftClose.addEventListener("click", () => hide(els.giftModal));
