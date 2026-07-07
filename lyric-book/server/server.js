@@ -31,6 +31,7 @@ import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
 import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
 import { initCollab, revokeCollabAccess } from "./collab.js";
+import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 
 dotenv.config();
 
@@ -70,9 +71,16 @@ app.use(
     credentials: true
   })
 );
+// Stripe webhook must read the RAW body for signature verification, so it is
+// mounted before express.json() parses the body for every other route.
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
+
 // Allow base64 image payloads for avatar uploads (default 100kb is too small).
 app.use(express.json({ limit: "8mb" }));
 app.use(cookieParser());
+
+// Gift Me (Stripe Connect) routes — additive; no-op if STRIPE_SECRET_KEY unset.
+registerPaymentRoutes(app);
 
 // Serve the frontend statically too (handy for local dev / standalone deploy).
 app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-book")));
