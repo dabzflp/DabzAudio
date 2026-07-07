@@ -277,7 +277,7 @@ export function registerPaymentRoutes(app) {
       const amount = Number(req.body.amount);
       const message = String(req.body.message || "").slice(0, 280);
 
-      if (!toUserId || toUserId === req.user.id) {
+      if (!toUserId || String(toUserId) === String(req.user.id)) {
         return res.status(400).json({ error: "Pick someone else to gift." });
       }
       if (!(amount >= MIN_AMOUNT && amount <= MAX_AMOUNT)) {
