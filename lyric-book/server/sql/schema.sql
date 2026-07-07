@@ -81,3 +81,43 @@ CREATE TABLE IF NOT EXISTS lb_lyric_docs (
   state BYTEA NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Gift Me (Stripe Connect). Additive — the Community Hub and existing Lyric Book
+-- flow are untouched. One connected Stripe Express account per user who wants to
+-- RECEIVE gifts; Stripe handles KYC + bank payouts, so DabzAudio never holds funds.
+CREATE TABLE IF NOT EXISTS lb_stripe_accounts (
+  user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
+  stripe_account_id TEXT NOT NULL,
+  charges_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  details_submitted BOOLEAN NOT NULL DEFAULT FALSE,
+  country TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_stripe_account_id
+  ON lb_stripe_accounts(stripe_account_id);
+
+-- A gift from one artist to another (typically a collaborator on a lyric).
+-- amount_cents is the gross charged to the sender; fee_cents is the optional
+-- DabzAudio platform fee; the remainder is transferred to the recipient's
+-- connected account and paid out to their bank by Stripe.
+CREATE TABLE IF NOT EXISTS lb_gifts (
+  id BIGSERIAL PRIMARY KEY,
+  from_user_id BIGINT REFERENCES lb_users(id) ON DELETE SET NULL,
+  to_user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  lyric_id BIGINT REFERENCES lb_lyrics(id) ON DELETE SET NULL,
+  amount_cents BIGINT NOT NULL,
+  fee_cents BIGINT NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'usd',
+  message TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'paid' | 'failed'
+  stripe_checkout_session_id TEXT,
+  stripe_payment_intent_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_lb_gifts_to ON lb_gifts(to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lb_gifts_from ON lb_gifts(from_user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_gifts_checkout
+  ON lb_gifts(stripe_checkout_session_id) WHERE stripe_checkout_session_id IS NOT NULL;

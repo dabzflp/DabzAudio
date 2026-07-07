@@ -58,6 +58,13 @@
   let dirty = false;
   let canEdit = true; // access level for the currently open lyric
 
+  // Expose the open lyric id so the Gift Me module (js/gifts.js) can scope
+  // gifts to collaborators on the current lyric without touching this closure.
+  window.LBApp = { getCurrentLyricId: () => currentId };
+  function notifyLyricOpen(id) {
+    document.dispatchEvent(new CustomEvent("lb-lyric-open", { detail: { id: id || null } }));
+  }
+
   // Real-time collaboration (Layer 2). The collab module may load slightly after
   // this script (it pulls in a bundled Yjs/Socket.io vendor module), so we queue
   // the lyric to connect and open it once the module signals readiness.
@@ -203,6 +210,7 @@
       renderRhythm();
       renderList();
       openCollab(id);
+      notifyLyricOpen(id);
     } catch (err) {
       setSaveState(err.message || "Could not open");
     }
@@ -251,6 +259,7 @@
       renderRhythm();
       closeCollab();
       openCollab(currentId);
+      notifyLyricOpen(currentId);
       els.title.focus();
       els.title.select();
     } catch (err) {
@@ -404,6 +413,7 @@
       els.shareBtn.hidden = true;
       els.deleteBtn.hidden = true;
       els.rolePill.hidden = true;
+      notifyLyricOpen(null);
     }
   }
 

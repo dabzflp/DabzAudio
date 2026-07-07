@@ -28,6 +28,7 @@
         <span aria-hidden="true">🔔</span>
         <span class="bell-count" id="invitesCount">0</span>
       </button>
+      <button class="btn subtle small" id="giftsBtn" type="button" title="Gifts & payouts" hidden>Gifts</button>
       <span class="who" id="who"></span>
       <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>
     </div>
@@ -49,6 +50,7 @@
           <span class="presence" id="presence" title="People editing now"></span>
           <span class="save-state" id="saveState"></span>
           <button class="btn ghost small" id="shareBtn" type="button" hidden>Share</button>
+          <button class="btn ghost small" id="giftBtn" type="button" title="Send a collaborator a gift" hidden>Gift</button>
           <button class="btn danger small" id="deleteBtn" type="button">Delete</button>
         </div>
         <textarea class="body-input" id="bodyInput" placeholder="Start writing your lyrics…&#10;&#10;Tip: pick a word in the Suggestions panel to find rhymes, or check the syllable count per line for your flow."></textarea>
@@ -117,8 +119,80 @@
     </div>
   </div>
 
+  <!-- Gift modal (send a gift to a collaborator) -->
+  <div class="modal-overlay" id="giftModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Send a gift</h3>
+        <button class="modal-close" id="giftClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub">Send any artist on DabzAudio real money — it lands in their wallet and pays out to their bank via Stripe.</p>
+      <form class="gift-form" id="giftForm">
+        <div class="gift-label">To
+          <div class="gift-picker">
+            <input type="text" id="giftRecipientSearch" placeholder="Search an artist by name…" autocomplete="off" />
+            <input type="hidden" id="giftRecipient" />
+            <div class="gift-results" id="giftRecipientResults" hidden></div>
+          </div>
+          <div class="gift-selected" id="giftSelected" hidden></div>
+        </div>
+        <label class="gift-label">Amount (<span id="giftCurrency">USD</span>)
+          <input type="number" id="giftAmount" min="1" step="1" placeholder="10" required />
+        </label>
+        <div class="gift-presets" id="giftPresets"></div>
+        <label class="gift-label">Message (optional)
+          <textarea id="giftMessage" maxlength="280" placeholder="Loved writing this with you!"></textarea>
+        </label>
+        <button class="btn" id="giftSend" type="submit">Continue to secure checkout</button>
+      </form>
+      <div class="msg" id="giftMsg"></div>
+      <p class="gift-fineprint">Payments are processed securely by Stripe. You'll enter card details on Stripe's page.</p>
+    </div>
+  </div>
+
+  <!-- Gifts & payouts modal -->
+  <div class="modal-overlay" id="giftsModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Gifts &amp; payouts</h3>
+        <button class="modal-close" id="giftsClose" type="button" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="payout-card" id="payoutCard">
+        <div class="payout-status" id="payoutStatus">Loading…</div>
+        <div class="payout-actions" id="payoutActions"></div>
+      </div>
+
+      <div class="wallet-card" id="walletCard" hidden>
+        <div class="wallet-row">
+          <div>
+            <div class="wallet-label">Wallet balance</div>
+            <div class="wallet-balance" id="walletBalance">—</div>
+            <div class="wallet-pending" id="walletPending"></div>
+          </div>
+          <button class="btn small" id="withdrawBtn" type="button">Withdraw to bank</button>
+        </div>
+        <div class="msg" id="walletMsg"></div>
+      </div>
+
+      <div class="gift-total" id="giftTotal" hidden></div>
+
+      <div class="gifts-modal-actions">
+        <button class="btn small" id="sendGiftBtn" type="button">Send a gift</button>
+      </div>
+
+      <div class="gift-tabs">
+        <button class="gift-tab active" id="tabReceived" type="button">Received</button>
+        <button class="gift-tab" id="tabSent" type="button">Sent</button>
+      </div>
+      <ul class="gift-history" id="giftReceived"></ul>
+      <ul class="gift-history" id="giftSent" hidden></ul>
+    </div>
+  </div>
+
   <script type="module" src="js/collab.js"></script>
   <script src="js/suggest.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/gifts.js"></script>
 </body>
 </html>
