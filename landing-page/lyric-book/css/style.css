@@ -340,6 +340,51 @@ body.auth-bg .site-header {
 .gift-preset:hover { border-color: var(--orange); color: #fff; }
 .gift-fineprint { color: var(--muted); font-size: 11.5px; margin: 12px 0 0; }
 
+/* Recipient search picker */
+.gift-picker { position: relative; }
+.gift-results {
+  margin-top: 6px; background: #0f0f0f; border: 1px solid var(--line);
+  border-radius: 10px; max-height: 220px; overflow-y: auto; padding: 4px;
+}
+.gift-result-note { font-size: 11.5px; color: var(--muted); padding: 6px 8px; }
+.gift-result {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; color: #eee; text-align: left;
+  padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.gift-result:hover:not(.disabled) { background: rgba(255,122,0,0.12); }
+.gift-result.disabled { color: var(--muted); cursor: not-allowed; }
+.gift-result-av {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--charcoal) center/cover no-repeat; border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
+}
+.gift-result-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gift-selected { margin-top: 6px; }
+.gift-chip {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: #fff;
+  background: rgba(255,122,0,0.14); border: 1px solid rgba(255,122,0,0.4);
+  border-radius: 999px; padding: 5px 6px 5px 14px;
+}
+.gift-chip-x {
+  background: none; border: none; color: #fff; cursor: pointer; font-size: 16px;
+  line-height: 1; width: 20px; height: 20px; border-radius: 50%;
+}
+.gift-chip-x:hover { background: rgba(255,255,255,0.15); }
+
+/* Wallet card */
+.wallet-card {
+  background: #0f0f0f; border: 1px solid rgba(255,122,0,0.28); border-radius: 12px;
+  padding: 14px 16px; margin: 0 0 16px;
+}
+.wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wallet-label { font-size: 12px; color: var(--muted); }
+.wallet-balance { font-size: 24px; font-weight: 700; color: var(--orange); line-height: 1.2; }
+.wallet-pending { font-size: 11.5px; color: #ffc46b; margin-top: 2px; }
+.wallet-card .msg { margin-top: 10px; }
+
+.gifts-modal-actions { display: flex; justify-content: flex-end; margin: 0 0 12px; }
+
 .payout-card {
   background: #0f0f0f; border: 1px solid var(--line); border-radius: 12px;
   padding: 14px 16px; margin: 4px 0 16px;

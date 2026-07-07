@@ -126,11 +126,16 @@
         <h3>Send a gift</h3>
         <button class="modal-close" id="giftClose" type="button" aria-label="Close">&times;</button>
       </div>
-      <p class="sub">Thank a collaborator on this lyric with real money — it goes straight to their bank via Stripe.</p>
+      <p class="sub">Send any artist on DabzAudio real money — it lands in their wallet and pays out to their bank via Stripe.</p>
       <form class="gift-form" id="giftForm">
-        <label class="gift-label">To
-          <select id="giftRecipient" required></select>
-        </label>
+        <div class="gift-label">To
+          <div class="gift-picker">
+            <input type="text" id="giftRecipientSearch" placeholder="Search an artist by name…" autocomplete="off" />
+            <input type="hidden" id="giftRecipient" />
+            <div class="gift-results" id="giftRecipientResults" hidden></div>
+          </div>
+          <div class="gift-selected" id="giftSelected" hidden></div>
+        </div>
         <label class="gift-label">Amount (<span id="giftCurrency">USD</span>)
           <input type="number" id="giftAmount" min="1" step="1" placeholder="10" required />
         </label>
@@ -158,7 +163,23 @@
         <div class="payout-actions" id="payoutActions"></div>
       </div>
 
+      <div class="wallet-card" id="walletCard" hidden>
+        <div class="wallet-row">
+          <div>
+            <div class="wallet-label">Wallet balance</div>
+            <div class="wallet-balance" id="walletBalance">—</div>
+            <div class="wallet-pending" id="walletPending"></div>
+          </div>
+          <button class="btn small" id="withdrawBtn" type="button">Withdraw to bank</button>
+        </div>
+        <div class="msg" id="walletMsg"></div>
+      </div>
+
       <div class="gift-total" id="giftTotal" hidden></div>
+
+      <div class="gifts-modal-actions">
+        <button class="btn small" id="sendGiftBtn" type="button">Send a gift</button>
+      </div>
 
       <div class="gift-tabs">
         <button class="gift-tab active" id="tabReceived" type="button">Received</button>

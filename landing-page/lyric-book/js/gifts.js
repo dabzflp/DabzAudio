@@ -17,6 +17,9 @@
     giftClose: document.getElementById("giftClose"),
     giftForm: document.getElementById("giftForm"),
     giftRecipient: document.getElementById("giftRecipient"),
+    giftRecipientSearch: document.getElementById("giftRecipientSearch"),
+    giftRecipientResults: document.getElementById("giftRecipientResults"),
+    giftSelected: document.getElementById("giftSelected"),
     giftAmount: document.getElementById("giftAmount"),
     giftPresets: document.getElementById("giftPresets"),
     giftMessage: document.getElementById("giftMessage"),
@@ -27,6 +30,12 @@
     giftsClose: document.getElementById("giftsClose"),
     payoutStatus: document.getElementById("payoutStatus"),
     payoutActions: document.getElementById("payoutActions"),
+    walletCard: document.getElementById("walletCard"),
+    walletBalance: document.getElementById("walletBalance"),
+    walletPending: document.getElementById("walletPending"),
+    withdrawBtn: document.getElementById("withdrawBtn"),
+    walletMsg: document.getElementById("walletMsg"),
+    sendGiftBtn: document.getElementById("sendGiftBtn"),
     giftTotal: document.getElementById("giftTotal"),
     tabReceived: document.getElementById("tabReceived"),
     tabSent: document.getElementById("tabSent"),
@@ -37,6 +46,10 @@
 
   let config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, feeBps: 0 };
   let currentLyricId = null;
+  // The lyric to attach to the gift — only set when the chosen recipient is a
+  // collaborator on the open lyric (otherwise the gift is lyric-agnostic).
+  let selectedLyricId = null;
+  let searchTimer = null;
 
   init();
 
@@ -59,10 +72,13 @@
 
   function wire() {
     els.giftsBtn.addEventListener("click", openGiftsModal);
-    els.giftBtn.addEventListener("click", openGiftModal);
+    els.giftBtn.addEventListener("click", () => openGiftModal({ fromLyric: true }));
+    els.sendGiftBtn.addEventListener("click", () => { hide(els.giftsModal); openGiftModal({ fromLyric: false }); });
     els.giftClose.addEventListener("click", () => hide(els.giftModal));
     els.giftsClose.addEventListener("click", () => hide(els.giftsModal));
     els.giftForm.addEventListener("submit", submitGift);
+    els.withdrawBtn.addEventListener("click", withdraw);
+    els.giftRecipientSearch.addEventListener("input", onSearchInput);
     els.tabReceived.addEventListener("click", () => switchTab("received"));
     els.tabSent.addEventListener("click", () => switchTab("sent"));
     [els.giftModal, els.giftsModal].forEach((m) => {
@@ -76,39 +92,116 @@
     });
   }
 
-  /* ---------- Gift a collaborator ---------- */
-  async function openGiftModal() {
-    const lyricId = currentLyricId || (window.LBApp && window.LBApp.getCurrentLyricId());
-    if (!lyricId) return;
+  /* ---------- Gift any artist ---------- */
+  async function openGiftModal(opts) {
+    const fromLyric = !!(opts && opts.fromLyric);
     setMsg("");
     els.giftAmount.value = "";
     els.giftMessage.value = "";
-    els.giftRecipient.innerHTML = "<option>Loading…</option>";
+    els.giftRecipientSearch.value = "";
+    clearRecipient();
+    els.giftRecipientResults.hidden = true;
     els.giftModal.hidden = false;
+
+    // Quick-picks: collaborators on the open lyric first, else people I know.
+    const lyricId = fromLyric ? (currentLyricId || (window.LBApp && window.LBApp.getCurrentLyricId())) : null;
+    els.giftRecipientResults.hidden = false;
+    els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Loading…</div>";
     try {
-      const data = await window.LB.apiFetch("/api/gifts/recipients?lyricId=" + lyricId);
-      const recipients = data.recipients || [];
-      if (!recipients.length) {
-        els.giftRecipient.innerHTML = "<option value=''>No collaborators yet</option>";
-        setMsg("Share this lyric with someone first — then you can gift them.", "err");
+      let users, scopedLyricId = null;
+      if (lyricId) {
+        const data = await window.LB.apiFetch("/api/gifts/recipients?lyricId=" + lyricId);
+        users = data.recipients || [];
+        scopedLyricId = lyricId;
+      } else {
+        const data = await window.LB.apiFetch("/api/gifts/suggestions");
+        users = data.users || [];
+      }
+      if (!users.length) {
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
         return;
       }
-      els.giftRecipient.innerHTML = "";
-      recipients.forEach((r) => {
-        const opt = document.createElement("option");
-        opt.value = r.userId;
-        opt.textContent = r.canReceive ? r.name : `${r.name} (hasn't set up payouts)`;
-        opt.disabled = !r.canReceive;
-        els.giftRecipient.appendChild(opt);
-      });
-      // Select the first enabled recipient if the first is disabled.
-      const firstEnabled = recipients.find((r) => r.canReceive);
-      if (firstEnabled) els.giftRecipient.value = String(firstEnabled.userId);
-      if (!firstEnabled) setMsg("No collaborator here has set up payouts yet.", "err");
+      const label = lyricId ? "Collaborators on this lyric" : "People you've worked with";
+      renderResults(users, scopedLyricId, label);
     } catch (err) {
-      els.giftRecipient.innerHTML = "<option value=''>Could not load</option>";
-      setMsg(err.message || "Could not load collaborators.", "err");
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
     }
+  }
+
+  function onSearchInput() {
+    const q = els.giftRecipientSearch.value.trim();
+    clearTimeout(searchTimer);
+    if (q.length < 1) { els.giftRecipientResults.hidden = true; return; }
+    searchTimer = setTimeout(async () => {
+      els.giftRecipientResults.hidden = false;
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Searching…</div>";
+      try {
+        const data = await window.LB.apiFetch("/api/gifts/search-users?q=" + encodeURIComponent(q));
+        const users = data.users || [];
+        if (!users.length) {
+          els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>No artists found.</div>";
+          return;
+        }
+        renderResults(users, null, "");
+      } catch (err) {
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Could not search.</div>";
+      }
+    }, 220);
+  }
+
+  function renderResults(users, scopedLyricId, label) {
+    els.giftRecipientResults.innerHTML = "";
+    if (label) {
+      const h = document.createElement("div");
+      h.className = "gift-result-note";
+      h.textContent = label;
+      els.giftRecipientResults.appendChild(h);
+    }
+    users.forEach((u) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "gift-result" + (u.canReceive ? "" : " disabled");
+      row.disabled = !u.canReceive;
+      const av = document.createElement("span");
+      av.className = "gift-result-av";
+      if (u.avatarUrl) av.style.backgroundImage = `url(${u.avatarUrl})`;
+      else av.textContent = (u.name || "?").slice(0, 1).toUpperCase();
+      const nm = document.createElement("span");
+      nm.className = "gift-result-name";
+      nm.textContent = u.canReceive ? u.name : `${u.name} · no payouts yet`;
+      row.appendChild(av);
+      row.appendChild(nm);
+      row.addEventListener("click", () => selectRecipient(u, scopedLyricId));
+      els.giftRecipientResults.appendChild(row);
+    });
+  }
+
+  function selectRecipient(u, scopedLyricId) {
+    els.giftRecipient.value = String(u.userId);
+    selectedLyricId = scopedLyricId || null;
+    els.giftRecipientResults.hidden = true;
+    els.giftRecipientSearch.value = "";
+    els.giftSelected.hidden = false;
+    els.giftSelected.innerHTML = "";
+    const chip = document.createElement("span");
+    chip.className = "gift-chip";
+    chip.textContent = u.name;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "gift-chip-x";
+    x.setAttribute("aria-label", "Change recipient");
+    x.textContent = "×";
+    x.addEventListener("click", () => { clearRecipient(); els.giftRecipientSearch.focus(); });
+    chip.appendChild(x);
+    els.giftSelected.appendChild(chip);
+    setMsg("");
+  }
+
+  function clearRecipient() {
+    els.giftRecipient.value = "";
+    selectedLyricId = null;
+    els.giftSelected.hidden = true;
+    els.giftSelected.innerHTML = "";
   }
 
   async function submitGift(e) {
@@ -116,7 +209,7 @@
     const toUserId = Number(els.giftRecipient.value);
     const amount = Number(els.giftAmount.value);
     const message = els.giftMessage.value.trim();
-    if (!toUserId) return setMsg("Pick who to gift.", "err");
+    if (!toUserId) return setMsg("Pick an artist to gift.", "err");
     if (!(amount >= config.minAmount && amount <= config.maxAmount)) {
       return setMsg(`Enter an amount between ${config.minAmount} and ${config.maxAmount}.`, "err");
     }
@@ -125,7 +218,7 @@
     try {
       const data = await window.LB.apiFetch("/api/gifts", {
         method: "POST",
-        body: JSON.stringify({ toUserId, lyricId: currentLyricId, amount, message })
+        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message })
       });
       if (data.url) {
         window.location.href = data.url; // Stripe Checkout
@@ -156,11 +249,51 @@
     els.giftsModal.hidden = false;
     els.payoutStatus.textContent = "Loading…";
     els.payoutActions.innerHTML = "";
+    els.walletCard.hidden = true;
+    els.walletMsg.textContent = "";
     els.giftTotal.hidden = true;
     els.giftReceived.innerHTML = "";
     els.giftSent.innerHTML = "";
     switchTab("received");
-    await Promise.all([loadPayoutStatus(), loadHistory()]);
+    await Promise.all([loadPayoutStatus(), loadWallet(), loadHistory()]);
+  }
+
+  /* ---------- Wallet (balance + on-demand withdraw) ---------- */
+  async function loadWallet() {
+    try {
+      const w = await window.LB.apiFetch("/api/wallet/balance");
+      if (!w.enabled || !w.payoutsEnabled) { els.walletCard.hidden = true; return; }
+      els.walletCard.hidden = false;
+      els.walletBalance.textContent = formatCents(w.availableCents);
+      if (w.pendingCents > 0) {
+        els.walletPending.hidden = false;
+        els.walletPending.textContent = formatCents(w.pendingCents) + " still settling";
+      } else {
+        els.walletPending.hidden = true;
+        els.walletPending.textContent = "";
+      }
+      els.withdrawBtn.disabled = !(w.availableCents > 0);
+      els.withdrawBtn.title = w.availableCents > 0 ? "" : "No settled funds to withdraw yet";
+    } catch (err) {
+      els.walletCard.hidden = true;
+    }
+  }
+
+  async function withdraw() {
+    els.walletMsg.className = "msg";
+    els.walletMsg.textContent = "Sending to your bank…";
+    els.withdrawBtn.disabled = true;
+    try {
+      const d = await window.LB.apiFetch("/api/wallet/withdraw", { method: "POST" });
+      els.walletMsg.className = "msg ok";
+      els.walletMsg.textContent = "Withdrew " + formatCents(d.amountCents) + " to your bank.";
+      toast("Withdrawal on its way to your bank 🏦");
+      await loadWallet();
+    } catch (err) {
+      els.walletMsg.className = "msg err";
+      els.walletMsg.textContent = err.message || "Could not withdraw right now.";
+      els.withdrawBtn.disabled = false;
+    }
   }
 
   async function loadPayoutStatus() {

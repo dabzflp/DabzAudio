@@ -196,6 +196,9 @@ export function registerPaymentRoutes(app) {
             card_payments: { requested: true }
           },
           business_type: "individual",
+          // Manual payouts: gifts accumulate in the artist's Stripe balance
+          // (their in-app "wallet") until they choose to withdraw to their bank.
+          settings: { payouts: { schedule: { interval: "manual" } } },
           metadata: { lb_user_id: String(req.user.id) }
         });
         accountId = acct.id;
@@ -225,6 +228,112 @@ export function registerPaymentRoutes(app) {
     } catch (err) {
       console.error("payouts/login-link error", err);
       res.status(500).json({ error: "Could not open payout dashboard." });
+    }
+  });
+
+  // Free-text search for anyone on the platform to gift (by artist/display name).
+  app.get("/api/gifts/search-users", requireAuth, async (req, res) => {
+    try {
+      const q = String(req.query.q || "").trim();
+      if (q.length < 1) return res.json({ users: [] });
+      const like = "%" + q.replace(/[%_]/g, "") + "%";
+      const { rows } = await pool.query(
+        `SELECT u.id AS user_id,
+                COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
+                p.avatar_url,
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+           FROM lb_users u
+           LEFT JOIN lb_profiles p ON p.user_id = u.id
+           LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+          WHERE u.id <> $1
+            AND (p.artist_name ILIKE $2 OR p.display_name ILIKE $2)
+          ORDER BY payouts_enabled DESC, name ASC
+          LIMIT 8`,
+        [req.user.id, like]
+      );
+      res.json({ users: rows.map(mapUser) });
+    } catch (err) {
+      console.error("gifts/search-users error", err);
+      res.status(500).json({ error: "Could not search artists." });
+    }
+  });
+
+  // Quick-pick suggestions: people I've written with (any lyric) or gifted before.
+  app.get("/api/gifts/suggestions", requireAuth, async (req, res) => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT u.id AS user_id,
+                COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
+                p.avatar_url,
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+           FROM lb_users u
+           LEFT JOIN lb_profiles p ON p.user_id = u.id
+           LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+          WHERE u.id <> $1 AND u.id IN (
+            SELECT c.user_id FROM lb_lyric_collaborators c
+              JOIN lb_lyrics l ON l.id = c.lyric_id
+             WHERE l.user_id = $1 AND c.status = 'accepted' AND c.user_id IS NOT NULL
+            UNION
+            SELECT l.user_id FROM lb_lyrics l
+              JOIN lb_lyric_collaborators c ON c.lyric_id = l.id
+             WHERE c.user_id = $1 AND c.status = 'accepted'
+            UNION
+            SELECT g.to_user_id FROM lb_gifts g WHERE g.from_user_id = $1
+          )
+          ORDER BY payouts_enabled DESC, name ASC
+          LIMIT 12`,
+        [req.user.id]
+      );
+      res.json({ users: rows.map(mapUser) });
+    } catch (err) {
+      console.error("gifts/suggestions error", err);
+      res.status(500).json({ error: "Could not load suggestions." });
+    }
+  });
+
+  // Wallet balance — the artist's own Stripe balance (gifts accumulate here).
+  app.get("/api/wallet/balance", requireAuth, async (req, res) => {
+    if (!stripe) return res.json({ enabled: false });
+    try {
+      const row = await getAccountRow(req.user.id);
+      if (!row || !row.payouts_enabled) {
+        return res.json({ enabled: true, payoutsEnabled: false, currency: CURRENCY, availableCents: 0, pendingCents: 0 });
+      }
+      const bal = await stripe.balance.retrieve({ stripeAccount: row.stripe_account_id });
+      res.json({
+        enabled: true,
+        payoutsEnabled: true,
+        currency: CURRENCY,
+        availableCents: sumBalance(bal.available, CURRENCY),
+        pendingCents: sumBalance(bal.pending, CURRENCY)
+      });
+    } catch (err) {
+      console.error("wallet/balance error", err);
+      res.status(500).json({ error: "Could not load your wallet." });
+    }
+  });
+
+  // Withdraw the available wallet balance to the artist's bank (on-demand payout).
+  app.post("/api/wallet/withdraw", requireAuth, async (req, res) => {
+    if (!stripe) return notConfigured(res);
+    try {
+      const row = await getAccountRow(req.user.id);
+      if (!row || !row.payouts_enabled) {
+        return res.status(400).json({ error: "Set up payouts before withdrawing." });
+      }
+      const bal = await stripe.balance.retrieve({ stripeAccount: row.stripe_account_id });
+      const available = sumBalance(bal.available, CURRENCY);
+      if (available <= 0) {
+        return res.status(400).json({ error: "No funds available yet — gifts take a few days to settle, then you can cash out." });
+      }
+      const payout = await stripe.payouts.create(
+        { amount: available, currency: CURRENCY, description: "DabzAudio wallet withdrawal" },
+        { stripeAccount: row.stripe_account_id }
+      );
+      res.json({ ok: true, amountCents: available, currency: CURRENCY, payoutId: payout.id, arrivalDate: payout.arrival_date });
+    } catch (err) {
+      console.error("wallet/withdraw error", err);
+      res.status(500).json({ error: err.message || "Could not withdraw right now." });
     }
   });
 
@@ -407,6 +516,22 @@ export function registerPaymentRoutes(app) {
       res.status(500).json({ error: "Could not load gift history." });
     }
   });
+}
+
+function mapUser(r) {
+  return {
+    userId: Number(r.user_id),
+    name: r.name || ("Artist #" + r.user_id),
+    avatarUrl: r.avatar_url || "",
+    canReceive: !!r.payouts_enabled
+  };
+}
+
+// Sum a Stripe balance array (available/pending) for one currency, in cents.
+function sumBalance(arr, currency) {
+  return (arr || [])
+    .filter((b) => b.currency === currency)
+    .reduce((s, b) => s + (b.amount || 0), 0);
 }
 
 function mapGift(dir, r) {
