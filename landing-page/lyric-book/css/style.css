@@ -269,8 +269,8 @@ body.auth-bg .site-header {
   .row-2 { grid-template-columns: 1fr; }
 }
 
-/* Collapse the header actions behind a hamburger on phones */
-@media (max-width: 720px) {
+/* Collapse the header actions behind a hamburger on phones/tablets */
+@media (max-width: 860px) {
   .site-header { padding: 12px 16px; }
   .hamburger { display: flex; }
   .header-actions {
