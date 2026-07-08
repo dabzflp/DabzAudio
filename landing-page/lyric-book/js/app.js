@@ -22,6 +22,7 @@
     avatarImg: document.getElementById("avatarImg"),
     avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
+    lyricSearch: document.getElementById("lyricSearch"),
     list: document.getElementById("lyricList"),
     title: document.getElementById("titleInput"),
     body: document.getElementById("bodyInput"),
@@ -53,6 +54,7 @@
   };
 
   let lyrics = [];
+  let listFilter = "";
   let currentId = null;
   let saveTimer = null;
   let dirty = false;
@@ -117,6 +119,12 @@
     els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
     els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
+    if (els.lyricSearch) {
+      els.lyricSearch.addEventListener("input", () => {
+        listFilter = els.lyricSearch.value;
+        renderList();
+      });
+    }
     els.deleteBtn.addEventListener("click", deleteCurrent);
     els.title.addEventListener("input", onEdit);
     els.body.addEventListener("input", function () {
@@ -167,7 +175,18 @@
       els.list.appendChild(li);
       return;
     }
-    lyrics.forEach((ly) => {
+    const q = listFilter.trim().toLowerCase();
+    const shown = q
+      ? lyrics.filter((ly) => (ly.title || "Untitled").toLowerCase().includes(q))
+      : lyrics;
+    if (!shown.length) {
+      const li = document.createElement("li");
+      li.className = "empty-note";
+      li.textContent = "No lyrics match “" + listFilter.trim() + "”.";
+      els.list.appendChild(li);
+      return;
+    }
+    shown.forEach((ly) => {
       const li = document.createElement("li");
       li.className = "lyric-item" + (ly.id === currentId ? " active" : "");
       li.dataset.id = ly.id;
