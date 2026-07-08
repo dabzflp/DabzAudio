@@ -23,7 +23,10 @@
       </a>
     </div>
     <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" hidden />
-    <div class="header-actions">
+    <button class="hamburger" id="menuToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="headerActions">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="header-actions" id="headerActions">
       <button class="bell-btn" id="invitesBtn" type="button" title="Collaboration invites" hidden>
         <span aria-hidden="true">🔔</span>
         <span class="bell-count" id="invitesCount">0</span>
@@ -195,5 +198,27 @@
   <script src="js/suggest.js"></script>
   <script src="js/app.js"></script>
   <script src="js/gifts.js"></script>
+  <script>
+    // Mobile hamburger: collapse the header actions into a dropdown on small screens.
+    (function () {
+      var header = document.querySelector(".site-header");
+      var toggle = document.getElementById("menuToggle");
+      var actions = document.getElementById("headerActions");
+      if (!header || !toggle || !actions) return;
+      function close() { header.classList.remove("menu-open"); toggle.setAttribute("aria-expanded", "false"); }
+      toggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = header.classList.toggle("menu-open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      // Tapping an action or clicking outside closes the menu.
+      actions.addEventListener("click", function (e) { if (e.target.closest("button")) close(); });
+      document.addEventListener("click", function (e) {
+        if (!header.classList.contains("menu-open")) return;
+        if (!actions.contains(e.target) && !toggle.contains(e.target)) close();
+      });
+      window.addEventListener("resize", function () { if (window.innerWidth > 720) close(); });
+    })();
+  </script>
 </body>
 </html>
