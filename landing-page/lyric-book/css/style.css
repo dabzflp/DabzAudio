@@ -232,12 +232,23 @@ body.auth-bg .site-header {
 
 .back-link { font-size: 13px; color: var(--muted); }
 
+/* "Back to lyrics" is only used in the mobile master/detail flow. */
+.editor-back { display: none; flex-shrink: 0; }
+
 @media (max-width: 860px) {
   .app-shell { flex-direction: column; }
-  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--line); max-height: 42vh; }
+  /* Mobile is a two-step flow: the saved-lyrics list fills the screen, and the
+     writing area only appears once a lyric is tapped (.app-shell.editing). */
+  .sidebar {
+    width: 100%; border-right: none; border-bottom: none;
+    max-height: none; flex: 1;
+  }
+  .editor { display: none; flex-direction: column; }
+  .app-shell.editing .sidebar { display: none; }
+  .app-shell.editing .editor { display: flex; flex: 1; }
+  .editor-back { display: inline-flex; }
   /* On touch there is no hover, so keep the editor actions visible. */
   .editor-actions { opacity: 1; transform: none; pointer-events: auto; }
-  .editor { flex-direction: column; }
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
 }
