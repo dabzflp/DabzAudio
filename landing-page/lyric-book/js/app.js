@@ -22,7 +22,10 @@
     avatarImg: document.getElementById("avatarImg"),
     avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
+    lyricSearch: document.getElementById("lyricSearch"),
     list: document.getElementById("lyricList"),
+    appShell: document.querySelector(".app-shell"),
+    backToList: document.getElementById("backToList"),
     title: document.getElementById("titleInput"),
     body: document.getElementById("bodyInput"),
     saveState: document.getElementById("saveState"),
@@ -53,6 +56,7 @@
   };
 
   let lyrics = [];
+  let listFilter = "";
   let currentId = null;
   let saveTimer = null;
   let dirty = false;
@@ -91,7 +95,9 @@
     }
     await acceptPendingInvite();
     await loadList();
-    if (lyrics.length) selectLyric(lyrics[0].id);
+    // Preload the most recent lyric so it opens instantly, but stay on the list
+    // view (matters on mobile, where the editor is a separate screen).
+    if (lyrics.length) selectLyric(lyrics[0].id, false);
     else setEditorEnabled(false);
     wire();
     loadInvites();
@@ -117,6 +123,13 @@
     els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
     els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
+    if (els.backToList) els.backToList.addEventListener("click", showList);
+    if (els.lyricSearch) {
+      els.lyricSearch.addEventListener("input", () => {
+        listFilter = els.lyricSearch.value;
+        renderList();
+      });
+    }
     els.deleteBtn.addEventListener("click", deleteCurrent);
     els.title.addEventListener("input", onEdit);
     els.body.addEventListener("input", function () {
@@ -167,7 +180,18 @@
       els.list.appendChild(li);
       return;
     }
-    lyrics.forEach((ly) => {
+    const q = listFilter.trim().toLowerCase();
+    const shown = q
+      ? lyrics.filter((ly) => (ly.title || "Untitled").toLowerCase().includes(q))
+      : lyrics;
+    if (!shown.length) {
+      const li = document.createElement("li");
+      li.className = "empty-note";
+      li.textContent = "No lyrics match “" + listFilter.trim() + "”.";
+      els.list.appendChild(li);
+      return;
+    }
+    shown.forEach((ly) => {
       const li = document.createElement("li");
       li.className = "lyric-item" + (ly.id === currentId ? " active" : "");
       li.dataset.id = ly.id;
@@ -195,8 +219,10 @@
     });
   }
 
-  async function selectLyric(id) {
-    if (id === currentId) return;
+  // reveal=true switches to the editor screen on mobile; pass false to only
+  // load the lyric behind the scenes (e.g. initial preload).
+  async function selectLyric(id, reveal = true) {
+    if (id === currentId) { if (reveal) showEditor(); return; }
     flushSave();
     closeCollab();
     try {
@@ -209,11 +235,21 @@
       setSaveState("Saved");
       renderRhythm();
       renderList();
+      if (reveal) showEditor();
       openCollab(id);
       notifyLyricOpen(id);
     } catch (err) {
       setSaveState(err.message || "Could not open");
     }
+  }
+
+  // Mobile master/detail: toggle between the saved-lyrics list and the writing
+  // area. On desktop the .editing class is inert (both are always visible).
+  function showEditor() {
+    if (els.appShell) els.appShell.classList.add("editing");
+  }
+  function showList() {
+    if (els.appShell) els.appShell.classList.remove("editing");
   }
 
   // Adapt the editor UI to the user's access level for the open lyric.
@@ -258,6 +294,7 @@
       setSaveState("Saved");
       renderRhythm();
       closeCollab();
+      showEditor();
       openCollab(currentId);
       notifyLyricOpen(currentId);
       els.title.focus();
@@ -278,13 +315,14 @@
       closeCollab();
       lyrics = lyrics.filter((l) => l.id !== id);
       currentId = null;
-      if (lyrics.length) selectLyric(lyrics[0].id);
+      if (lyrics.length) selectLyric(lyrics[0].id, false);
       else {
         els.title.value = "";
         els.body.value = "";
         setEditorEnabled(false);
         renderRhythm();
       }
+      showList();
       renderList();
     } catch (err) {
       setSaveState(err.message || "Could not delete");
