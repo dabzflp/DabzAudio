@@ -258,6 +258,39 @@ export function registerPaymentRoutes(app) {
     }
   });
 
+  // Look up a recipient by their exact account email — the system confirms the
+  // email belongs to a registered artist before a gift can proceed.
+  app.get("/api/gifts/lookup-email", requireAuth, async (req, res) => {
+    try {
+      const email = String(req.query.email || "").trim().toLowerCase();
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return res.status(400).json({ found: false, error: "Enter a valid email address." });
+      }
+      const { rows } = await pool.query(
+        `SELECT u.id AS user_id,
+                COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name,
+                p.avatar_url,
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+           FROM lb_users u
+           LEFT JOIN lb_profiles p ON p.user_id = u.id
+           LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+          WHERE LOWER(u.email) = $1
+          LIMIT 1`,
+        [email]
+      );
+      if (!rows.length) {
+        return res.json({ found: false });
+      }
+      if (Number(rows[0].user_id) === Number(req.user.id)) {
+        return res.json({ found: false, self: true });
+      }
+      res.json({ found: true, user: mapUser(rows[0]) });
+    } catch (err) {
+      console.error("gifts/lookup-email error", err);
+      res.status(500).json({ found: false, error: "Could not check that email." });
+    }
+  });
+
   // Quick-pick suggestions: people I've written with (any lyric) or gifted before.
   app.get("/api/gifts/suggestions", requireAuth, async (req, res) => {
     try {

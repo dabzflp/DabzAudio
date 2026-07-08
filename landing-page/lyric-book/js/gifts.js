@@ -121,13 +121,13 @@
         users = data.users || [];
       }
       if (!users.length) {
-        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Enter the artist's account email above to gift them.</div>";
         return;
       }
-      const label = lyricId ? "Collaborators on this lyric" : "People you've worked with";
+      const label = lyricId ? "Collaborators on this lyric" : "People you've worked with — or enter any artist's email above";
       renderResults(users, scopedLyricId, label);
     } catch (err) {
-      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Enter the artist's account email above to gift them.</div>";
     }
   }
 
@@ -135,21 +135,32 @@
     const q = els.giftRecipientSearch.value.trim();
     clearTimeout(searchTimer);
     if (q.length < 1) { els.giftRecipientResults.hidden = true; return; }
-    searchTimer = setTimeout(async () => {
-      els.giftRecipientResults.hidden = false;
-      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Searching…</div>";
-      try {
-        const data = await window.LB.apiFetch("/api/gifts/search-users?q=" + encodeURIComponent(q));
-        const users = data.users || [];
-        if (!users.length) {
-          els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>No artists found.</div>";
-          return;
-        }
-        renderResults(users, null, "");
-      } catch (err) {
-        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Could not search.</div>";
+    searchTimer = setTimeout(() => lookupEmail(q), 300);
+  }
+
+  // Recipients are entered by their account email; the system checks the email
+  // is a registered artist before the gift can proceed.
+  async function lookupEmail(q) {
+    els.giftRecipientResults.hidden = false;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(q)) {
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Enter the artist's full account email to check.</div>";
+      return;
+    }
+    els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Checking…</div>";
+    try {
+      const data = await window.LB.apiFetch("/api/gifts/lookup-email?email=" + encodeURIComponent(q));
+      if (data.self) {
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>That's your own account — pick someone else.</div>";
+        return;
       }
-    }, 220);
+      if (!data.found || !data.user) {
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>No DabzAudio artist is registered with that email.</div>";
+        return;
+      }
+      renderResults([data.user], null, "");
+    } catch (err) {
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>" + (err.message || "Could not check that email.") + "</div>";
+    }
   }
 
   function renderResults(users, scopedLyricId, label) {
