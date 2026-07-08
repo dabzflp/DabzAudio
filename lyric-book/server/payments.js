@@ -231,25 +231,28 @@ export function registerPaymentRoutes(app) {
     }
   });
 
-  // Free-text search for anyone on the platform to gift (by artist/display name).
+  // Search for anyone on the platform to gift, by their unique @username.
   app.get("/api/gifts/search-users", requireAuth, async (req, res) => {
     try {
-      const q = String(req.query.q || "").trim();
+      const q = String(req.query.q || "").trim().replace(/^@/, "");
       if (q.length < 1) return res.json({ users: [] });
-      const like = "%" + q.replace(/[%_]/g, "") + "%";
+      const clean = q.replace(/[%_]/g, "");
+      const prefix = clean + "%";
+      const anywhere = "%" + clean + "%";
       const { rows } = await pool.query(
         `SELECT u.id AS user_id,
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
+                p.username,
                 p.avatar_url,
                 COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
            FROM lb_users u
            LEFT JOIN lb_profiles p ON p.user_id = u.id
            LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
           WHERE u.id <> $1
-            AND (p.artist_name ILIKE $2 OR p.display_name ILIKE $2)
-          ORDER BY payouts_enabled DESC, name ASC
+            AND p.username ILIKE $3
+          ORDER BY (p.username ILIKE $2) DESC, payouts_enabled DESC, p.username ASC
           LIMIT 8`,
-        [req.user.id, like]
+        [req.user.id, prefix, anywhere]
       );
       res.json({ users: rows.map(mapUser) });
     } catch (err) {
@@ -264,6 +267,7 @@ export function registerPaymentRoutes(app) {
       const { rows } = await pool.query(
         `SELECT u.id AS user_id,
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
+                p.username,
                 p.avatar_url,
                 COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
            FROM lb_users u
@@ -348,6 +352,7 @@ export function registerPaymentRoutes(app) {
       const { rows } = await pool.query(
         `SELECT u.id AS user_id,
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name,
+                p.username,
                 p.avatar_url,
                 COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
            FROM lb_lyrics l
@@ -363,14 +368,7 @@ export function registerPaymentRoutes(app) {
           ORDER BY name ASC`,
         [lyricId, req.user.id]
       );
-      res.json({
-        recipients: rows.map((r) => ({
-          userId: Number(r.user_id),
-          name: r.name,
-          avatarUrl: r.avatar_url || "",
-          canReceive: !!r.payouts_enabled
-        }))
-      });
+      res.json({ recipients: rows.map(mapUser) });
     } catch (err) {
       console.error("gifts/recipients error", err);
       res.status(500).json({ error: "Could not load collaborators." });
@@ -522,6 +520,7 @@ function mapUser(r) {
   return {
     userId: Number(r.user_id),
     name: r.name || ("Artist #" + r.user_id),
+    username: r.username || "",
     avatarUrl: r.avatar_url || "",
     canReceive: !!r.payouts_enabled
   };

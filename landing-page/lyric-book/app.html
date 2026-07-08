@@ -131,7 +131,7 @@
       <form class="gift-form" id="giftForm">
         <div class="gift-label">To
           <div class="gift-picker">
-            <input type="text" id="giftRecipientSearch" placeholder="Search an artist by name…" autocomplete="off" />
+            <input type="text" id="giftRecipientSearch" placeholder="Search by @username…" autocomplete="off" spellcheck="false" />
             <input type="hidden" id="giftRecipient" />
             <div class="gift-results" id="giftRecipientResults" hidden></div>
           </div>
@@ -157,6 +157,17 @@
       <div class="modal-head">
         <h3>Gifts &amp; payouts</h3>
         <button class="modal-close" id="giftsClose" type="button" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="handle-card">
+        <div class="handle-label">Your gift handle</div>
+        <div class="handle-row">
+          <span class="handle-at">@</span>
+          <input type="text" id="handleInput" class="handle-input" maxlength="20" autocomplete="off" spellcheck="false" placeholder="username" />
+          <button class="btn small" id="handleSaveBtn" type="button">Save</button>
+        </div>
+        <div class="handle-hint">Share this so other artists can find and gift you. Usernames are unique — 3–20 lowercase letters, numbers or underscores.</div>
+        <div class="msg" id="handleMsg"></div>
       </div>
 
       <div class="payout-card" id="payoutCard">
