@@ -49,6 +49,23 @@ function notConfigured(res) {
   return res.status(503).json({ error: "Gifting is not set up yet. Please try again later." });
 }
 
+// Turn a Stripe error into an actionable client message instead of a blank 500.
+// Some Stripe failures (e.g. Connect not enabled in live mode) are configuration
+// problems the caller can't fix, but the message tells the operator exactly what
+// to do — so we surface it rather than hiding it behind a generic error.
+function stripeError(res, err, fallback) {
+  const msg = (err && err.raw && err.raw.message) || (err && err.message) || "";
+  if (/signed up for Connect/i.test(msg)) {
+    return res.status(503).json({
+      error: "Payouts aren't enabled yet. The DabzAudio team needs to activate Stripe Connect in live mode."
+    });
+  }
+  if (err && err.type === "StripeInvalidRequestError" && msg) {
+    return res.status(400).json({ error: msg });
+  }
+  return res.status(500).json({ error: fallback });
+}
+
 // Round the platform fee from basis points of the gross amount.
 function platformFeeCents(amountCents) {
   if (!FEE_BPS) return 0;
@@ -213,7 +230,7 @@ export function registerPaymentRoutes(app) {
       res.json({ url: link.url });
     } catch (err) {
       console.error("payouts/connect error", err);
-      res.status(500).json({ error: "Could not start payout setup." });
+      stripeError(res, err, "Could not start payout setup.");
     }
   });
 
@@ -227,7 +244,7 @@ export function registerPaymentRoutes(app) {
       res.json({ url: link.url });
     } catch (err) {
       console.error("payouts/login-link error", err);
-      res.status(500).json({ error: "Could not open payout dashboard." });
+      stripeError(res, err, "Could not open payout dashboard.");
     }
   });
 
@@ -466,7 +483,7 @@ export function registerPaymentRoutes(app) {
       }
     } catch (err) {
       console.error("gifts create error", err);
-      res.status(500).json({ error: "Could not start the gift. Please try again." });
+      stripeError(res, err, "Could not start the gift. Please try again.");
     }
   });
 
