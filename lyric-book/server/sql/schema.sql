@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS lb_profiles (
 -- Add avatar_url for profiles created before this column existed.
 ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT '';
 
+-- Public @username handle (used to find artists in the gift picker). Globally
+-- unique, case-insensitive. Backfilled for existing rows by migrate.js.
+ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS username TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_profiles_username
+  ON lb_profiles(LOWER(username)) WHERE username IS NOT NULL AND username <> '';
+
 CREATE TABLE IF NOT EXISTS lb_lyrics (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,

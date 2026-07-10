@@ -32,6 +32,7 @@ import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
 import { initCollab, revokeCollabAccess } from "./collab.js";
 import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
+import { ensureUniqueUsername, validateUsername } from "./username.js";
 
 dotenv.config();
 
@@ -94,7 +95,8 @@ function sanitizeProfile(row) {
     genre: row.genre,
     influences: row.influences,
     experience: row.experience,
-    avatarUrl: row.avatar_url || ""
+    avatarUrl: row.avatar_url || "",
+    username: row.username || ""
   };
 }
 
@@ -162,10 +164,14 @@ app.post("/api/auth/signup", async (req, res) => {
         [email.toLowerCase(), password_hash]
       );
       user = u.rows[0];
+      const username = await ensureUniqueUsername(
+        client,
+        String(email).split("@")[0] || artistName || displayName
+      );
       await client.query(
-        `INSERT INTO lb_profiles (user_id, display_name, artist_name, genre, influences, experience)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [user.id, displayName, artistName, genre, influences, experience]
+        `INSERT INTO lb_profiles (user_id, display_name, artist_name, genre, influences, experience, username)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [user.id, displayName, artistName, genre, influences, experience, username]
       );
       await client.query("COMMIT");
     } catch (e) {
@@ -222,7 +228,7 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
     await linkPendingInvites(req.user.id, req.user.email);
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url
+      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url, p.username
        FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
       [req.user.id]
@@ -241,22 +247,50 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
 
 app.put("/api/profile", requireAuth, async (req, res) => {
   try {
-    const {
-      displayName = "",
-      artistName = "",
-      genre = "",
-      influences = "",
-      experience = ""
-    } = req.body || {};
+    const body = req.body || {};
+    // Fields absent from the request are left unchanged (COALESCE keeps the
+    // existing value), so a username-only update doesn't wipe the profile.
+    const nz = (v) => (v === undefined ? null : String(v));
+    const displayName = nz(body.displayName);
+    const artistName = nz(body.artistName);
+    const genre = nz(body.genre);
+    const influences = nz(body.influences);
+    const experience = nz(body.experience);
+
+    // Username is optional; when provided it is validated and must be unique.
+    let handle = null;
+    if (body.username !== undefined) {
+      const wanted = String(body.username).trim().toLowerCase();
+      const bad = validateUsername(wanted);
+      if (bad) return res.status(400).json({ error: bad });
+      const taken = await pool.query(
+        "SELECT 1 FROM lb_profiles WHERE LOWER(username) = $1 AND user_id <> $2 LIMIT 1",
+        [wanted, req.user.id]
+      );
+      if (taken.rows.length) {
+        return res.status(409).json({ error: "That username is already taken." });
+      }
+      handle = wanted;
+    }
+
     const { rows } = await pool.query(
       `UPDATE lb_profiles
-       SET display_name = $2, artist_name = $3, genre = $4, influences = $5, experience = $6, updated_at = NOW()
+       SET display_name = COALESCE($2, display_name),
+           artist_name  = COALESCE($3, artist_name),
+           genre        = COALESCE($4, genre),
+           influences   = COALESCE($5, influences),
+           experience   = COALESCE($6, experience),
+           username     = COALESCE($7, username),
+           updated_at = NOW()
        WHERE user_id = $1
-       RETURNING display_name, artist_name, genre, influences, experience, avatar_url`,
-      [req.user.id, displayName, artistName, genre, influences, experience]
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username`,
+      [req.user.id, displayName, artistName, genre, influences, experience, handle]
     );
     res.json({ profile: sanitizeProfile(rows[0]) });
   } catch (err) {
+    if (err && err.code === "23505") {
+      return res.status(409).json({ error: "That username is already taken." });
+    }
     console.error("profile error", err);
     res.status(500).json({ error: "Could not save profile." });
   }
@@ -296,7 +330,7 @@ app.post("/api/profile/avatar", requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE lb_profiles SET avatar_url = $2, updated_at = NOW()
        WHERE user_id = $1
-       RETURNING display_name, artist_name, genre, influences, experience, avatar_url`,
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username`,
       [req.user.id, url]
     );
     res.json({ profile: sanitizeProfile(rows[0]) });
