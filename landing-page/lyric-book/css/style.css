@@ -413,8 +413,10 @@ body.auth-bg .site-header {
   background: none; border: none; color: #eee; text-align: left;
   padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px;
 }
-.gift-result:hover:not(.disabled) { background: rgba(255,122,0,0.12); }
-.gift-result.disabled { color: var(--muted); cursor: not-allowed; }
+.gift-result:hover { background: rgba(255,122,0,0.12); }
+.gift-result.muted .gift-result-name b { color: var(--muted); }
+.gift-result-name b { font-weight: 600; }
+.gift-result-handle { color: var(--muted); font-size: 12px; }
 .gift-result-av {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
   background: var(--charcoal) center/cover no-repeat; border: 1px solid var(--line);
@@ -432,6 +434,22 @@ body.auth-bg .site-header {
   line-height: 1; width: 20px; height: 20px; border-radius: 50%;
 }
 .gift-chip-x:hover { background: rgba(255,255,255,0.15); }
+
+/* Gift handle (@username) card */
+.handle-card {
+  background: #0f0f0f; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px; margin: 4px 0 16px;
+}
+.handle-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.handle-row { display: flex; align-items: center; gap: 8px; }
+.handle-at { color: var(--orange); font-weight: 700; font-size: 16px; }
+.handle-input {
+  flex: 1; min-width: 0; background: #141414; border: 1px solid var(--line);
+  border-radius: 9px; color: #eee; padding: 9px 11px; font-size: 14px;
+}
+.handle-input:focus { outline: none; border-color: var(--orange); }
+.handle-hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+.handle-card .msg { margin-top: 8px; }
 
 /* Wallet card */
 .wallet-card {

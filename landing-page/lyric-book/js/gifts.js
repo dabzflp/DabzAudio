@@ -29,6 +29,9 @@
     // Gifts & payouts modal
     giftsModal: document.getElementById("giftsModal"),
     giftsClose: document.getElementById("giftsClose"),
+    handleInput: document.getElementById("handleInput"),
+    handleSaveBtn: document.getElementById("handleSaveBtn"),
+    handleMsg: document.getElementById("handleMsg"),
     payoutStatus: document.getElementById("payoutStatus"),
     payoutActions: document.getElementById("payoutActions"),
     walletCard: document.getElementById("walletCard"),
@@ -81,6 +84,7 @@
     els.giftsClose.addEventListener("click", () => hide(els.giftsModal));
     els.giftForm.addEventListener("submit", submitGift);
     els.withdrawBtn.addEventListener("click", withdraw);
+    if (els.handleSaveBtn) els.handleSaveBtn.addEventListener("click", saveHandle);
     els.giftRecipientSearch.addEventListener("input", onSearchInput);
     els.tabReceived.addEventListener("click", () => switchTab("received"));
     els.tabSent.addEventListener("click", () => switchTab("sent"));
@@ -121,13 +125,13 @@
         users = data.users || [];
       }
       if (!users.length) {
-        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
+        els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by their @username above.</div>";
         return;
       }
-      const label = lyricId ? "Collaborators on this lyric" : "People you've worked with";
+      const label = lyricId ? "Collaborators on this lyric" : "People you've worked with — or search any @username above";
       renderResults(users, scopedLyricId, label);
     } catch (err) {
-      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by name above.</div>";
+      els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Search an artist by their @username above.</div>";
     }
   }
 
@@ -139,10 +143,11 @@
       els.giftRecipientResults.hidden = false;
       els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>Searching…</div>";
       try {
-        const data = await window.LB.apiFetch("/api/gifts/search-users?q=" + encodeURIComponent(q));
+        const query = q.replace(/^@/, "");
+        const data = await window.LB.apiFetch("/api/gifts/search-users?q=" + encodeURIComponent(query));
         const users = data.users || [];
         if (!users.length) {
-          els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>No artists found.</div>";
+          els.giftRecipientResults.innerHTML = "<div class='gift-result-note'>No artist with that username. Usernames are unique — check the exact @handle.</div>";
           return;
         }
         renderResults(users, null, "");
@@ -161,17 +166,21 @@
       els.giftRecipientResults.appendChild(h);
     }
     users.forEach((u) => {
+      // Rows are always clickable; if the artist can't receive yet we say so
+      // on click rather than leaving a dead, unclickable option.
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "gift-result" + (u.canReceive ? "" : " disabled");
-      row.disabled = !u.canReceive;
+      row.className = "gift-result" + (u.canReceive ? "" : " muted");
       const av = document.createElement("span");
       av.className = "gift-result-av";
       if (u.avatarUrl) av.style.backgroundImage = `url(${u.avatarUrl})`;
-      else av.textContent = (u.name || "?").slice(0, 1).toUpperCase();
+      else av.textContent = (u.name || u.username || "?").slice(0, 1).toUpperCase();
       const nm = document.createElement("span");
       nm.className = "gift-result-name";
-      nm.textContent = u.canReceive ? u.name : `${u.name} · no payouts yet`;
+      const handle = u.username ? "@" + u.username : "";
+      nm.innerHTML = `<b>${escapeHtml(u.name || handle)}</b>` +
+        (handle ? ` <span class="gift-result-handle">${escapeHtml(handle)}</span>` : "") +
+        (u.canReceive ? "" : ` <span class="gift-result-handle">· no payouts yet</span>`);
       row.appendChild(av);
       row.appendChild(nm);
       row.addEventListener("click", () => selectRecipient(u, scopedLyricId));
@@ -179,7 +188,18 @@
     });
   }
 
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+  }
+
   function selectRecipient(u, scopedLyricId) {
+    if (!u.canReceive) {
+      const who = u.username ? "@" + u.username : u.name;
+      setMsg(`${who} hasn't set up payouts yet, so they can't receive gifts.`, "err");
+      return;
+    }
     els.giftRecipient.value = String(u.userId);
     selectedLyricId = scopedLyricId || null;
     els.giftRecipientResults.hidden = true;
@@ -188,7 +208,7 @@
     els.giftSelected.innerHTML = "";
     const chip = document.createElement("span");
     chip.className = "gift-chip";
-    chip.textContent = u.name;
+    chip.textContent = u.username ? "@" + u.username : u.name;
     const x = document.createElement("button");
     x.type = "button";
     x.className = "gift-chip-x";
@@ -258,7 +278,48 @@
     els.giftReceived.innerHTML = "";
     els.giftSent.innerHTML = "";
     switchTab("received");
-    await Promise.all([loadPayoutStatus(), loadWallet(), loadHistory()]);
+    if (els.handleMsg) els.handleMsg.textContent = "";
+    await Promise.all([loadHandle(), loadPayoutStatus(), loadWallet(), loadHistory()]);
+  }
+
+  /* ---------- Gift handle (@username) ---------- */
+  async function loadHandle() {
+    if (!els.handleInput) return;
+    try {
+      const me = await window.LB.apiFetch("/api/auth/me");
+      els.handleInput.value = (me.profile && me.profile.username) || "";
+    } catch {
+      /* leave blank */
+    }
+  }
+
+  async function saveHandle() {
+    if (!els.handleInput) return;
+    const username = els.handleInput.value.trim().toLowerCase();
+    els.handleInput.value = username;
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+      setHandleMsg("3–20 lowercase letters, numbers or underscores.", "err");
+      return;
+    }
+    els.handleSaveBtn.disabled = true;
+    setHandleMsg("Saving…");
+    try {
+      await window.LB.apiFetch("/api/profile", {
+        method: "PUT",
+        body: JSON.stringify({ username })
+      });
+      setHandleMsg("Saved — you're now @" + username, "ok");
+    } catch (err) {
+      setHandleMsg(err.message || "Could not save username.", "err");
+    } finally {
+      els.handleSaveBtn.disabled = false;
+    }
+  }
+
+  function setHandleMsg(text, kind) {
+    if (!els.handleMsg) return;
+    els.handleMsg.textContent = text || "";
+    els.handleMsg.className = "msg" + (kind ? " " + kind : "");
   }
 
   /* ---------- Wallet (balance + on-demand withdraw) ---------- */
