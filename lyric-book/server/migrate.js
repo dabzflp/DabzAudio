@@ -37,7 +37,7 @@ async function backfillUsernames() {
   if (!rows.length) return;
   let assigned = 0;
   for (const r of rows) {
-    const base = r.artist_name || r.display_name || String(r.email || "").split("@")[0];
+    const base = String(r.email || "").split("@")[0] || r.artist_name || r.display_name;
     const handle = await ensureUniqueUsername(pool, base, r.user_id);
     await pool.query("UPDATE lb_profiles SET username = $2 WHERE user_id = $1", [r.user_id, handle]);
     assigned++;

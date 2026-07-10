@@ -166,7 +166,7 @@ app.post("/api/auth/signup", async (req, res) => {
       user = u.rows[0];
       const username = await ensureUniqueUsername(
         client,
-        artistName || displayName || String(email).split("@")[0]
+        String(email).split("@")[0] || artistName || displayName
       );
       await client.query(
         `INSERT INTO lb_profiles (user_id, display_name, artist_name, genre, influences, experience, username)

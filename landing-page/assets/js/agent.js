@@ -20,6 +20,7 @@
         "<li><strong>Key &amp; BPM Analysis</strong> — find the key and tempo of any track</li>" +
         "<li><strong>Reverb &amp; Delay Calculator</strong> — tempo-synced FX times</li>" +
         "<li><strong>Lyric Book</strong> — write, store &amp; co-write lyrics with rhyme/rhythm help</li>" +
+        "<li><strong>Gift an artist</strong> — send money to any artist by @username via Stripe</li>" +
         "<li><strong>Community Hub</strong> &amp; <strong>Studio Creative Assets</strong></li>" +
         "</ul>Which one would you like to know more about?"
     },
@@ -69,6 +70,18 @@
         "In the <strong>Lyric Book</strong> you can share a single lyric with another artist by email and set them as <em>viewer</em> or <em>editor</em>. " +
         "Editors can type <strong>live, at the same time as you</strong>, with presence avatars showing who's online. " +
         "You only ever share the one lyric you choose — your other lyrics stay private — and you can stop sharing anytime."
+    },
+    {
+      id: "gift",
+      keywords: ["gift", "gifting", "tip", "tipping", "donate", "donation", "send money", "pay artist", "support artist", "payout", "payouts", "wallet", "withdraw", "stripe", "username", "@", "handle", "receive money", "get paid"],
+      answer:
+        "<strong>Gift an artist</strong> lets you send money straight to another DabzAudio artist — securely through Stripe:" +
+        "<ul>" +
+        "<li><strong>Find them by @username.</strong> Every artist has one unique handle across the whole platform (e.g. <em>@dabzflp</em>), so you always gift the right person — no mix-ups or duplicates.</li>" +
+        "<li><strong>Send the gift.</strong> In the Lyric Book tap <em>Gift an artist</em>, search their @username, choose an amount and add a message, then pay securely via Stripe Checkout (card/Apple&nbsp;Pay/Google&nbsp;Pay). No account details are shared.</li>" +
+        "<li><strong>They get paid.</strong> The artist sees the gift land in their in-app <em>wallet</em>, then withdraws to their bank on demand once they've completed a quick one-time Stripe payout setup.</li>" +
+        "<li><strong>Set your own handle.</strong> Open <em>Gifts &amp; payouts</em> → <em>Your gift handle</em> to claim your @username so fans can gift you.</li>" +
+        "</ul>Gifts go 100% to the artist. Open the <a href='lyric-book/index.html'>Lyric Book</a> to try it."
     },
     {
       id: "hub",
@@ -125,7 +138,8 @@
     { label: "How do I get started?", q: "How do I get started?" },
     { label: "Key & BPM tool", q: "Tell me about the Key and BPM tool" },
     { label: "Lyric Book", q: "What is the Lyric Book?" },
-    { label: "Collaborate on lyrics", q: "How does collaboration work?" }
+    { label: "Collaborate on lyrics", q: "How does collaboration work?" },
+    { label: "Gift an artist", q: "How does gifting an artist work?" }
   ];
 
   var FALLBACK =
