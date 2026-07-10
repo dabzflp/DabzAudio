@@ -81,7 +81,7 @@
         "<li><strong>Send the gift.</strong> In the Lyric Book tap <em>Gift an artist</em>, search their @username, choose an amount and add a message, then pay securely via Stripe Checkout (card/Apple&nbsp;Pay/Google&nbsp;Pay). No account details are shared.</li>" +
         "<li><strong>They get paid.</strong> The artist sees the gift land in their in-app <em>wallet</em>, then withdraws to their bank on demand once they've completed a quick one-time Stripe payout setup.</li>" +
         "<li><strong>Set your own handle.</strong> Open <em>Gifts &amp; payouts</em> → <em>Your gift handle</em> to claim your @username so fans can gift you.</li>" +
-        "</ul>Gifts go 100% to the artist. Open the <a href='lyric-book/index.html'>Lyric Book</a> to try it."
+        "</ul>The gift popup shows exactly what the artist receives and DabzAudio's small platform fee before you pay. Open the <a href='lyric-book/index.html'>Lyric Book</a> to try it."
     },
     {
       id: "hub",
