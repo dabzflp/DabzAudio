@@ -23,6 +23,7 @@
     giftSelected: document.getElementById("giftSelected"),
     giftAmount: document.getElementById("giftAmount"),
     giftPresets: document.getElementById("giftPresets"),
+    giftBreakdown: document.getElementById("giftBreakdown"),
     giftMessage: document.getElementById("giftMessage"),
     giftCurrency: document.getElementById("giftCurrency"),
     giftMsg: document.getElementById("giftMsg"),
@@ -72,6 +73,7 @@
     els.giftAmount.max = config.maxAmount;
     renderPresets();
     wire();
+    renderBreakdown();
     handleReturnParams();
   }
 
@@ -83,6 +85,7 @@
     els.giftClose.addEventListener("click", () => hide(els.giftModal));
     els.giftsClose.addEventListener("click", () => hide(els.giftsModal));
     els.giftForm.addEventListener("submit", submitGift);
+    els.giftAmount.addEventListener("input", renderBreakdown);
     els.withdrawBtn.addEventListener("click", withdraw);
     if (els.handleSaveBtn) els.handleSaveBtn.addEventListener("click", saveHandle);
     els.giftRecipientSearch.addEventListener("input", onSearchInput);
@@ -107,6 +110,7 @@
     els.giftMessage.value = "";
     els.giftRecipientSearch.value = "";
     clearRecipient();
+    renderBreakdown();
     els.giftRecipientResults.hidden = true;
     els.giftModal.hidden = false;
 
@@ -262,9 +266,34 @@
       b.type = "button";
       b.className = "gift-preset";
       b.textContent = formatMajor(v);
-      b.addEventListener("click", () => { els.giftAmount.value = v; });
+      b.addEventListener("click", () => { els.giftAmount.value = v; renderBreakdown(); });
       els.giftPresets.appendChild(b);
     });
+  }
+
+  // Show exactly how a gift splits: what the artist receives vs the DabzAudio fee.
+  function renderBreakdown() {
+    if (!els.giftBreakdown) return;
+    const feePct = (config.feeBps || 0) / 100;
+    const amount = Number(els.giftAmount.value);
+    if (!(amount > 0)) {
+      if (feePct > 0) {
+        els.giftBreakdown.hidden = false;
+        els.giftBreakdown.innerHTML =
+          `<span class="gift-breakdown-note">Artist keeps ${(100 - feePct).toLocaleString()}% \u00b7 DabzAudio fee ${feePct.toLocaleString()}%</span>`;
+      } else {
+        els.giftBreakdown.hidden = true;
+      }
+      return;
+    }
+    const fee = Math.round(amount * (config.feeBps || 0)) / 10000;
+    const net = amount - fee;
+    els.giftBreakdown.hidden = false;
+    els.giftBreakdown.innerHTML =
+      `<span class="gift-breakdown-row"><span>Artist receives</span><b>${formatMajor(net)}</b></span>` +
+      (feePct > 0
+        ? `<span class="gift-breakdown-row muted"><span>DabzAudio fee (${feePct.toLocaleString()}%)</span><span>${formatMajor(fee)}</span></span>`
+        : `<span class="gift-breakdown-row muted"><span>DabzAudio fee</span><span>Free</span></span>`);
   }
 
   /* ---------- Gifts & payouts ---------- */

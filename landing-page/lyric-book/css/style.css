@@ -399,6 +399,14 @@ body.auth-bg .site-header {
   border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer;
 }
 .gift-preset:hover { border-color: var(--orange); color: #fff; }
+.gift-breakdown {
+  background: #0f0f0f; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; margin-top: -2px;
+}
+.gift-breakdown-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; color: #eee; }
+.gift-breakdown-row b { color: var(--orange); font-weight: 700; }
+.gift-breakdown-row.muted { color: var(--muted); font-size: 12px; }
+.gift-breakdown-note { color: var(--muted); font-size: 12px; }
 .gift-fineprint { color: var(--muted); font-size: 11.5px; margin: 12px 0 0; }
 
 /* Recipient search picker */

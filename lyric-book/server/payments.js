@@ -31,7 +31,13 @@ export const stripe = SECRET ? new Stripe(SECRET) : null;
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const CONNECT_COUNTRY = (process.env.STRIPE_CONNECT_COUNTRY || "US").toUpperCase();
 const CURRENCY = (process.env.GIFT_CURRENCY || "usd").toLowerCase();
-const FEE_BPS = Math.max(0, Math.min(10000, Number(process.env.PLATFORM_FEE_BPS || 0)));
+// Platform fee in basis points (100 = 1%). Defaults to 1000 (10%) — fair for a
+// creator-tipping product and enough to cover Stripe's processing fees on typical
+// gifts. Override with PLATFORM_FEE_BPS (set to 0 for a no-fee, artist-keeps-all model).
+const FEE_BPS = Math.max(
+  0,
+  Math.min(10000, Number(process.env.PLATFORM_FEE_BPS ?? 1000))
+);
 
 // Sensible gift bounds (in major currency units).
 const MIN_AMOUNT = 1;      // e.g. £1 / $1
