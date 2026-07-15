@@ -312,11 +312,24 @@
   }
 
   /* ---------- Gift handle (@username) ---------- */
+  const USERNAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
   async function loadHandle() {
     if (!els.handleInput) return;
     try {
       const me = await window.LB.apiFetch("/api/auth/me");
-      els.handleInput.value = (me.profile && me.profile.username) || "";
+      const prof = me.profile || {};
+      els.handleInput.value = prof.username || "";
+      const last = prof.usernameUpdatedAt ? new Date(prof.usernameUpdatedAt).getTime() : 0;
+      const nextAllowed = last + USERNAME_COOLDOWN_MS;
+      if (last && Date.now() < nextAllowed) {
+        const d = new Date(nextAllowed).toLocaleDateString(undefined, {
+          day: "numeric", month: "short", year: "numeric"
+        });
+        setHandleMsg("You can change your @username again on " + d + ".", "");
+      } else {
+        setHandleMsg("You can change your @username once every 30 days.", "");
+      }
     } catch {
       /* leave blank */
     }
@@ -337,7 +350,7 @@
         method: "PUT",
         body: JSON.stringify({ username })
       });
-      setHandleMsg("Saved — you're now @" + username, "ok");
+      setHandleMsg("Saved — you're now @" + username + ". You can change it again in 30 days.", "ok");
     } catch (err) {
       setHandleMsg(err.message || "Could not save username.", "err");
     } finally {
@@ -495,10 +508,12 @@
   function handleReturnParams() {
     const p = new URLSearchParams(location.search);
     const gift = p.get("gift");
+    const giftId = p.get("giftId");
     const payouts = p.get("payouts");
     if (!gift && !payouts) return;
     // Clean the URL so a refresh doesn't re-trigger.
     p.delete("gift");
+    p.delete("giftId");
     p.delete("payouts");
     const qs = p.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
@@ -508,6 +523,12 @@
       openGiftsModal();
     } else if (gift === "cancel") {
       toast("Gift cancelled — no charge was made.");
+      // Flip the abandoned gift from Pending → Failed right away.
+      if (giftId) {
+        window.LB.apiFetch("/api/gifts/" + encodeURIComponent(giftId) + "/cancel", {
+          method: "POST"
+        }).catch(() => {});
+      }
     }
     if (payouts === "done" || payouts === "refresh") {
       openGiftsModal();

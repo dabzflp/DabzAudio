@@ -148,6 +148,29 @@ async function handleEvent(event) {
         [giftId, session.payment_intent || null]
       );
     }
+  } else if (
+    event.type === "checkout.session.expired" ||
+    event.type === "checkout.session.async_payment_failed"
+  ) {
+    // Sender abandoned or the payment failed — mark the gift Failed (not stuck
+    // on Pending) so both parties see an accurate status.
+    const session = event.data.object;
+    const giftId = session.metadata && session.metadata.giftId;
+    if (giftId) {
+      await pool.query(
+        "UPDATE lb_gifts SET status = 'failed' WHERE id = $1 AND status = 'pending'",
+        [giftId]
+      );
+    }
+  } else if (event.type === "payment_intent.payment_failed") {
+    const pi = event.data.object;
+    const giftId = pi.metadata && pi.metadata.giftId;
+    if (giftId) {
+      await pool.query(
+        "UPDATE lb_gifts SET status = 'failed' WHERE id = $1 AND status = 'pending'",
+        [giftId]
+      );
+    }
   } else if (event.type === "account.updated") {
     const acct = event.data.object;
     await pool.query(
@@ -474,7 +497,7 @@ export function registerPaymentRoutes(app) {
             lyricId: lyricId ? String(lyricId) : ""
           },
           success_url: `${appBase()}/app.html?gift=success`,
-          cancel_url: `${appBase()}/app.html?gift=cancel`
+          cancel_url: `${appBase()}/app.html?gift=cancel&giftId=${giftId}`
         });
         await pool.query(
           "UPDATE lb_gifts SET stripe_checkout_session_id = $2 WHERE id = $1",
@@ -491,9 +514,30 @@ export function registerPaymentRoutes(app) {
     }
   });
 
+  // Sender bailed out of Checkout — mark their own still-pending gift Failed.
+  app.post("/api/gifts/:id/cancel", requireAuth, async (req, res) => {
+    try {
+      await pool.query(
+        `UPDATE lb_gifts SET status = 'failed'
+          WHERE id = $1 AND from_user_id = $2 AND status = 'pending'`,
+        [Number(req.params.id), req.user.id]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("gifts cancel error", err);
+      res.status(500).json({ error: "Could not update the gift." });
+    }
+  });
+
   // Gift history for the current user (received + sent) with totals.
   app.get("/api/gifts/history", requireAuth, async (req, res) => {
     try {
+      // Self-heal: any gift left Pending past the Checkout window (24h) never
+      // completed, so flip it to Failed rather than leaving it hanging.
+      await pool.query(
+        `UPDATE lb_gifts SET status = 'failed'
+          WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours'`
+      );
       const received = await pool.query(
         `SELECT g.id, g.amount_cents, g.fee_cents, g.currency, g.message, g.status, g.created_at,
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email, 'A fan') AS from_name,
