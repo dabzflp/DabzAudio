@@ -39,8 +39,10 @@ const FEE_BPS = Math.max(
   Math.min(10000, Number(process.env.PLATFORM_FEE_BPS ?? 1000))
 );
 
-// Sensible gift bounds (in major currency units).
-const MIN_AMOUNT = 1;      // e.g. £1 / $1
+// Sensible gift bounds (in major currency units). Minimum defaults to 5 so
+// Stripe's fixed processing fee (~20p) doesn't make small gifts loss-making;
+// override with MIN_GIFT.
+const MIN_AMOUNT = Math.max(1, Number(process.env.MIN_GIFT ?? 5));
 const MAX_AMOUNT = 1000;   // guard-rail against fat-finger / abuse
 
 // Minimum wallet withdrawal (major units). Keeps Stripe's fixed payout fee from
