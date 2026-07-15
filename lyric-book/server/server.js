@@ -88,6 +88,9 @@ app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-b
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Artists may change their @username at most once every 30 days.
+const USERNAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
 function sanitizeProfile(row) {
   return {
     displayName: row.display_name,
@@ -96,7 +99,8 @@ function sanitizeProfile(row) {
     influences: row.influences,
     experience: row.experience,
     avatarUrl: row.avatar_url || "",
-    username: row.username || ""
+    username: row.username || "",
+    usernameUpdatedAt: row.username_updated_at || null
   };
 }
 
@@ -228,7 +232,7 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
     await linkPendingInvites(req.user.id, req.user.email);
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url, p.username
+      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url, p.username, p.username_updated_at
        FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
       [req.user.id]
@@ -257,20 +261,42 @@ app.put("/api/profile", requireAuth, async (req, res) => {
     const influences = nz(body.influences);
     const experience = nz(body.experience);
 
-    // Username is optional; when provided it is validated and must be unique.
+    // Username is optional; when provided it is validated, must be unique, and
+    // can only be changed once every 30 days (to curb churn / abuse).
     let handle = null;
+    let touchHandleTs = false;
     if (body.username !== undefined) {
       const wanted = String(body.username).trim().toLowerCase();
       const bad = validateUsername(wanted);
       if (bad) return res.status(400).json({ error: bad });
-      const taken = await pool.query(
-        "SELECT 1 FROM lb_profiles WHERE LOWER(username) = $1 AND user_id <> $2 LIMIT 1",
-        [wanted, req.user.id]
+
+      const cur = await pool.query(
+        "SELECT username, username_updated_at FROM lb_profiles WHERE user_id = $1",
+        [req.user.id]
       );
-      if (taken.rows.length) {
-        return res.status(409).json({ error: "That username is already taken." });
+      const current = (cur.rows[0] && cur.rows[0].username) || "";
+      // No-op when the handle is unchanged — don't rate-limit or bump the clock.
+      if (wanted !== current.toLowerCase()) {
+        const lastChanged = cur.rows[0] && cur.rows[0].username_updated_at;
+        if (lastChanged) {
+          const nextAllowed = new Date(lastChanged).getTime() + USERNAME_COOLDOWN_MS;
+          if (Date.now() < nextAllowed) {
+            const days = Math.ceil((nextAllowed - Date.now()) / (24 * 60 * 60 * 1000));
+            return res.status(429).json({
+              error: `You can only change your @username once a month. Try again in ${days} day${days === 1 ? "" : "s"}.`
+            });
+          }
+        }
+        const taken = await pool.query(
+          "SELECT 1 FROM lb_profiles WHERE LOWER(username) = $1 AND user_id <> $2 LIMIT 1",
+          [wanted, req.user.id]
+        );
+        if (taken.rows.length) {
+          return res.status(409).json({ error: "That username is already taken." });
+        }
+        handle = wanted;
+        touchHandleTs = true;
       }
-      handle = wanted;
     }
 
     const { rows } = await pool.query(
@@ -281,10 +307,11 @@ app.put("/api/profile", requireAuth, async (req, res) => {
            influences   = COALESCE($5, influences),
            experience   = COALESCE($6, experience),
            username     = COALESCE($7, username),
+           username_updated_at = CASE WHEN $8 THEN NOW() ELSE username_updated_at END,
            updated_at = NOW()
        WHERE user_id = $1
-       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username`,
-      [req.user.id, displayName, artistName, genre, influences, experience, handle]
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username, username_updated_at`,
+      [req.user.id, displayName, artistName, genre, influences, experience, handle, touchHandleTs]
     );
     res.json({ profile: sanitizeProfile(rows[0]) });
   } catch (err) {
@@ -330,7 +357,7 @@ app.post("/api/profile/avatar", requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE lb_profiles SET avatar_url = $2, updated_at = NOW()
        WHERE user_id = $1
-       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username`,
+       RETURNING display_name, artist_name, genre, influences, experience, avatar_url, username, username_updated_at`,
       [req.user.id, url]
     );
     res.json({ profile: sanitizeProfile(rows[0]) });

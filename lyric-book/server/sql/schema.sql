@@ -31,6 +31,9 @@ ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS username TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_profiles_username
   ON lb_profiles(LOWER(username)) WHERE username IS NOT NULL AND username <> '';
 
+-- When the handle was last changed, to rate-limit renames (once / 30 days).
+ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS username_updated_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS lb_lyrics (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
