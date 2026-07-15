@@ -43,6 +43,7 @@
       <div class="sidebar-head">
         <button class="btn block" id="newBtn" type="button">+ New lyric</button>
         <input class="lyric-search" id="lyricSearch" type="search" placeholder="Search your lyrics…" autocomplete="off" />
+        <div class="lyric-count" id="lyricCount"></div>
       </div>
       <ul class="lyric-list" id="lyricList"></ul>
     </aside>
@@ -236,5 +237,6 @@
       window.addEventListener("resize", function () { if (window.innerWidth > 860) close(); });
     })();
   </script>
+  <script src="../assets/js/cookie-consent.js"></script>
 </body>
 </html>

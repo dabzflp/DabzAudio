@@ -181,6 +181,7 @@ body.auth-bg .site-header {
   border-radius: 9px; color: #eee; padding: 9px 11px; font-size: 13px;
 }
 .lyric-search:focus { outline: none; border-color: var(--orange); }
+.lyric-count { font-size: 12px; color: var(--muted); padding: 0 2px; }
 .lyric-list { list-style: none; margin: 0; padding: 8px; overflow-y: auto; flex: 1; min-height: 0; }
 .lyric-item {
   padding: 12px 12px; border-radius: 10px; cursor: pointer;

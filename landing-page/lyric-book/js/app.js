@@ -23,6 +23,7 @@
     avatarInput: document.getElementById("avatarInput"),
     newBtn: document.getElementById("newBtn"),
     lyricSearch: document.getElementById("lyricSearch"),
+    lyricCount: document.getElementById("lyricCount"),
     list: document.getElementById("lyricList"),
     appShell: document.querySelector(".app-shell"),
     backToList: document.getElementById("backToList"),
@@ -171,9 +172,22 @@
     renderList();
   }
 
+  function renderCount(shownLen) {
+    if (!els.lyricCount) return;
+    const created = lyrics.filter((ly) => ly.owned !== false).length;
+    const shared = lyrics.length - created;
+    let text = created + (created === 1 ? " lyric" : " lyrics");
+    if (shared > 0) text += " · " + shared + " shared with you";
+    if (shownLen != null && shownLen !== lyrics.length) {
+      text = "Showing " + shownLen + " of " + text;
+    }
+    els.lyricCount.textContent = lyrics.length ? text : "";
+  }
+
   function renderList() {
     els.list.innerHTML = "";
     if (!lyrics.length) {
+      renderCount();
       const li = document.createElement("li");
       li.className = "empty-note";
       li.textContent = "No lyrics yet. Click “New lyric” to start.";
@@ -184,6 +198,7 @@
     const shown = q
       ? lyrics.filter((ly) => (ly.title || "Untitled").toLowerCase().includes(q))
       : lyrics;
+    renderCount(shown.length);
     if (!shown.length) {
       const li = document.createElement("li");
       li.className = "empty-note";
