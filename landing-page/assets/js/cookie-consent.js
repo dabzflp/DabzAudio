@@ -1,30 +1,29 @@
 /* =====================================================================
-   DabzAudio — Cookie consent banner
-   Lightweight, dependency-free GDPR/PECR-style consent. Injects its own
-   styles + DOM, remembers the choice in localStorage, and never blocks the
-   page. Essential cookies (sign-in/session) always run; analytics/marketing
-   only after the visitor accepts.
+   DabzAudio — Cookie notice (landing page)
+   Lightweight, dependency-free notice. DabzAudio only uses cookies that are
+   strictly necessary for the site to function (sign-in/session + remembering
+   you dismissed this notice). This banner just lets visitors know; it stores
+   the dismissal in localStorage so it doesn't reappear.
    ===================================================================== */
 (function () {
   "use strict";
 
-  var KEY = "dabz_cookie_consent"; // stores "all" | "necessary"
-  var VERSION = "1"; // bump to re-ask everyone if the policy changes
+  var KEY = "dabz_cookie_notice"; // stores that the notice was dismissed
+  var VERSION = "1"; // bump to re-show everyone if the policy changes
 
-  // Already answered for this policy version? Do nothing.
+  // Already dismissed for this policy version? Do nothing.
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || "null");
     if (saved && saved.v === VERSION) {
-      window.DabzConsent = saved;
+      window.DabzCookieNotice = saved;
       return;
     }
   } catch (e) { /* ignore corrupt value */ }
 
-  function save(choice) {
-    var val = { v: VERSION, choice: choice, at: new Date().toISOString() };
+  function save() {
+    var val = { v: VERSION, at: new Date().toISOString() };
     try { localStorage.setItem(KEY, JSON.stringify(val)); } catch (e) {}
-    window.DabzConsent = val;
-    document.dispatchEvent(new CustomEvent("dabz-consent", { detail: val }));
+    window.DabzCookieNotice = val;
   }
 
   function injectStyles() {
@@ -57,27 +56,24 @@
     injectStyles();
     var bar = document.createElement("div");
     bar.className = "dz-cookie";
-    bar.setAttribute("role", "dialog");
-    bar.setAttribute("aria-label", "Cookie consent");
+    bar.setAttribute("role", "note");
+    bar.setAttribute("aria-label", "Cookie notice");
     bar.setAttribute("aria-live", "polite");
     bar.innerHTML =
-      "<p>We use cookies to keep you signed in and to understand how DabzAudio is used, " +
-      "in line with best-practice privacy standards. Essential cookies are always on. " +
+      "<p>DabzAudio uses only the cookies needed for the site to work — to keep you " +
+      "signed in and secure your session. No tracking or ads. " +
       "See our <a href=\"/privacy.html\">Privacy &amp; Cookie Policy</a>.</p>" +
       "<div class=\"dz-cookie-actions\">" +
-      "<button type=\"button\" class=\"dz-necessary\">Necessary only</button>" +
-      "<button type=\"button\" class=\"primary dz-accept\">Accept all</button>" +
+      "<button type=\"button\" class=\"primary dz-ok\">Got it</button>" +
       "</div>";
     document.body.appendChild(bar);
     requestAnimationFrame(function () { bar.classList.add("show"); });
 
-    function done(choice) {
-      save(choice);
+    bar.querySelector(".dz-ok").addEventListener("click", function () {
+      save();
       bar.classList.remove("show");
       setTimeout(function () { bar.remove(); }, 350);
-    }
-    bar.querySelector(".dz-accept").addEventListener("click", function () { done("all"); });
-    bar.querySelector(".dz-necessary").addEventListener("click", function () { done("necessary"); });
+    });
   }
 
   if (document.readyState === "loading") {
