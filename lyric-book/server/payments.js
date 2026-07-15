@@ -43,6 +43,11 @@ const FEE_BPS = Math.max(
 const MIN_AMOUNT = 1;      // e.g. £1 / $1
 const MAX_AMOUNT = 1000;   // guard-rail against fat-finger / abuse
 
+// Minimum wallet withdrawal (major units). Keeps Stripe's fixed payout fee from
+// eating tiny cash-outs — artists let the balance build to at least this much.
+const MIN_WITHDRAWAL = Math.max(0, Number(process.env.MIN_WITHDRAWAL ?? 5));
+const MIN_WITHDRAWAL_CENTS = Math.round(MIN_WITHDRAWAL * 100);
+
 export function stripeEnabled() {
   return !!stripe;
 }
@@ -194,6 +199,7 @@ export function registerPaymentRoutes(app) {
       currency: CURRENCY,
       minAmount: MIN_AMOUNT,
       maxAmount: MAX_AMOUNT,
+      minWithdrawalCents: MIN_WITHDRAWAL_CENTS,
       feeBps: FEE_BPS
     });
   });
@@ -375,6 +381,11 @@ export function registerPaymentRoutes(app) {
       const available = sumBalance(bal.available, CURRENCY);
       if (available <= 0) {
         return res.status(400).json({ error: "No funds available yet — gifts take a few days to settle, then you can cash out." });
+      }
+      if (available < MIN_WITHDRAWAL_CENTS) {
+        return res.status(400).json({
+          error: `You need at least ${formatMoney(MIN_WITHDRAWAL_CENTS)} available to withdraw (this keeps bank fees from eating small cash-outs).`
+        });
       }
       const payout = await stripe.payouts.create(
         { amount: available, currency: CURRENCY, description: "DabzAudio wallet withdrawal" },
@@ -591,6 +602,18 @@ function mapUser(r) {
     avatarUrl: r.avatar_url || "",
     canReceive: !!r.payouts_enabled
   };
+}
+
+// Format an amount in cents as a localized currency string (e.g. £5.00).
+function formatMoney(cents) {
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: CURRENCY.toUpperCase()
+    }).format((cents || 0) / 100);
+  } catch {
+    return CURRENCY.toUpperCase() + " " + ((cents || 0) / 100).toFixed(2);
+  }
 }
 
 // Sum a Stripe balance array (available/pending) for one currency, in cents.
