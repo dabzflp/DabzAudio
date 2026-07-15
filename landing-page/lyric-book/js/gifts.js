@@ -49,7 +49,7 @@
   };
   if (!els.giftsBtn || !els.giftBtn) return;
 
-  let config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, feeBps: 0 };
+  let config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, minWithdrawalCents: 500, feeBps: 0 };
   let currentLyricId = null;
   // The lyric to attach to the gift — only set when the chosen recipient is a
   // collaborator on the open lyric (otherwise the gift is lyric-agnostic).
@@ -378,8 +378,18 @@
         els.walletPending.hidden = true;
         els.walletPending.textContent = "";
       }
-      els.withdrawBtn.disabled = !(w.availableCents > 0);
-      els.withdrawBtn.title = w.availableCents > 0 ? "" : "No settled funds to withdraw yet";
+      const minCents = config.minWithdrawalCents || 0;
+      const canWithdraw = w.availableCents >= minCents && w.availableCents > 0;
+      els.withdrawBtn.disabled = !canWithdraw;
+      if (els.walletMsg) { els.walletMsg.className = "msg"; els.walletMsg.textContent = ""; }
+      if (canWithdraw) {
+        els.withdrawBtn.title = "";
+      } else if (w.availableCents > 0 && minCents > 0) {
+        els.withdrawBtn.title = "Minimum withdrawal is " + formatCents(minCents);
+        if (els.walletMsg) els.walletMsg.textContent = "Minimum withdrawal is " + formatCents(minCents) + " — a little more to go.";
+      } else {
+        els.withdrawBtn.title = "No settled funds to withdraw yet";
+      }
     } catch (err) {
       els.walletCard.hidden = true;
     }
