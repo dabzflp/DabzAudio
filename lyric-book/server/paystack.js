@@ -17,6 +17,7 @@ import crypto from "crypto";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { displayNameForUser } from "./access.js";
+import { notifyGiftReceived } from "./notify.js";
 
 const SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 const PUBLIC = process.env.PAYSTACK_PUBLIC_KEY || "";
@@ -130,12 +131,14 @@ async function handlePaystackEvent(event) {
   const reference = data.reference;
 
   if (meta.giftId) {
-    await pool.query(
+    const upd = await pool.query(
       `UPDATE lb_gifts
           SET status = 'paid', paid_at = NOW(), paystack_reference = COALESCE($2, paystack_reference)
-        WHERE id = $1 AND status <> 'paid'`,
+        WHERE id = $1 AND status <> 'paid'
+        RETURNING id`,
       [meta.giftId, reference || null]
     );
+    if (upd.rowCount) await notifyGiftReceived(meta.giftId);
     return;
   }
   if (meta.invoiceId) {
@@ -400,10 +403,11 @@ export function registerPaystackRoutes(app) {
       if (gift.status === "paid") return res.json({ paid: true });
       const tx = await paystackVerify(reference);
       if (tx && tx.status === "success") {
-        await pool.query(
-          "UPDATE lb_gifts SET status='paid', paid_at=NOW() WHERE id=$1 AND status<>'paid'",
+        const upd = await pool.query(
+          "UPDATE lb_gifts SET status='paid', paid_at=NOW() WHERE id=$1 AND status<>'paid' RETURNING id",
           [gift.id]
         );
+        if (upd.rowCount) await notifyGiftReceived(gift.id);
         return res.json({ paid: true });
       }
       res.json({ paid: false });

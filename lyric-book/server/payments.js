@@ -27,6 +27,7 @@ import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
 import { handleInvoiceEvent } from "./invoices.js";
+import { notifyGiftReceived } from "./notify.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 export const stripe = SECRET ? new Stripe(SECRET) : null;
@@ -202,14 +203,17 @@ async function handleEvent(event) {
     const session = event.data.object;
     const giftId = session.metadata && session.metadata.giftId;
     if (giftId) {
-      await pool.query(
+      const upd = await pool.query(
         `UPDATE lb_gifts
             SET status = 'paid',
                 stripe_payment_intent_id = $2,
                 paid_at = NOW()
-          WHERE id = $1 AND status <> 'paid'`,
+          WHERE id = $1 AND status <> 'paid'
+          RETURNING id`,
         [giftId, session.payment_intent || null]
       );
+      // Only email the artist on the actual transition to paid (fires once).
+      if (upd.rowCount) await notifyGiftReceived(giftId);
     }
   } else if (
     event.type === "checkout.session.expired" ||
