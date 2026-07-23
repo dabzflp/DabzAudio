@@ -605,6 +605,63 @@ function formatOpenKeyNotation(key) {
   return abbrev || normalized;
 }
 
+// The analyzer runs scale-to-zero (idle -> shut down, wakes on the next request),
+// so the first scan after a quiet spell pays a cold start. Two mitigations:
+//  1) warmUpOpenKeyScan() pings the analyzer the moment a file is picked, so the
+//     container is booting while the user is still setting up the scan.
+//  2) the analyze request below allows a generous timeout and retries once on the
+//     transient errors a cold boot produces (502/503/504/network), instead of
+//     immediately dropping to the less-accurate in-browser estimator.
+const KEY_ANALYZE_TIMEOUT_MS = 60000;
+let openKeyScanWarming = null;
+
+async function warmUpOpenKeyScan() {
+  // Any inbound request wakes a sleeping instance; a lightweight GET is enough.
+  // We don't care about the response (the analyzer may 404/405 a GET) — reaching
+  // it is what starts the container. De-duped so repeated picks don't pile up.
+  if (openKeyScanWarming) return openKeyScanWarming;
+  openKeyScanWarming = (async () => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), KEY_ANALYZE_TIMEOUT_MS);
+      try {
+        await fetch('/api/key/analyze', { method: 'GET', signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (err) {
+      // Warm-up is best-effort; failures here never block the real scan.
+      console.debug('OpenKeyScan warm-up ping failed (non-fatal):', err);
+    } finally {
+      // Allow a fresh warm-up on the next file pick.
+      setTimeout(() => { openKeyScanWarming = null; }, 5000);
+    }
+  })();
+  return openKeyScanWarming;
+}
+
+async function postToOpenKeyScan(wavBlob, wavFileName) {
+  const formData = new FormData();
+  // OpenKeyScan's /analyze/single expects a multipart field named "file".
+  formData.append('file', wavBlob, wavFileName);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), KEY_ANALYZE_TIMEOUT_MS);
+  try {
+    return await fetch('/api/key/analyze', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isColdStartStatus(status) {
+  return status === 502 || status === 503 || status === 504;
+}
+
 async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback = () => {}) {
   try {
     progressCallback('loading...');
@@ -612,14 +669,25 @@ async function estimateKeyWithOpenKeyScan(arrBuffer, fileName, progressCallback 
     const wavBlob = await convertArrayBufferToWavBlob(arrBuffer, wavFileName);
 
     progressCallback('loading...');
-    const formData = new FormData();
-    // OpenKeyScan's /analyze/single expects a multipart field named "file".
-    formData.append('file', wavBlob, wavFileName);
 
-    const response = await fetch('/api/key/analyze', {
-      method: 'POST',
-      body: formData,
-    });
+    let response;
+    try {
+      response = await postToOpenKeyScan(wavBlob, wavFileName);
+    } catch (netErr) {
+      // Network error/timeout on the first hit usually means the analyzer was
+      // asleep and is still booting. Give it one more try after a short pause.
+      console.warn('OpenKeyScan first attempt failed, retrying after cold start:', netErr);
+      progressCallback('waking analyzer...');
+      await new Promise((r) => setTimeout(r, 2000));
+      response = await postToOpenKeyScan(wavBlob, wavFileName);
+    }
+
+    if (!response.ok && isColdStartStatus(response.status)) {
+      console.warn('OpenKeyScan returned', response.status, '— retrying after cold start');
+      progressCallback('waking analyzer...');
+      await new Promise((r) => setTimeout(r, 2000));
+      response = await postToOpenKeyScan(wavBlob, wavFileName);
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -698,4 +766,4 @@ async function estimateBPM(audioBuffer) {
 }
 
 /* ---- Expose to app ---- */
-window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyWithEssentia, formatOpenKeyNotation };
+window.dabzAnalysis = { analyzeAudioUrl, analyzeAudioBuffer, estimateKeyWithEssentia, formatOpenKeyNotation, warmUpOpenKeyScan };
