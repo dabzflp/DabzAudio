@@ -38,6 +38,7 @@
     walletCard: document.getElementById("walletCard"),
     walletBalance: document.getElementById("walletBalance"),
     walletPending: document.getElementById("walletPending"),
+    walletExtra: document.getElementById("walletExtra"),
     withdrawBtn: document.getElementById("withdrawBtn"),
     walletMsg: document.getElementById("walletMsg"),
     sendGiftBtn: document.getElementById("sendGiftBtn"),
@@ -318,7 +319,7 @@
     try {
       const data = await window.LB.apiFetch("/api/gifts", {
         method: "POST",
-        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message, embedded: wantEmbedded })
+        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message, currency: giftCurrencyCode(), embedded: wantEmbedded })
       });
       if (data.clientSecret) {
         // Pay on-page — no redirect to a Stripe-hosted page.
@@ -508,23 +509,44 @@
       const w = await window.LB.apiFetch("/api/wallet/balance");
       if (!w.enabled || !w.payoutsEnabled) { els.walletCard.hidden = true; return; }
       els.walletCard.hidden = false;
-      els.walletBalance.textContent = formatCents(w.availableCents);
+      els.walletBalance.textContent = formatCents(w.availableCents, w.currency);
       if (w.pendingCents > 0) {
         els.walletPending.hidden = false;
-        els.walletPending.textContent = formatCents(w.pendingCents) + " still settling";
+        els.walletPending.textContent = formatCents(w.pendingCents, w.currency) + " still settling";
       } else {
         els.walletPending.hidden = true;
         els.walletPending.textContent = "";
       }
+      // Gifts can now arrive in other currencies (USD/EUR/…). Show those too.
+      const extras = (w.balances || []).filter(
+        (b) => b.currency !== w.currency && (b.availableCents > 0 || b.pendingCents > 0)
+      );
+      if (els.walletExtra) {
+        if (extras.length) {
+          els.walletExtra.hidden = false;
+          els.walletExtra.textContent = "Also: " + extras.map((b) => {
+            const p = b.pendingCents > 0 ? " (+" + formatCents(b.pendingCents, b.currency) + " settling)" : "";
+            return formatCents(b.availableCents, b.currency) + p;
+          }).join(" · ");
+        } else {
+          els.walletExtra.hidden = true;
+          els.walletExtra.textContent = "";
+        }
+      }
+      // Total available across all currencies decides whether withdraw is offered
+      // (the backend cashes out each currency it can).
+      const totalAvailable = (w.balances && w.balances.length)
+        ? w.balances.reduce((s, b) => s + (b.availableCents || 0), 0)
+        : w.availableCents;
       const minCents = config.minWithdrawalCents || 0;
-      const canWithdraw = w.availableCents >= minCents && w.availableCents > 0;
+      const canWithdraw = totalAvailable >= minCents && totalAvailable > 0;
       els.withdrawBtn.disabled = !canWithdraw;
       if (els.walletMsg) { els.walletMsg.className = "msg"; els.walletMsg.textContent = ""; }
       if (canWithdraw) {
         els.withdrawBtn.title = "";
-      } else if (w.availableCents > 0 && minCents > 0) {
-        els.withdrawBtn.title = "Minimum withdrawal is " + formatCents(minCents);
-        if (els.walletMsg) els.walletMsg.textContent = "Minimum withdrawal is " + formatCents(minCents) + " — a little more to go.";
+      } else if (totalAvailable > 0 && minCents > 0) {
+        els.withdrawBtn.title = "Minimum withdrawal is " + formatCents(minCents, w.currency);
+        if (els.walletMsg) els.walletMsg.textContent = "Minimum withdrawal is " + formatCents(minCents, w.currency) + " — a little more to go.";
       } else {
         els.withdrawBtn.title = "No settled funds to withdraw yet";
       }
@@ -539,8 +561,11 @@
     els.withdrawBtn.disabled = true;
     try {
       const d = await window.LB.apiFetch("/api/wallet/withdraw", { method: "POST" });
+      const summary = (d.payouts && d.payouts.length)
+        ? d.payouts.map((p) => formatCents(p.amountCents, p.currency)).join(" + ")
+        : formatCents(d.amountCents, d.currency);
       els.walletMsg.className = "msg ok";
-      els.walletMsg.textContent = "Withdrew " + formatCents(d.amountCents) + " to your bank.";
+      els.walletMsg.textContent = "Withdrew " + summary + " to your bank.";
       toast("Withdrawal on its way to your bank 🏦");
       await loadWallet();
     } catch (err) {
@@ -730,11 +755,22 @@
     return activeCurrency === "ngn" ? [1000, 2000, 5000, 10000] : [5, 10, 20, 50];
   }
 
+  function stripeCurrencies() {
+    // Prefer the server-provided list; fall back to the single primary currency
+    // (so this still works against an older backend that hasn't deployed yet).
+    const list = Array.isArray(config.currencies) && config.currencies.length
+      ? config.currencies
+      : [config.currency];
+    return list.filter(Boolean);
+  }
+
   function setupCurrencyForRecipient(u) {
     if (!els.giftCurrencySelect) { activeCurrency = config.currency; return; }
     const opts = [];
     if (u.canReceive && stripeGifting) {
-      opts.push({ code: config.currency, label: "Pay in " + config.currency.toUpperCase() });
+      stripeCurrencies().forEach((code) => {
+        opts.push({ code, label: "Pay in " + String(code).toUpperCase() });
+      });
     }
     if (u.canReceiveNgn && paystackConfig.enabled) {
       opts.push({ code: "ngn", label: "Pay in Naira (\u20a6)" });

@@ -16,7 +16,9 @@
  *  - STRIPE_SECRET_KEY        sk_test_... / sk_live_... (required to enable)
  *  - STRIPE_WEBHOOK_SECRET    whsec_...    (required to verify webhooks)
  *  - STRIPE_CONNECT_COUNTRY   2-letter country for new Express accounts (default US)
- *  - GIFT_CURRENCY            ISO currency for gifts (default usd)
+ *  - GIFT_CURRENCY            primary ISO currency for gifts (default usd)
+ *  - GIFT_CURRENCIES          comma-separated ISO currencies a sender may pay in
+ *                             (default "usd,gbp,eur,cad,aud"; GIFT_CURRENCY is always added)
  *  - PLATFORM_FEE_BPS         platform fee in basis points, e.g. 500 = 5% (default 0)
  *  - APP_BASE_URL             frontend base, used for Stripe redirect URLs
  */
@@ -39,6 +41,25 @@ export function embeddedEnabled() { return !!(stripe && PUBLISHABLE_KEY); }
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const CONNECT_COUNTRY = (process.env.STRIPE_CONNECT_COUNTRY || "US").toUpperCase();
 const CURRENCY = (process.env.GIFT_CURRENCY || "usd").toLowerCase();
+
+// Currencies a sender may pay in on the Stripe rail. Stripe accepts the card in
+// any of these (the "presentment" currency) and settles/converts to the artist's
+// Stripe balance automatically — so senders aren't locked to a single currency.
+// Override with GIFT_CURRENCIES (comma-separated ISO codes); the primary
+// GIFT_CURRENCY is always included first. (Naira is a separate Paystack rail.)
+const GIFT_CURRENCIES = (() => {
+  const raw = String(process.env.GIFT_CURRENCIES || "").trim();
+  const list = raw
+    ? raw.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean)
+    : ["usd", "gbp", "eur", "cad", "aud"];
+  return [...new Set([CURRENCY, ...list])];
+})();
+
+// Coerce a requested gift currency to one we actually support (else the primary).
+function normalizeGiftCurrency(c) {
+  const cur = String(c || CURRENCY).toLowerCase();
+  return GIFT_CURRENCIES.includes(cur) ? cur : CURRENCY;
+}
 // Platform fee in basis points (100 = 1%). Defaults to 1000 (10%) — fair for a
 // creator-tipping product and enough to cover Stripe's processing fees on typical
 // gifts. Override with PLATFORM_FEE_BPS (set to 0 for a no-fee, artist-keeps-all model).
@@ -234,6 +255,7 @@ export function registerPaymentRoutes(app) {
     res.json({
       enabled: stripeEnabled(),
       currency: CURRENCY,
+      currencies: GIFT_CURRENCIES,
       minAmount: MIN_AMOUNT,
       maxAmount: MAX_AMOUNT,
       minWithdrawalCents: MIN_WITHDRAWAL_CENTS,
@@ -403,12 +425,28 @@ export function registerPaymentRoutes(app) {
         return res.json({ enabled: true, payoutsEnabled: false, currency: CURRENCY, availableCents: 0, pendingCents: 0 });
       }
       const bal = await stripe.balance.retrieve({ stripeAccount: row.stripe_account_id });
+      // Gifts can arrive in several currencies now, so report each balance the
+      // account actually holds (not just the primary one) — otherwise non-primary
+      // earnings would be invisible.
+      const codes = [...new Set([
+        CURRENCY,
+        ...(bal.available || []).map((b) => b.currency),
+        ...(bal.pending || []).map((b) => b.currency)
+      ])];
+      const balances = codes
+        .map((cur) => ({
+          currency: cur,
+          availableCents: sumBalance(bal.available, cur),
+          pendingCents: sumBalance(bal.pending, cur)
+        }))
+        .filter((b) => b.currency === CURRENCY || b.availableCents > 0 || b.pendingCents > 0);
       res.json({
         enabled: true,
         payoutsEnabled: true,
         currency: CURRENCY,
         availableCents: sumBalance(bal.available, CURRENCY),
-        pendingCents: sumBalance(bal.pending, CURRENCY)
+        pendingCents: sumBalance(bal.pending, CURRENCY),
+        balances
       });
     } catch (err) {
       console.error("wallet/balance error", err);
@@ -425,20 +463,46 @@ export function registerPaymentRoutes(app) {
         return res.status(400).json({ error: "Set up payouts before withdrawing." });
       }
       const bal = await stripe.balance.retrieve({ stripeAccount: row.stripe_account_id });
-      const available = sumBalance(bal.available, CURRENCY);
-      if (available <= 0) {
+      const totalAvailable = (bal.available || []).reduce((s, b) => s + (b.amount || 0), 0);
+      if (totalAvailable <= 0) {
         return res.status(400).json({ error: "No funds available yet — gifts take a few days to settle, then you can cash out." });
       }
-      if (available < MIN_WITHDRAWAL_CENTS) {
-        return res.status(400).json({
-          error: `You need at least ${formatMoney(MIN_WITHDRAWAL_CENTS)} available to withdraw (this keeps bank fees from eating small cash-outs).`
-        });
+      // Cash out every currency the account holds (a gift may have been paid in
+      // USD/EUR/etc.). Each currency pays out separately; per-currency failures
+      // (e.g. no matching bank) are skipped so one bad currency can't block the rest.
+      const payouts = [];
+      let belowMin = false;
+      for (const b of bal.available || []) {
+        const amt = b.amount || 0;
+        if (amt <= 0) continue;
+        if (amt < MIN_WITHDRAWAL_CENTS) { belowMin = true; continue; }
+        try {
+          const payout = await stripe.payouts.create(
+            { amount: amt, currency: b.currency, description: "DabzAudio wallet withdrawal" },
+            { stripeAccount: row.stripe_account_id }
+          );
+          payouts.push({ currency: b.currency, amountCents: amt, payoutId: payout.id, arrivalDate: payout.arrival_date });
+        } catch (e) {
+          console.error("wallet/withdraw payout error", b.currency, e.message);
+        }
       }
-      const payout = await stripe.payouts.create(
-        { amount: available, currency: CURRENCY, description: "DabzAudio wallet withdrawal" },
-        { stripeAccount: row.stripe_account_id }
-      );
-      res.json({ ok: true, amountCents: available, currency: CURRENCY, payoutId: payout.id, arrivalDate: payout.arrival_date });
+      if (!payouts.length) {
+        if (belowMin) {
+          return res.status(400).json({
+            error: `You need at least ${formatMoney(MIN_WITHDRAWAL_CENTS)} available to withdraw (this keeps bank fees from eating small cash-outs).`
+          });
+        }
+        return res.status(400).json({ error: "Couldn't withdraw right now — your funds may still be settling." });
+      }
+      const first = payouts[0];
+      res.json({
+        ok: true,
+        payouts,
+        amountCents: first.amountCents,
+        currency: first.currency,
+        payoutId: first.payoutId,
+        arrivalDate: first.arrivalDate
+      });
     } catch (err) {
       console.error("wallet/withdraw error", err);
       res.status(500).json({ error: err.message || "Could not withdraw right now." });
@@ -489,6 +553,7 @@ export function registerPaymentRoutes(app) {
       const lyricId = req.body.lyricId ? Number(req.body.lyricId) : null;
       const amount = Number(req.body.amount);
       const message = String(req.body.message || "").slice(0, 280);
+      const currency = normalizeGiftCurrency(req.body.currency);
 
       if (!toUserId || String(toUserId) === String(req.user.id)) {
         return res.status(400).json({ error: "Pick someone else to gift." });
@@ -524,7 +589,7 @@ export function registerPaymentRoutes(app) {
       const ins = await pool.query(
         `INSERT INTO lb_gifts (from_user_id, to_user_id, lyric_id, amount_cents, fee_cents, currency, message, status)
          VALUES ($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING id`,
-        [req.user.id, toUserId, lyricId, amountCents, feeCents, CURRENCY, message]
+        [req.user.id, toUserId, lyricId, amountCents, feeCents, currency, message]
       );
       const giftId = ins.rows[0].id;
 
@@ -537,7 +602,7 @@ export function registerPaymentRoutes(app) {
           line_items: [
             {
               price_data: {
-                currency: CURRENCY,
+                currency,
                 unit_amount: amountCents,
                 product_data: {
                   name: `Gift to ${to.name}`,
