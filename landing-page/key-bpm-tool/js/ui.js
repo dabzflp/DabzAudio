@@ -77,17 +77,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Wake the (scale-to-zero) analyzer as soon as a file is chosen, so it's warm
+  // by the time the user runs the scan — hides most of the cold-start latency.
+  function warmAnalyzer() {
+    if (window.dabzAnalysis && typeof window.dabzAnalysis.warmUpOpenKeyScan === 'function') {
+      window.dabzAnalysis.warmUpOpenKeyScan();
+    }
+  }
+
+  if (input) {
+    input.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      warmAnalyzer();
+      // When there's no explicit upload button, selecting a file runs analysis.
+      if (!btn) run(f);
+    });
+  }
+
   // Handle file selection via input or upload button
   if (btn) {
     btn.addEventListener('click', () => {
       const f = input.files && input.files[0];
       if (!f) return alert('Choose a file first');
       run(f);
-    });
-  } else if (input) {
-    input.addEventListener('change', (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f) run(f);
     });
   }
 });

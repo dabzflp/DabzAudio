@@ -24,6 +24,15 @@ Browser displays the key (falls back to in-browser estimation if this fails)
 
 BPM is computed entirely client-side and never leaves the browser.
 
+### Cost: the analyzer runs scale-to-zero
+
+The analyzer is the only always-on, RAM-hungry component, so it's run **scale-to-zero**
+— idle → shut down, wakes on the next scan (Railway App Sleeping, or Cloud Run with
+`--min-instances 0`; see `dabz-audio-key-bpm/RAILWAY.md`). To keep the first (cold)
+scan smooth, the front-end **warms the analyzer as soon as a file is selected**
+(`warmUpOpenKeyScan`) and **retries once** on the transient 502/503/504/timeout a
+cold boot returns before dropping to the in-browser estimator.
+
 ### Why localhost / file paths broke production
 
 The analyzer in production runs on a **separate machine** (Railway). Two earlier

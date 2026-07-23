@@ -36,6 +36,26 @@ app.use('/dabz-audio-key-bpm', express.static(path.join(__dirname, './public')))
 app.use('/dabz-audio-reverb-delay-calculator', express.static(path.join(__dirname, '../dabz-audio-reverb-delay-calculator')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
+// Warm-up ping: the front-end hits this the moment a file is picked so a
+// scale-to-zero analyzer starts booting before the real scan. We just poke the
+// analyzer to wake it; its response doesn't matter (a 404/405 still wakes it).
+app.get('/api/key/analyze', async (req, res) => {
+  const openKeyScanUrl = process.env.OPENKEYSCAN_URL || 'http://localhost:58721/analyze/single';
+  const base = openKeyScanUrl.replace(/\/analyze\/single\/?$/, '') || openKeyScanUrl;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      await fetch(base, { method: 'GET', signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (err) {
+    // Best-effort — waking is what matters, not the result.
+  }
+  return res.json({ warmed: true });
+});
+
 app.post('/api/key/analyze', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
