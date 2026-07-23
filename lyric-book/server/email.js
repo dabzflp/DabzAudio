@@ -120,6 +120,53 @@ export async function sendInvoiceEmail(to, { senderName, number, amount, note, d
   return { sent: true };
 }
 
+// Notify an artist they've received a gift — clearly naming who sent it.
+export async function sendGiftReceivedEmail(to, { fromName, amount, net, message, lyricTitle, openUrl }) {
+  if (!to) return { sent: false };
+  const who = (fromName || "Someone").toString();
+  const subject = `${who} sent you a gift — ${amount}`;
+  const forLyric = lyricTitle ? ` for your lyric “${lyricTitle}”` : "";
+  const noteHtml = message ? `<p style="color:#9b9b9b;line-height:1.5">“${message}”</p>` : "";
+  const netHtml = net
+    ? `<p style="color:#9b9b9b;line-height:1.5">You'll receive <b style="color:#fff">${net}</b> after the DabzAudio fee — it settles to your linked bank via the payment provider.</p>`
+    : "";
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">You got gifted 🎁</h2>
+    <p style="color:#9b9b9b;line-height:1.5"><b style="color:#fff">${who}</b> sent you a gift of <b style="color:#fff">${amount}</b>${forLyric} on DabzAudio.</p>
+    ${noteHtml}
+    ${netHtml}
+    ${openUrl ? ctaButton(openUrl, "Open your Lyric Book") : ""}`);
+  if (!resend) {
+    console.log(`[email disabled] Gift received for ${to}: ${amount} from ${who}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+// Send the payer a receipt once their invoice is honored, with a PDF download
+// link (works even if they don't have a DabzAudio account).
+export async function sendInvoiceReceiptEmail(to, { number, fromName, amount, downloadUrl, hasAccount }) {
+  if (!to) return { sent: false };
+  const safeSender = (fromName || "A DabzAudio artist").toString();
+  const subject = `Receipt for invoice ${number} — ${amount}`;
+  const join = hasAccount
+    ? ""
+    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio. <a href="https://dabzaudio.netlify.app/lyric-book/" style="color:#ff7a00">Create a free account</a> to keep all your invoices in one place.</p>`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">Payment confirmed — here's your receipt</h2>
+    <p style="color:#9b9b9b;line-height:1.5">Invoice <b style="color:#fff">${number}</b> from ${safeSender} for <b style="color:#fff">${amount}</b> has been marked as paid.</p>
+    <p style="color:#9b9b9b;line-height:1.5">Download a PDF copy for your records:</p>
+    ${ctaButton(downloadUrl, "Download PDF receipt")}
+    ${join}`);
+  if (!resend) {
+    console.log(`[email disabled] Invoice receipt ${number} for ${to}: ${downloadUrl}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
 // Notify the sender their invoice was honored (paid online).
 export async function sendInvoiceHonoredEmail(to, { senderName, number, payer, amount, method }) {
   if (!to) return { sent: false };

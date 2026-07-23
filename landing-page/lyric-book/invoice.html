@@ -12,6 +12,7 @@
   <script src="js/api.js"></script>
   <script src="js/stripe-embedded.js"></script>
   <script src="js/paystack-inline.js"></script>
+  <script src="js/invoice-pdf.js"></script>
 </head>
 <body class="dabz-lite">
   <header class="site-header">
@@ -100,6 +101,7 @@
       var currency = "gbp";
       var embedded = false;
       var usePaystack = false;
+      var currentInvoice = null;
 
       if (!token) {
         els.loading.innerHTML = "<p class='sub' style='text-align:center'>No invoice specified.</p>";
@@ -130,6 +132,7 @@
 
       function render(data) {
         var inv = data.invoice;
+        currentInvoice = inv;
         currency = inv.currency || "gbp";
         usePaystack = !!(data.paystack && window.LBPaystack);
         embedded = !usePaystack && !!(data.embedded && data.publishableKey && window.LBStripe);
@@ -174,8 +177,26 @@
         if (inv.note) { els.note.hidden = false; els.note.textContent = inv.note; }
 
         renderActions(data);
+        addDownloadButton();
 
         if (params.get("paid") === "1") setMsg(els.msg, "Payment received — thank you! The sender has been notified.", "ok");
+        if (params.get("pdf") === "1") downloadPdf();
+      }
+
+      function addDownloadButton() {
+        var dl = document.createElement("button");
+        dl.className = "btn subtle"; dl.type = "button";
+        dl.textContent = currentInvoice && currentInvoice.status === "honored"
+          ? "Download receipt (PDF)" : "Download invoice (PDF)";
+        dl.addEventListener("click", downloadPdf);
+        els.actions.appendChild(dl);
+      }
+
+      function downloadPdf() {
+        if (!currentInvoice || !window.LBInvoicePDF) return;
+        window.LBInvoicePDF.download(currentInvoice).catch(function (e) {
+          setMsg(els.msg, e && e.message ? e.message : "Could not generate the PDF.", "err");
+        });
       }
 
       function renderActions(data) {

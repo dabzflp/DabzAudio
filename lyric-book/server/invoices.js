@@ -22,7 +22,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { displayNameForUser } from "./access.js";
-import { sendInvoiceEmail, sendInvoiceHonoredEmail, sendInvoiceProofEmail } from "./email.js";
+import { sendInvoiceEmail, sendInvoiceHonoredEmail, sendInvoiceProofEmail, sendInvoiceReceiptEmail } from "./email.js";
 import {
   paystackEnabled,
   paystackPublicKey,
@@ -251,7 +251,26 @@ export async function honorInvoiceOnline({ invoiceId, provider = "stripe", payme
   } catch (e) {
     console.error("invoice honored email error", e?.message);
   }
+  await sendPayerReceipt(inv);
   return inv;
+}
+
+// Email the payer a receipt with a PDF download link once an invoice is honored.
+// Best-effort; works even when the payer has no DabzAudio account.
+async function sendPayerReceipt(inv) {
+  try {
+    if (!inv || !inv.to_email || !inv.public_token) return;
+    const sender = await displayNameForUser(inv.from_user_id);
+    await sendInvoiceReceiptEmail(inv.to_email, {
+      number: invoiceNumber(inv.id),
+      fromName: sender.name,
+      amount: formatMoney(inv.total_cents, inv.currency),
+      downloadUrl: `${appBase()}/invoice.html?token=${inv.public_token}&pdf=1`,
+      hasAccount: !!inv.to_user_id
+    });
+  } catch (e) {
+    console.error("invoice receipt email error", e?.message);
+  }
 }
 
 async function senderContact(userId) {
@@ -344,7 +363,8 @@ export function registerInvoiceRoutes(app) {
       );
       if (!rows.length) return res.status(404).json({ error: "Invoice not found." });
       const inv = rows[0];
-      res.json({ invoice: mapInvoice(inv, { items: await loadItems(inv.id), proofs: await loadProofs(inv.id) }) });
+      const me = await displayNameForUser(inv.from_user_id, req.user.email);
+      res.json({ invoice: mapInvoice(inv, { items: await loadItems(inv.id), proofs: await loadProofs(inv.id), fromName: me.name }) });
     } catch (err) {
       console.error("invoice get error", err);
       res.status(500).json({ error: "Could not load invoice." });
@@ -474,6 +494,7 @@ export function registerInvoiceRoutes(app) {
         [Number(req.params.id), req.user.id]
       );
       if (!rows.length) return res.status(404).json({ error: "Invoice not found or already settled." });
+      await sendPayerReceipt(rows[0]);
       res.json({ ok: true, invoice: mapInvoice(rows[0], { items: await loadItems(rows[0].id) }) });
     } catch (err) {
       console.error("invoice mark-honored error", err);
@@ -492,6 +513,7 @@ export function registerInvoiceRoutes(app) {
         [Number(req.params.id), req.user.id]
       );
       if (!rows.length) return res.status(404).json({ error: "No proof awaiting your confirmation." });
+      await sendPayerReceipt(rows[0]);
       res.json({ ok: true, invoice: mapInvoice(rows[0], { items: await loadItems(rows[0].id) }) });
     } catch (err) {
       console.error("invoice confirm error", err);
