@@ -57,6 +57,10 @@
     ngnPayoutCard: document.getElementById("ngnPayoutCard"),
     ngnPayoutStatus: document.getElementById("ngnPayoutStatus"),
     ngnPayoutActions: document.getElementById("ngnPayoutActions"),
+    ngnWalletCard: document.getElementById("ngnWalletCard"),
+    ngnWalletTotal: document.getElementById("ngnWalletTotal"),
+    ngnWalletPending: document.getElementById("ngnWalletPending"),
+    ngnWalletSettle: document.getElementById("ngnWalletSettle"),
     ngnModal: document.getElementById("ngnModal"),
     ngnClose: document.getElementById("ngnClose"),
     ngnBank: document.getElementById("ngnBank"),
@@ -436,12 +440,13 @@
     els.payoutActions.innerHTML = "";
     els.walletCard.hidden = true;
     els.walletMsg.textContent = "";
+    if (els.ngnWalletCard) els.ngnWalletCard.hidden = true;
     els.giftTotal.hidden = true;
     els.giftReceived.innerHTML = "";
     els.giftSent.innerHTML = "";
     switchTab("received");
     if (els.handleMsg) els.handleMsg.textContent = "";
-    await Promise.all([loadHandle(), loadPayoutStatus(), loadNgnPayoutStatus(), loadWallet(), loadHistory()]);
+    await Promise.all([loadHandle(), loadPayoutStatus(), loadNgnPayoutStatus(), loadWallet(), loadNgnWallet(), loadHistory()]);
   }
 
   /* ---------- Gift handle (@username) ---------- */
@@ -778,6 +783,33 @@
       }
     } catch (err) {
       els.ngnPayoutStatus.textContent = err.message || "Could not load Naira payout status.";
+    }
+  }
+
+  // Naira earnings — Paystack settles a subaccount's share straight to the
+  // linked bank, so there's no held balance to withdraw. We surface what has
+  // been received (net of the DabzAudio fee) and where it settles.
+  async function loadNgnWallet() {
+    if (!els.ngnWalletCard) return;
+    if (!paystackConfig.enabled) { els.ngnWalletCard.hidden = true; return; }
+    try {
+      const w = await window.LB.apiFetch("/api/paystack/wallet");
+      if (!w.enabled || !w.active) { els.ngnWalletCard.hidden = true; return; }
+      els.ngnWalletCard.hidden = false;
+      els.ngnWalletTotal.textContent = formatCents(w.receivedNetKobo, "ngn");
+      if (w.pendingNetKobo > 0) {
+        els.ngnWalletPending.hidden = false;
+        els.ngnWalletPending.textContent = formatCents(w.pendingNetKobo, "ngn") + " still settling";
+      } else {
+        els.ngnWalletPending.hidden = true;
+        els.ngnWalletPending.textContent = "";
+      }
+      const dest = [w.accountName, w.bankName, w.accountNumberMasked].filter(Boolean).join(" \u00b7 ");
+      els.ngnWalletSettle.textContent = dest
+        ? "Paystack settles your share straight to " + dest + " automatically \u2014 DabzAudio never holds your Naira."
+        : "Paystack settles your share straight to your linked bank automatically \u2014 DabzAudio never holds your Naira.";
+    } catch (err) {
+      els.ngnWalletCard.hidden = true;
     }
   }
 
