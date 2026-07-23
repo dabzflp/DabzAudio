@@ -382,6 +382,13 @@
       const tag = inv.honoredMethod === "online" ? "paid online" : inv.honoredMethod === "proof" ? "confirmed from proof" : "marked paid";
       wrap.innerHTML = `<div class="inv-sub" style="align-self:center">Honored (${tag})${inv.honoredAt ? " · " + new Date(inv.honoredAt).toLocaleDateString() : ""}</div>`;
     }
+
+    addBtn(inv.status === "honored" ? "Download receipt (PDF)" : "Download invoice (PDF)", "subtle", () => downloadInvoicePdf(inv));
+  }
+
+  function downloadInvoicePdf(inv) {
+    if (!window.LBInvoicePDF) { setMsg(els.viewMsg, "PDF tool unavailable.", "err"); return; }
+    window.LBInvoicePDF.download(inv).catch((e) => setMsg(els.viewMsg, e && e.message ? e.message : "Could not generate the PDF.", "err"));
   }
 
   function copyLink(inv) {
