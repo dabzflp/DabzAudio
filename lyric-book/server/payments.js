@@ -339,10 +339,12 @@ export function registerPaymentRoutes(app) {
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
                 p.username,
                 p.avatar_url,
-                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled,
+                COALESCE(pa.active, FALSE) AS ngn_active
            FROM lb_users u
            LEFT JOIN lb_profiles p ON p.user_id = u.id
            LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+           LEFT JOIN lb_paystack_accounts pa ON pa.user_id = u.id
           WHERE u.id <> $1
             AND p.username ILIKE $3
           ORDER BY (p.username ILIKE $2) DESC, payouts_enabled DESC, p.username ASC
@@ -364,10 +366,12 @@ export function registerPaymentRoutes(app) {
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,'')) AS name,
                 p.username,
                 p.avatar_url,
-                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled,
+                COALESCE(pa.active, FALSE) AS ngn_active
            FROM lb_users u
            LEFT JOIN lb_profiles p ON p.user_id = u.id
            LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+           LEFT JOIN lb_paystack_accounts pa ON pa.user_id = u.id
           WHERE u.id <> $1 AND u.id IN (
             SELECT c.user_id FROM lb_lyric_collaborators c
               JOIN lb_lyrics l ON l.id = c.lyric_id
@@ -454,7 +458,8 @@ export function registerPaymentRoutes(app) {
                 COALESCE(NULLIF(p.artist_name,''), NULLIF(p.display_name,''), u.email) AS name,
                 p.username,
                 p.avatar_url,
-                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled
+                COALESCE(sa.payouts_enabled, FALSE) AS payouts_enabled,
+                COALESCE(pa.active, FALSE) AS ngn_active
            FROM lb_lyrics l
            JOIN lb_users u
              ON u.id = l.user_id
@@ -464,6 +469,7 @@ export function registerPaymentRoutes(app) {
              )
            LEFT JOIN lb_profiles p ON p.user_id = u.id
            LEFT JOIN lb_stripe_accounts sa ON sa.user_id = u.id
+           LEFT JOIN lb_paystack_accounts pa ON pa.user_id = u.id
           WHERE l.id = $1 AND u.id <> $2
           ORDER BY name ASC`,
         [lyricId, req.user.id]
@@ -653,7 +659,8 @@ function mapUser(r) {
     name: r.name || ("Artist #" + r.user_id),
     username: r.username || "",
     avatarUrl: r.avatar_url || "",
-    canReceive: !!r.payouts_enabled
+    canReceive: !!r.payouts_enabled,          // Stripe (GBP/USD/EUR)
+    canReceiveNgn: !!r.ngn_active             // Paystack (NGN)
   };
 }
 

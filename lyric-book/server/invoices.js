@@ -23,6 +23,13 @@ import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { displayNameForUser } from "./access.js";
 import { sendInvoiceEmail, sendInvoiceHonoredEmail, sendInvoiceProofEmail } from "./email.js";
+import {
+  paystackEnabled,
+  paystackPublicKey,
+  paystackInitTransaction,
+  paystackVerify,
+  getPaystackAccountRow
+} from "./paystack.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 const stripe = SECRET ? new Stripe(SECRET) : null;
@@ -206,16 +213,32 @@ export async function handleInvoiceEvent(event) {
   const session = event.data.object;
   const invoiceId = session.metadata && session.metadata.invoiceId;
   if (!invoiceId) return;
+  await honorInvoiceOnline({
+    invoiceId,
+    provider: "stripe",
+    paymentIntentId: session.payment_intent || null
+  });
+}
+
+/**
+ * Mark an invoice Honored after a verified online payment (Stripe webhook or
+ * Paystack charge.success) and notify the sender. Idempotent: a no-op if the
+ * invoice is already honored. Shared by both payment rails.
+ */
+export async function honorInvoiceOnline({ invoiceId, provider = "stripe", paymentIntentId = null, reference = null }) {
   const { rows } = await pool.query(
     `UPDATE lb_invoices
         SET status = 'honored', honored_method = 'online', honored_at = NOW(),
-            honored_seen = FALSE, stripe_payment_intent_id = $2, updated_at = NOW()
+            honored_seen = FALSE, provider = $3,
+            stripe_payment_intent_id = COALESCE($2, stripe_payment_intent_id),
+            paystack_reference = COALESCE($4, paystack_reference),
+            updated_at = NOW()
       WHERE id = $1 AND status <> 'honored'
       RETURNING *`,
-    [invoiceId, session.payment_intent || null]
+    [invoiceId, paymentIntentId, provider, reference]
   );
   const inv = rows[0];
-  if (!inv) return;
+  if (!inv) return null;
   try {
     const sender = await senderContact(inv.from_user_id);
     await sendInvoiceHonoredEmail(sender.email, {
@@ -228,6 +251,7 @@ export async function handleInvoiceEvent(event) {
   } catch (e) {
     console.error("invoice honored email error", e?.message);
   }
+  return inv;
 }
 
 async function senderContact(userId) {
@@ -261,6 +285,13 @@ export function registerInvoiceRoutes(app) {
         payoutsEnabled = !!(rows[0] && rows[0].payouts_enabled);
       } catch { /* ignore */ }
     }
+    let ngnPayEnabled = false;
+    if (paystackEnabled()) {
+      try {
+        const pa = await getPaystackAccountRow(req.user.id);
+        ngnPayEnabled = !!(pa && pa.active);
+      } catch { /* ignore */ }
+    }
     res.json({
       onlinePayEnabled: !!stripe,
       payoutsEnabled,
@@ -268,7 +299,10 @@ export function registerInvoiceRoutes(app) {
       defaultCurrency: DEFAULT_CURRENCY,
       currencies: CURRENCIES,
       embedded: EMBEDDED,
-      publishableKey: PUBLISHABLE_KEY
+      publishableKey: PUBLISHABLE_KEY,
+      // Paystack (Naira) rail for the sender.
+      paystackEnabled: paystackEnabled(),
+      ngnPayEnabled
     });
   });
 
@@ -525,11 +559,17 @@ export function registerInvoiceRoutes(app) {
         await pool.query("UPDATE lb_invoices SET status='viewed', viewed_at=NOW() WHERE id=$1 AND status='sent'", [inv.id]);
       }
       const sender = await displayNameForUser(inv.from_user_id);
+      const isNgn = String(inv.currency).toLowerCase() === "ngn";
       let canPayOnline = false;
-      if (stripe) {
+      // Naira invoices are paid via Paystack; everything else via Stripe.
+      if (isNgn && paystackEnabled()) {
+        const pa = await getPaystackAccountRow(inv.from_user_id);
+        canPayOnline = !!(pa && pa.active);
+      } else if (!isNgn && stripe) {
         const acc = await pool.query("SELECT payouts_enabled FROM lb_stripe_accounts WHERE user_id=$1", [inv.from_user_id]);
         canPayOnline = !!(acc.rows[0] && acc.rows[0].payouts_enabled);
       }
+      const usePaystack = isNgn && paystackEnabled() && canPayOnline;
       res.json({
         invoice: {
           number: invoiceNumber(inv.id),
@@ -551,8 +591,11 @@ export function registerInvoiceRoutes(app) {
           items: await loadItems(inv.id)
         },
         canPayOnline,
-        embedded: EMBEDDED && canPayOnline,
-        publishableKey: EMBEDDED && canPayOnline ? PUBLISHABLE_KEY : "",
+        embedded: EMBEDDED && canPayOnline && !usePaystack,
+        publishableKey: EMBEDDED && canPayOnline && !usePaystack ? PUBLISHABLE_KEY : "",
+        // Paystack (Naira) on-page payment.
+        paystack: usePaystack,
+        paystackPublicKey: usePaystack ? paystackPublicKey() : "",
         settled: inv.status === "honored",
         cancelled: inv.status === "cancelled"
       });
@@ -618,6 +661,79 @@ export function registerInvoiceRoutes(app) {
     } catch (err) {
       console.error("invoice pay error", err);
       stripeError(res, err, "Could not start payment. Please try again.");
+    }
+  });
+
+  // Recipient pays a Naira invoice online → Paystack (split to the sender's
+  // subaccount, DabzAudio fee kept by the platform). Returns an access code for
+  // the on-page Paystack inline popup (no redirect).
+  app.post("/api/public/invoices/:token/paystack", async (req, res) => {
+    if (!paystackEnabled()) return res.status(503).json({ error: "Online payment isn't available for this invoice." });
+    try {
+      const { rows } = await pool.query("SELECT * FROM lb_invoices WHERE public_token=$1", [String(req.params.token)]);
+      if (!rows.length) return res.status(404).json({ error: "This invoice link is invalid." });
+      const inv = rows[0];
+      if (String(inv.currency).toLowerCase() !== "ngn") {
+        return res.status(400).json({ error: "This invoice is not payable with Paystack." });
+      }
+      if (inv.status === "honored") return res.status(400).json({ error: "This invoice has already been paid." });
+      if (inv.status === "cancelled") return res.status(400).json({ error: "This invoice was cancelled." });
+
+      const account = await getPaystackAccountRow(inv.from_user_id);
+      if (!account || !account.active) {
+        return res.status(400).json({ error: "The sender hasn't set up Naira payments yet. You can pay them directly and upload proof instead." });
+      }
+
+      const feeKobo = feeCentsFor(Number(inv.total_cents));
+      const reference = "lbinv_" + inv.id + "_" + crypto.randomBytes(6).toString("hex");
+      const tx = await paystackInitTransaction({
+        email: inv.to_email || "payer@dabzaudio.app",
+        amountKobo: Number(inv.total_cents),
+        subaccountCode: account.subaccount_code,
+        transactionChargeKobo: feeKobo,
+        reference,
+        metadata: { invoiceId: String(inv.id) }
+      });
+      await pool.query(
+        "UPDATE lb_invoices SET provider='paystack', paystack_reference=$2, fee_cents=$3, updated_at=NOW() WHERE id=$1",
+        [inv.id, reference, feeKobo]
+      );
+      res.json({
+        reference: tx.reference,
+        accessCode: tx.access_code,
+        authorizationUrl: tx.authorization_url,
+        publicKey: paystackPublicKey(),
+        email: inv.to_email || ""
+      });
+    } catch (err) {
+      console.error("invoice paystack pay error", err);
+      res.status(500).json({ error: err.message || "Could not start payment. Please try again." });
+    }
+  });
+
+  // Confirm a Paystack invoice payment immediately after the inline popup
+  // succeeds (the webhook is the source of truth, but this gives instant UX).
+  app.post("/api/public/invoices/:token/paystack/verify", async (req, res) => {
+    if (!paystackEnabled()) return res.status(503).json({ error: "Not available." });
+    try {
+      const reference = String((req.body && req.body.reference) || "");
+      if (!reference) return res.status(400).json({ error: "Missing reference." });
+      const { rows } = await pool.query(
+        "SELECT * FROM lb_invoices WHERE public_token=$1 AND paystack_reference=$2",
+        [String(req.params.token), reference]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Invoice not found." });
+      const inv = rows[0];
+      if (inv.status === "honored") return res.json({ paid: true });
+      const tx = await paystackVerify(reference);
+      if (tx && tx.status === "success") {
+        await honorInvoiceOnline({ invoiceId: inv.id, provider: "paystack", reference });
+        return res.json({ paid: true });
+      }
+      res.json({ paid: false });
+    } catch (err) {
+      console.error("invoice paystack verify error", err);
+      res.status(500).json({ error: "Could not verify payment." });
     }
   });
 

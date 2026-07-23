@@ -146,6 +146,9 @@
           </div>
           <div class="gift-selected" id="giftSelected" hidden></div>
         </div>
+        <label class="gift-label" id="giftCurrencyRow" hidden>Pay with
+          <select id="giftCurrencySelect"></select>
+        </label>
         <label class="gift-label">Amount (<span id="giftCurrency">USD</span>)
           <input type="number" id="giftAmount" min="1" step="1" placeholder="10" required />
         </label>
@@ -183,6 +186,12 @@
       <div class="payout-card" id="payoutCard">
         <div class="payout-status" id="payoutStatus">Loading…</div>
         <div class="payout-actions" id="payoutActions"></div>
+      </div>
+
+      <!-- Naira (Paystack) payouts — only shown when Paystack is configured. -->
+      <div class="payout-card" id="ngnPayoutCard" hidden>
+        <div class="payout-status" id="ngnPayoutStatus">Set up Naira (₦) payouts to receive gifts and invoices from fans in Nigeria.</div>
+        <div class="payout-actions" id="ngnPayoutActions"></div>
       </div>
 
       <div class="wallet-card" id="walletCard" hidden>
@@ -331,10 +340,31 @@
     </div>
   </div>
 
+  <!-- Naira (Paystack) payout setup -->
+  <div class="modal-overlay" id="ngnModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Set up Naira payouts</h3>
+        <button class="modal-close" id="ngnClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub">Link your Nigerian bank account. Paystack securely verifies it and pays your gifts &amp; invoices straight to your bank. DabzAudio never holds your funds.</p>
+      <label class="gift-label">Bank
+        <select id="ngnBank"><option value="">Loading banks…</option></select>
+      </label>
+      <label class="gift-label">Account number
+        <input type="text" id="ngnAccountNumber" inputmode="numeric" maxlength="10" placeholder="0123456789" autocomplete="off" />
+      </label>
+      <div class="msg" id="ngnResolved"></div>
+      <button class="btn" id="ngnSaveBtn" type="button">Verify &amp; save</button>
+      <div class="msg" id="ngnMsg"></div>
+    </div>
+  </div>
+
   <script type="module" src="js/collab.js"></script>
   <script src="js/suggest.js"></script>
   <script src="js/app.js"></script>
   <script src="js/stripe-embedded.js"></script>
+  <script src="js/paystack-inline.js"></script>
   <script src="js/gifts.js"></script>
   <script src="js/invoices.js"></script>
   <script>

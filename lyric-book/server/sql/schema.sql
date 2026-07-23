@@ -191,3 +191,35 @@ CREATE TABLE IF NOT EXISTS lb_invoice_proofs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_lb_invoice_proofs_invoice ON lb_invoice_proofs(invoice_id, created_at DESC);
+
+-- =============================== Paystack (Naira) ============================
+-- Second payment rail for African (NGN) users, chosen by currency: NGN routes
+-- to Paystack, GBP/USD/EUR stay on Stripe. Like Stripe Connect, Paystack is the
+-- regulated fund-holder — an artist links their Nigerian bank via a Paystack
+-- *subaccount* and Paystack settles their share straight to that bank. DabzAudio
+-- never holds the money; the platform fee is the subaccount's percentage_charge.
+CREATE TABLE IF NOT EXISTS lb_paystack_accounts (
+  user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
+  subaccount_code TEXT NOT NULL,
+  business_name TEXT NOT NULL DEFAULT '',
+  bank_code TEXT NOT NULL DEFAULT '',
+  bank_name TEXT NOT NULL DEFAULT '',
+  account_number TEXT NOT NULL DEFAULT '',
+  account_name TEXT NOT NULL DEFAULT '',
+  currency TEXT NOT NULL DEFAULT 'ngn',
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_paystack_subaccount
+  ON lb_paystack_accounts(subaccount_code);
+
+-- Which rail each gift/invoice used, plus the Paystack transaction reference so
+-- the webhook can reconcile a NGN payment back to its row.
+ALTER TABLE lb_gifts ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'stripe';
+ALTER TABLE lb_gifts ADD COLUMN IF NOT EXISTS paystack_reference TEXT;
+CREATE INDEX IF NOT EXISTS idx_lb_gifts_paystack_ref ON lb_gifts(paystack_reference) WHERE paystack_reference IS NOT NULL;
+
+ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'stripe';
+ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS paystack_reference TEXT;
+CREATE INDEX IF NOT EXISTS idx_lb_invoices_paystack_ref ON lb_invoices(paystack_reference) WHERE paystack_reference IS NOT NULL;
