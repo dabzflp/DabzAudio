@@ -33,6 +33,7 @@
       </button>
       <button class="btn small" id="giftAnyBtn" type="button" title="Send an artist a gift" hidden>Gift an artist</button>
       <button class="btn subtle small" id="giftsBtn" type="button" title="Gifts & payouts" hidden>Gifts</button>
+      <button class="btn subtle small" id="invoicesBtn" type="button" title="Invoices" hidden>Invoices <span class="inv-badge" id="invoicesBadge" hidden>0</span></button>
       <span class="who" id="who"></span>
       <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>
     </div>
@@ -211,10 +212,106 @@
     </div>
   </div>
 
+  <!-- Invoices list modal -->
+  <div class="modal-overlay" id="invoicesModal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3>Invoices</h3>
+        <button class="modal-close" id="invoicesClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub">Bill anyone by email — they don't need a DabzAudio account. Get paid by card, or accept proof of an offline payment.</p>
+      <div class="invoices-toolbar">
+        <button class="btn small" id="newInvoiceBtn" type="button">+ New invoice</button>
+      </div>
+      <div class="inv-tabs">
+        <button class="inv-tab active" data-group="drafts" type="button">Drafts <span class="inv-tab-count" id="cntDrafts">0</span></button>
+        <button class="inv-tab" data-group="sent" type="button">Sent <span class="inv-tab-count" id="cntSent">0</span></button>
+        <button class="inv-tab" data-group="awaiting" type="button">Awaiting <span class="inv-tab-count" id="cntAwaiting">0</span></button>
+        <button class="inv-tab" data-group="honored" type="button">Honored <span class="inv-tab-count" id="cntHonored">0</span></button>
+      </div>
+      <ul class="inv-list" id="invoiceList"></ul>
+      <div class="msg" id="invoicesMsg"></div>
+    </div>
+  </div>
+
+  <!-- Create / edit invoice modal -->
+  <div class="modal-overlay" id="invoiceFormModal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="invoiceFormTitle">New invoice</h3>
+        <button class="modal-close" id="invoiceFormClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <form class="invoice-form" id="invoiceForm">
+        <div class="inv-grid">
+          <label class="gift-label">Recipient email
+            <input type="email" id="invToEmail" placeholder="name@email.com" required />
+          </label>
+          <label class="gift-label">Recipient name (optional)
+            <input type="text" id="invToName" placeholder="Jane Doe" maxlength="120" />
+          </label>
+          <label class="gift-label">Currency
+            <select id="invCurrency"></select>
+          </label>
+          <label class="gift-label">Due date (optional)
+            <input type="date" id="invDueDate" />
+          </label>
+        </div>
+
+        <div class="inv-items-head">
+          <span>Line items</span>
+          <button class="btn ghost small" id="addItemBtn" type="button">+ Add item</button>
+        </div>
+        <div class="inv-items" id="invItemsEditor"></div>
+
+        <div class="inv-grid">
+          <label class="gift-label">Tax
+            <select id="invTaxMode">
+              <option value="none">No tax</option>
+              <option value="exclusive">Add tax on top (exclusive)</option>
+              <option value="inclusive">Tax included in prices (inclusive)</option>
+            </select>
+          </label>
+          <label class="gift-label" id="invTaxRateWrap" hidden>Tax rate (%)
+            <input type="number" id="invTaxRate" min="0" max="100" step="0.1" placeholder="20" />
+          </label>
+          <label class="gift-label" id="invTaxLabelWrap" hidden>Tax label
+            <input type="text" id="invTaxLabel" maxlength="24" placeholder="VAT" value="VAT" />
+          </label>
+        </div>
+
+        <label class="gift-label">Note / terms (optional)
+          <textarea id="invNoteInput" maxlength="2000" placeholder="Thanks for your business! Payment due within 14 days."></textarea>
+        </label>
+
+        <div class="gift-breakdown" id="invPreview"></div>
+
+        <div class="invoice-actions">
+          <button class="btn" id="invSaveSend" type="submit">Save &amp; send</button>
+          <button class="btn subtle" id="invSaveDraft" type="button">Save draft</button>
+        </div>
+        <div class="msg" id="invoiceFormMsg"></div>
+        <p class="gift-fineprint">You're responsible for any tax you charge and for your own local tax registration. DabzAudio provides the invoicing tool and, for online card payments, charges its standard platform fee.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Invoice detail modal -->
+  <div class="modal-overlay" id="invoiceViewModal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="invoiceViewTitle">Invoice</h3>
+        <button class="modal-close" id="invoiceViewClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div id="invoiceViewBody"></div>
+      <div class="msg" id="invoiceViewMsg"></div>
+    </div>
+  </div>
+
   <script type="module" src="js/collab.js"></script>
   <script src="js/suggest.js"></script>
   <script src="js/app.js"></script>
   <script src="js/gifts.js"></script>
+  <script src="js/invoices.js"></script>
   <script>
     // Mobile hamburger: collapse the header actions into a dropdown on small screens.
     (function () {

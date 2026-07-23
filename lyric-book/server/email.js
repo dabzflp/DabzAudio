@@ -76,3 +76,79 @@ export async function sendShareInvite(to, { inviterName, lyricTitle, acceptUrl, 
   await resend.emails.send({ from: FROM, to, subject, html });
   return { sent: true };
 }
+
+// Shared email chrome (dark card with the DabzAudio badge).
+function shell(inner) {
+  return `
+  <div style="background:#111111;padding:32px;font-family:Arial,Helvetica,sans-serif;color:#eaeaea">
+    <div style="max-width:520px;margin:0 auto;background:#161616;border-radius:14px;padding:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <div style="width:40px;height:40px;border-radius:10px;background:#2b2b2b;color:#ff7a00;font-weight:700;display:flex;align-items:center;justify-content:center">DA</div>
+        <div style="font-size:18px;font-weight:700;color:#fff">DabzAudio</div>
+      </div>
+      ${inner}
+    </div>
+  </div>`;
+}
+function ctaButton(url, label) {
+  return `<p style="margin:24px 0"><a href="${url}" style="background:#ff7a00;color:#1f1f1f;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px;display:inline-block">${label}</a></p>
+  <p style="color:#6f6f6f;font-size:12px;word-break:break-all">If the button doesn't work, paste this link into your browser:<br>${url}</p>`;
+}
+
+// An invoice sent to the recipient (registered or not).
+export async function sendInvoiceEmail(to, { senderName, number, amount, note, dueDate, viewUrl, hasAccount }) {
+  const safeSender = (senderName || "A DabzAudio artist").toString();
+  const subject = `${safeSender} sent you an invoice (${number}) — ${amount}`;
+  const due = dueDate ? `<p style="color:#9b9b9b;line-height:1.5">Due by <b style="color:#fff">${dueDate}</b>.</p>` : "";
+  const noteHtml = note ? `<p style="color:#9b9b9b;line-height:1.5">“${note}”</p>` : "";
+  const join = hasAccount
+    ? ""
+    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio — the songwriting studio where artists write, collaborate and get paid. <a href="https://dabzaudio.netlify.app/lyric-book/" style="color:#ff7a00">Create a free account</a>.</p>`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">You've received an invoice</h2>
+    <p style="color:#9b9b9b;line-height:1.5">${safeSender} sent you invoice <b style="color:#fff">${number}</b> for <b style="color:#fff">${amount}</b> via DabzAudio.</p>
+    ${due}
+    ${noteHtml}
+    <p style="color:#9b9b9b;line-height:1.5">Open it to pay securely by card, or upload proof if you've paid another way.</p>
+    ${ctaButton(viewUrl, "View & pay invoice")}
+    ${join}`);
+  if (!resend) {
+    console.log(`[email disabled] Invoice ${number} for ${to}: ${viewUrl}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+// Notify the sender their invoice was honored (paid online).
+export async function sendInvoiceHonoredEmail(to, { senderName, number, payer, amount, method }) {
+  if (!to) return { sent: false };
+  const subject = `Invoice ${number} was paid — ${amount}`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">Your invoice was honored 🎉</h2>
+    <p style="color:#9b9b9b;line-height:1.5">Hi ${senderName || "there"}, ${payer} honored invoice <b style="color:#fff">${number}</b> for <b style="color:#fff">${amount}</b> (${method}).</p>
+    <p style="color:#9b9b9b;line-height:1.5">The funds are on their way to your connected account and will settle to your bank via Stripe.</p>`);
+  if (!resend) {
+    console.log(`[email disabled] Invoice honored ${number} for ${to}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+// Notify the sender that the recipient uploaded proof of payment (needs review).
+export async function sendInvoiceProofEmail(to, { senderName, number, payer, amount, openUrl }) {
+  if (!to) return { sent: false };
+  const subject = `Proof of payment uploaded for invoice ${number}`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">Proof of payment received</h2>
+    <p style="color:#9b9b9b;line-height:1.5">Hi ${senderName || "there"}, ${payer} uploaded proof they've paid invoice <b style="color:#fff">${number}</b> (${amount}).</p>
+    <p style="color:#9b9b9b;line-height:1.5">Review the proof in your Invoices panel and confirm to mark it honored.</p>
+    ${ctaButton(openUrl, "Review & confirm")}`);
+  if (!resend) {
+    console.log(`[email disabled] Invoice proof ${number} for ${to}: ${openUrl}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}

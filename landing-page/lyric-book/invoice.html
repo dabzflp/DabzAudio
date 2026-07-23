@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Invoice | DabzAudio</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body class="dabz-lite">
+  <header class="site-header">
+    <a class="brand" href="../index.html" style="text-decoration:none">
+      <span class="dabz-brand"><span class="sitename">DA</span><span class="dot">.</span></span>
+      <div class="brand-text"><b>DabzAudio</b><small>Invoice</small></div>
+    </a>
+    <a class="back-link" href="lyric-book/">Lyric Book →</a>
+  </header>
+
+  <div class="invoice-page">
+    <div class="invoice-doc" id="invoiceDoc" hidden>
+      <div class="invoice-top">
+        <div>
+          <div class="invoice-num" id="invNumber">INV-00000</div>
+          <div class="invoice-from" id="invFrom"></div>
+        </div>
+        <span class="invoice-status" id="invStatus"></span>
+      </div>
+
+      <div class="invoice-meta" id="invMeta"></div>
+
+      <table class="invoice-items">
+        <thead>
+          <tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr>
+        </thead>
+        <tbody id="invItems"></tbody>
+      </table>
+
+      <div class="invoice-totals" id="invTotals"></div>
+
+      <div class="invoice-note" id="invNote" hidden></div>
+
+      <div class="invoice-actions" id="invActions"></div>
+      <div class="msg" id="invMsg"></div>
+
+      <p class="invoice-fineprint">
+        Invoicing tool provided by DabzAudio. Card payments are processed securely by Stripe.
+        Any tax shown is set by the sender and is their responsibility — DabzAudio is not the merchant of record or a tax adviser.
+      </p>
+    </div>
+
+    <div class="invoice-doc" id="invoiceLoading">
+      <p class="sub" style="text-align:center;margin:24px 0">Loading invoice…</p>
+    </div>
+
+    <!-- Proof upload -->
+    <div class="invoice-proof" id="proofBox" hidden>
+      <h3>Upload proof of payment</h3>
+      <p class="sub">Paid by bank transfer or another way? Upload a screenshot or photo of your payment and the sender will confirm it.</p>
+      <input type="file" id="proofFile" accept="image/png,image/jpeg,image/webp" />
+      <textarea id="proofNote" maxlength="500" placeholder="Reference or note (optional)"></textarea>
+      <div class="invoice-actions">
+        <button class="btn" id="proofSubmit" type="button">Submit proof</button>
+        <button class="btn subtle" id="proofCancel" type="button">Cancel</button>
+      </div>
+      <div class="msg" id="proofMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var token = params.get("token");
+      var els = {
+        doc: document.getElementById("invoiceDoc"),
+        loading: document.getElementById("invoiceLoading"),
+        number: document.getElementById("invNumber"),
+        from: document.getElementById("invFrom"),
+        status: document.getElementById("invStatus"),
+        meta: document.getElementById("invMeta"),
+        items: document.getElementById("invItems"),
+        totals: document.getElementById("invTotals"),
+        note: document.getElementById("invNote"),
+        actions: document.getElementById("invActions"),
+        msg: document.getElementById("invMsg"),
+        proofBox: document.getElementById("proofBox"),
+        proofFile: document.getElementById("proofFile"),
+        proofNote: document.getElementById("proofNote"),
+        proofSubmit: document.getElementById("proofSubmit"),
+        proofCancel: document.getElementById("proofCancel"),
+        proofMsg: document.getElementById("proofMsg")
+      };
+      var currency = "gbp";
+
+      if (!token) {
+        els.loading.innerHTML = "<p class='sub' style='text-align:center'>No invoice specified.</p>";
+        return;
+      }
+      load();
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+      function money(cents) {
+        try {
+          return new Intl.NumberFormat(undefined, { style: "currency", currency: currency.toUpperCase() }).format((cents || 0) / 100);
+        } catch (e) { return currency.toUpperCase() + " " + ((cents || 0) / 100).toFixed(2); }
+      }
+      function setMsg(el, text, kind) { el.className = "msg" + (kind ? " " + kind : ""); el.textContent = text || ""; }
+
+      async function load() {
+        try {
+          var data = await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token));
+          render(data);
+        } catch (err) {
+          els.loading.innerHTML = "<p class='sub' style='text-align:center'>" + esc(err.message || "Could not load this invoice.") + "</p>";
+        }
+      }
+
+      function render(data) {
+        var inv = data.invoice;
+        currency = inv.currency || "gbp";
+        els.loading.hidden = true;
+        els.doc.hidden = false;
+
+        els.number.textContent = inv.number;
+        els.from.textContent = "From " + inv.fromName;
+
+        var st = inv.status;
+        var label = st === "honored" ? "Paid" : st === "awaiting_confirmation" ? "Awaiting confirmation" :
+                    st === "cancelled" ? "Cancelled" : "Unpaid";
+        els.status.className = "invoice-status " + (st === "honored" ? "ok" : st === "cancelled" ? "err" : "pend");
+        els.status.textContent = label;
+
+        var meta = [];
+        if (inv.toName || inv.toEmail) meta.push("<span><b>Billed to</b><br>" + esc(inv.toName || inv.toEmail) + "</span>");
+        if (inv.dueDate) meta.push("<span><b>Due</b><br>" + esc(inv.dueDate) + "</span>");
+        if (inv.createdAt) meta.push("<span><b>Issued</b><br>" + esc(new Date(inv.createdAt).toLocaleDateString()) + "</span>");
+        els.meta.innerHTML = meta.join("");
+
+        els.items.innerHTML = "";
+        (inv.items || []).forEach(function (it) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = "<td>" + esc(it.description) + "</td>" +
+            "<td class='num'>" + it.quantity + "</td>" +
+            "<td class='num'>" + money(it.unitCents) + "</td>" +
+            "<td class='num'>" + money(Math.round(it.quantity * it.unitCents)) + "</td>";
+          els.items.appendChild(tr);
+        });
+
+        var rows = "<div class='invoice-total-row'><span>Subtotal</span><span>" + money(inv.subtotalCents) + "</span></div>";
+        if (inv.taxMode === "exclusive" && inv.taxRateBps > 0) {
+          rows += "<div class='invoice-total-row muted'><span>" + esc(inv.taxLabel) + " (" + (inv.taxRateBps / 100) + "%)</span><span>" + money(inv.taxCents) + "</span></div>";
+        } else if (inv.taxMode === "inclusive" && inv.taxRateBps > 0) {
+          rows += "<div class='invoice-total-row muted'><span>Includes " + esc(inv.taxLabel) + " (" + (inv.taxRateBps / 100) + "%)</span><span>" + money(inv.taxCents) + "</span></div>";
+        }
+        rows += "<div class='invoice-total-row grand'><span>Total due</span><span>" + money(inv.totalCents) + "</span></div>";
+        els.totals.innerHTML = rows;
+
+        if (inv.note) { els.note.hidden = false; els.note.textContent = inv.note; }
+
+        renderActions(data);
+
+        if (params.get("paid") === "1") setMsg(els.msg, "Payment received — thank you! The sender has been notified.", "ok");
+      }
+
+      function renderActions(data) {
+        els.actions.innerHTML = "";
+        var inv = data.invoice;
+        if (data.settled) { setMsg(els.msg, "This invoice has been paid. Thank you!", "ok"); return; }
+        if (data.cancelled) { setMsg(els.msg, "This invoice was cancelled by the sender.", "err"); return; }
+
+        if (data.canPayOnline) {
+          var pay = document.createElement("button");
+          pay.className = "btn"; pay.type = "button"; pay.textContent = "Pay " + money(inv.totalCents) + " by card";
+          pay.addEventListener("click", payOnline);
+          els.actions.appendChild(pay);
+        }
+        var proof = document.createElement("button");
+        proof.className = "btn subtle"; proof.type = "button"; proof.textContent = "I've paid another way";
+        proof.addEventListener("click", function () { els.proofBox.hidden = false; proof.scrollIntoView({ behavior: "smooth" }); });
+        els.actions.appendChild(proof);
+      }
+
+      async function payOnline() {
+        setMsg(els.msg, "Opening secure checkout…");
+        try {
+          var d = await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/pay", { method: "POST" });
+          if (d.url) window.location.href = d.url;
+          else setMsg(els.msg, "Could not start payment.", "err");
+        } catch (err) { setMsg(els.msg, err.message || "Could not start payment.", "err"); }
+      }
+
+      els.proofCancel.addEventListener("click", function () { els.proofBox.hidden = true; });
+      els.proofSubmit.addEventListener("click", submitProof);
+
+      function submitProof() {
+        var file = els.proofFile.files && els.proofFile.files[0];
+        if (!file) { setMsg(els.proofMsg, "Choose an image of your payment first.", "err"); return; }
+        if (file.size > 5 * 1024 * 1024) { setMsg(els.proofMsg, "Image too large (max 5MB).", "err"); return; }
+        var reader = new FileReader();
+        reader.onload = async function () {
+          els.proofSubmit.disabled = true;
+          setMsg(els.proofMsg, "Uploading…");
+          try {
+            await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/proof", {
+              method: "POST",
+              body: JSON.stringify({ imageBase64: reader.result, note: els.proofNote.value.trim() })
+            });
+            els.proofBox.hidden = true;
+            setMsg(els.msg, "Proof submitted — the sender will review and confirm your payment. Thank you!", "ok");
+            els.actions.innerHTML = "";
+          } catch (err) {
+            setMsg(els.proofMsg, err.message || "Could not upload proof.", "err");
+          } finally {
+            els.proofSubmit.disabled = false;
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    })();
+  </script>
+</body>
+</html>
