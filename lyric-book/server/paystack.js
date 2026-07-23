@@ -181,6 +181,66 @@ export function registerPaystackRoutes(app) {
     }
   });
 
+  // Naira wallet / earnings for the signed-in artist. Unlike Stripe (where gifts
+  // sit in the artist's own Stripe balance until they withdraw), Paystack settles
+  // a subaccount's share straight to the linked bank on Paystack's schedule — so
+  // there's no held balance to "withdraw". This surfaces what has been received
+  // (net of the DabzAudio fee) and where it settles, so Naira feels like real
+  // receiving rather than "just added a bank".
+  app.get("/api/paystack/wallet", requireAuth, async (req, res) => {
+    if (!paystackEnabled()) return res.json({ enabled: false });
+    try {
+      const row = await getPaystackAccountRow(req.user.id);
+      if (!row || !row.active) {
+        return res.json({ enabled: true, active: false, currency: "ngn" });
+      }
+      // Net to the artist = gross minus the platform fee taken as transaction_charge.
+      const agg = await pool.query(
+        `SELECT status, COALESCE(SUM(amount_cents - fee_cents), 0) AS net, COUNT(*) AS n
+           FROM lb_gifts
+          WHERE to_user_id = $1 AND currency = 'ngn' AND provider = 'paystack'
+          GROUP BY status`,
+        [req.user.id]
+      );
+      let receivedNetKobo = 0, pendingNetKobo = 0, paidCount = 0;
+      for (const r of agg.rows) {
+        if (r.status === "paid") { receivedNetKobo = Number(r.net); paidCount = Number(r.n); }
+        else if (r.status === "pending") { pendingNetKobo = Number(r.net); }
+      }
+      // Invoices honored online in NGN settle to the same bank via Paystack, so
+      // fold them into the artist's earnings (manual/proof honors settle offline
+      // and never touch Paystack, so they're excluded).
+      const inv = await pool.query(
+        `SELECT COALESCE(SUM(total_cents - fee_cents), 0) AS net, COUNT(*) AS n
+           FROM lb_invoices
+          WHERE from_user_id = $1 AND currency = 'ngn' AND provider = 'paystack'
+            AND status = 'honored' AND honored_method = 'online'`,
+        [req.user.id]
+      );
+      if (inv.rows[0]) {
+        receivedNetKobo += Number(inv.rows[0].net || 0);
+        paidCount += Number(inv.rows[0].n || 0);
+      }
+      res.json({
+        enabled: true,
+        active: true,
+        currency: "ngn",
+        receivedNetKobo,
+        pendingNetKobo,
+        paidCount,
+        bankName: row.bank_name || "",
+        accountName: row.account_name || "",
+        accountNumberMasked: row.account_number ? "••••" + String(row.account_number).slice(-4) : "",
+        // Paystack pays the subaccount's share to this bank automatically — no
+        // manual withdrawal step (and DabzAudio never holds the funds).
+        autoSettles: true
+      });
+    } catch (err) {
+      console.error("paystack/wallet error", err);
+      res.status(500).json({ error: "Could not load your Naira earnings." });
+    }
+  });
+
   // List Nigerian banks (for the account-setup dropdown). Cached in memory.
   let bankCache = { at: 0, banks: [] };
   app.get("/api/paystack/banks", requireAuth, async (req, res) => {
