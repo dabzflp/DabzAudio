@@ -26,6 +26,8 @@ import { sendInvoiceEmail, sendInvoiceHonoredEmail, sendInvoiceProofEmail } from
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 const stripe = SECRET ? new Stripe(SECRET) : null;
+const PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || "";
+const EMBEDDED = !!(stripe && PUBLISHABLE_KEY);
 
 // Same platform fee as gifting — DabzAudio keeps a % of any invoice paid online.
 const FEE_BPS = Math.max(0, Math.min(10000, Number(process.env.PLATFORM_FEE_BPS ?? 1000)));
@@ -264,7 +266,9 @@ export function registerInvoiceRoutes(app) {
       payoutsEnabled,
       feeBps: FEE_BPS,
       defaultCurrency: DEFAULT_CURRENCY,
-      currencies: CURRENCIES
+      currencies: CURRENCIES,
+      embedded: EMBEDDED,
+      publishableKey: PUBLISHABLE_KEY
     });
   });
 
@@ -547,6 +551,8 @@ export function registerInvoiceRoutes(app) {
           items: await loadItems(inv.id)
         },
         canPayOnline,
+        embedded: EMBEDDED && canPayOnline,
+        publishableKey: EMBEDDED && canPayOnline ? PUBLISHABLE_KEY : "",
         settled: inv.status === "honored",
         cancelled: inv.status === "cancelled"
       });
@@ -574,7 +580,8 @@ export function registerInvoiceRoutes(app) {
 
       const feeCents = feeCentsFor(Number(inv.total_cents));
       const sender = await displayNameForUser(inv.from_user_id);
-      const session = await stripe.checkout.sessions.create({
+      const useEmbedded = !!(req.body && req.body.embedded) && EMBEDDED;
+      const params = {
         mode: "payment",
         line_items: [{
           price_data: {
@@ -594,13 +601,20 @@ export function registerInvoiceRoutes(app) {
           metadata: { invoiceId: String(inv.id) }
         },
         metadata: { invoiceId: String(inv.id) },
-        customer_email: inv.to_email || undefined,
-        success_url: `${appBase()}/invoice.html?token=${inv.public_token}&paid=1`,
-        cancel_url: `${appBase()}/invoice.html?token=${inv.public_token}`
-      });
+        customer_email: inv.to_email || undefined
+      };
+      if (useEmbedded) {
+        params.ui_mode = "embedded";
+        params.return_url = `${appBase()}/invoice.html?token=${inv.public_token}&paid=1`;
+      } else {
+        params.success_url = `${appBase()}/invoice.html?token=${inv.public_token}&paid=1`;
+        params.cancel_url = `${appBase()}/invoice.html?token=${inv.public_token}`;
+      }
+      const session = await stripe.checkout.sessions.create(params);
       await pool.query("UPDATE lb_invoices SET stripe_checkout_session_id=$2, fee_cents=$3, updated_at=NOW() WHERE id=$1",
         [inv.id, session.id, feeCents]);
-      res.json({ url: session.url });
+      if (useEmbedded) res.json({ clientSecret: session.client_secret, publishableKey: PUBLISHABLE_KEY });
+      else res.json({ url: session.url });
     } catch (err) {
       console.error("invoice pay error", err);
       stripeError(res, err, "Could not start payment. Please try again.");

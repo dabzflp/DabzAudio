@@ -45,7 +45,14 @@
     tabReceived: document.getElementById("tabReceived"),
     tabSent: document.getElementById("tabSent"),
     giftReceived: document.getElementById("giftReceived"),
-    giftSent: document.getElementById("giftSent")
+    giftSent: document.getElementById("giftSent"),
+    // Embedded (on-page) Stripe modals
+    embedCheckoutModal: document.getElementById("embedCheckoutModal"),
+    embedCheckoutClose: document.getElementById("embedCheckoutClose"),
+    embedCheckoutContainer: document.getElementById("embedCheckoutContainer"),
+    embedOnboardModal: document.getElementById("embedOnboardModal"),
+    embedOnboardClose: document.getElementById("embedOnboardClose"),
+    embedOnboardContainer: document.getElementById("embedOnboardContainer")
   };
   if (!els.giftsBtn || !els.giftBtn) return;
 
@@ -65,6 +72,11 @@
       return; // server too old / unreachable — leave the feature dormant
     }
     if (!config.enabled) return; // gifting not configured on the server
+
+    // Enable on-page (embedded) Stripe when the server provides a publishable key.
+    if (config.embedded && config.publishableKey && window.LBStripe) {
+      window.LBStripe.pk = config.publishableKey;
+    }
 
     els.giftsBtn.hidden = false;
     if (els.giftAnyBtn) els.giftAnyBtn.hidden = false;
@@ -91,9 +103,12 @@
     els.giftRecipientSearch.addEventListener("input", onSearchInput);
     els.tabReceived.addEventListener("click", () => switchTab("received"));
     els.tabSent.addEventListener("click", () => switchTab("sent"));
-    [els.giftModal, els.giftsModal].forEach((m) => {
+    if (els.embedCheckoutClose) els.embedCheckoutClose.addEventListener("click", closeCheckout);
+    if (els.embedOnboardClose) els.embedOnboardClose.addEventListener("click", () => hide(els.embedOnboardModal));
+    [els.giftModal, els.giftsModal, els.embedCheckoutModal, els.embedOnboardModal].forEach((m) => {
+      if (!m) return;
       m.addEventListener("click", (e) => {
-        if (e.target === m) hide(m);
+        if (e.target === m) { if (m === els.embedCheckoutModal) closeCheckout(); else hide(m); }
       });
     });
     document.addEventListener("lb-lyric-open", (e) => {
@@ -240,15 +255,20 @@
     if (!(amount >= config.minAmount && amount <= config.maxAmount)) {
       return setMsg(`Enter an amount between ${config.minAmount} and ${config.maxAmount}.`, "err");
     }
+    const wantEmbedded = !!(config.embedded && window.LBStripe && window.LBStripe.pk);
     setMsg("Opening secure checkout…");
     els.giftForm.querySelector("button[type=submit]").disabled = true;
     try {
       const data = await window.LB.apiFetch("/api/gifts", {
         method: "POST",
-        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message })
+        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message, embedded: wantEmbedded })
       });
-      if (data.url) {
-        window.location.href = data.url; // Stripe Checkout
+      if (data.clientSecret) {
+        // Pay on-page — no redirect to a Stripe-hosted page.
+        hide(els.giftModal);
+        await openCheckout(data.clientSecret);
+      } else if (data.url) {
+        window.location.href = data.url; // hosted Checkout fallback
       } else {
         setMsg("Could not start checkout.", "err");
       }
@@ -257,6 +277,23 @@
     } finally {
       els.giftForm.querySelector("button[type=submit]").disabled = false;
     }
+  }
+
+  async function openCheckout(clientSecret) {
+    if (!els.embedCheckoutModal) return;
+    els.embedCheckoutModal.hidden = false;
+    els.embedCheckoutContainer.innerHTML = "<p class='sub'>Loading secure checkout…</p>";
+    try {
+      await window.LBStripe.mountEmbeddedCheckout(els.embedCheckoutContainer, async () => clientSecret);
+    } catch (err) {
+      els.embedCheckoutContainer.innerHTML = "<p class='sub'>Could not load checkout. Please try again.</p>";
+    }
+  }
+
+  function closeCheckout() {
+    if (window.LBStripe && window.LBStripe.unmountCheckout) window.LBStripe.unmountCheckout();
+    if (els.embedCheckoutContainer) els.embedCheckoutContainer.innerHTML = "";
+    hide(els.embedCheckoutModal);
   }
 
   function renderPresets() {
@@ -443,6 +480,16 @@
 
   async function startConnect(btn) {
     if (btn) btn.disabled = true;
+    // Prefer on-page (embedded) onboarding; fall back to hosted redirect.
+    if (config.embedded && window.LBStripe && window.LBStripe.pk && els.embedOnboardModal) {
+      try {
+        await openOnboarding();
+        if (btn) btn.disabled = false;
+        return;
+      } catch (err) {
+        // fall through to hosted redirect below
+      }
+    }
     try {
       const d = await window.LB.apiFetch("/api/payouts/connect", { method: "POST" });
       if (d.url) window.location.href = d.url;
@@ -450,6 +497,27 @@
       alert(err.message || "Could not start payout setup.");
       if (btn) btn.disabled = false;
     }
+  }
+
+  async function openOnboarding() {
+    els.embedOnboardModal.hidden = false;
+    els.embedOnboardContainer.innerHTML = "<p class='sub'>Loading secure onboarding…</p>";
+    await window.LBStripe.mountConnectOnboarding(
+      els.embedOnboardContainer,
+      async () => {
+        const d = await window.LB.apiFetch("/api/payouts/account-session", { method: "POST" });
+        if (!d.clientSecret) throw new Error("No client secret");
+        return d.clientSecret;
+      },
+      {
+        onExit: () => {
+          hide(els.embedOnboardModal);
+          // Refresh payout status + wallet after they finish/exit onboarding.
+          loadPayoutStatus();
+          loadWallet();
+        }
+      }
+    );
   }
 
   async function loadHistory() {
@@ -528,7 +596,8 @@
     const qs = p.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
 
-    if (gift === "success") {
+    if (gift === "success" || gift === "return") {
+      // "return" is the embedded-checkout completion redirect.
       toast("Gift sent — thank you! 💛");
       openGiftsModal();
     } else if (gift === "cancel") {

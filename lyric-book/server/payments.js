@@ -29,6 +29,13 @@ import { handleInvoiceEvent } from "./invoices.js";
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 export const stripe = SECRET ? new Stripe(SECRET) : null;
 
+// Publishable key (pk_...) — safe to expose to the browser. Required for the
+// embedded (on-page) Checkout + Connect onboarding experiences so users never
+// leave DabzAudio for a Stripe-hosted page.
+const PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || "";
+export function publishableKey() { return PUBLISHABLE_KEY; }
+export function embeddedEnabled() { return !!(stripe && PUBLISHABLE_KEY); }
+
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const CONNECT_COUNTRY = (process.env.STRIPE_CONNECT_COUNTRY || "US").toUpperCase();
 const CURRENCY = (process.env.GIFT_CURRENCY || "usd").toLowerCase();
@@ -116,6 +123,29 @@ async function getAccountRow(userId) {
     [userId]
   );
   return rows[0] || null;
+}
+
+// Get the user's Stripe Express account id, creating the account if needed.
+// Shared by hosted (accountLinks) and embedded (accountSessions) onboarding.
+async function ensureAccountId(user) {
+  const row = await getAccountRow(user.id);
+  if (row && row.stripe_account_id) return row.stripe_account_id;
+  const acct = await stripe.accounts.create({
+    type: "express",
+    country: CONNECT_COUNTRY,
+    email: user.email,
+    capabilities: {
+      transfers: { requested: true },
+      card_payments: { requested: true }
+    },
+    business_type: "individual",
+    // Manual payouts: gifts accumulate in the artist's Stripe balance (their
+    // in-app "wallet") until they choose to withdraw to their bank.
+    settings: { payouts: { schedule: { interval: "manual" } } },
+    metadata: { lb_user_id: String(user.id) }
+  });
+  await saveAccountStatus(user.id, acct);
+  return acct.id;
 }
 
 /**
@@ -207,7 +237,11 @@ export function registerPaymentRoutes(app) {
       minAmount: MIN_AMOUNT,
       maxAmount: MAX_AMOUNT,
       minWithdrawalCents: MIN_WITHDRAWAL_CENTS,
-      feeBps: FEE_BPS
+      feeBps: FEE_BPS,
+      // When both keys are present the frontend uses on-page (embedded) Stripe
+      // flows instead of redirecting to a Stripe-hosted page.
+      embedded: embeddedEnabled(),
+      publishableKey: PUBLISHABLE_KEY
     });
   });
 
@@ -243,26 +277,7 @@ export function registerPaymentRoutes(app) {
   app.post("/api/payouts/connect", requireAuth, async (req, res) => {
     if (!stripe) return notConfigured(res);
     try {
-      let row = await getAccountRow(req.user.id);
-      let accountId = row && row.stripe_account_id;
-      if (!accountId) {
-        const acct = await stripe.accounts.create({
-          type: "express",
-          country: CONNECT_COUNTRY,
-          email: req.user.email,
-          capabilities: {
-            transfers: { requested: true },
-            card_payments: { requested: true }
-          },
-          business_type: "individual",
-          // Manual payouts: gifts accumulate in the artist's Stripe balance
-          // (their in-app "wallet") until they choose to withdraw to their bank.
-          settings: { payouts: { schedule: { interval: "manual" } } },
-          metadata: { lb_user_id: String(req.user.id) }
-        });
-        accountId = acct.id;
-        await saveAccountStatus(req.user.id, acct);
-      }
+      const accountId = await ensureAccountId(req.user);
       const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${appBase()}/app.html?payouts=refresh`,
@@ -272,6 +287,27 @@ export function registerPaymentRoutes(app) {
       res.json({ url: link.url });
     } catch (err) {
       console.error("payouts/connect error", err);
+      stripeError(res, err, "Could not start payout setup.");
+    }
+  });
+
+  // Embedded onboarding: return an Account Session client secret so the artist
+  // completes Stripe onboarding *inside DabzAudio* (no redirect to Stripe).
+  app.post("/api/payouts/account-session", requireAuth, async (req, res) => {
+    if (!embeddedEnabled()) return res.status(503).json({ error: "Embedded onboarding isn't configured." });
+    try {
+      const accountId = await ensureAccountId(req.user);
+      const session = await stripe.accountSessions.create({
+        account: accountId,
+        components: {
+          account_onboarding: { enabled: true },
+          balances: { enabled: true },
+          payouts: { enabled: true }
+        }
+      });
+      res.json({ clientSecret: session.client_secret, publishableKey: PUBLISHABLE_KEY });
+    } catch (err) {
+      console.error("payouts/account-session error", err);
       stripeError(res, err, "Could not start payout setup.");
     }
   });
@@ -486,8 +522,11 @@ export function registerPaymentRoutes(app) {
       );
       const giftId = ins.rows[0].id;
 
+      // Embedded (on-page) Checkout when the client asks for it and the
+      // publishable key is configured; otherwise fall back to hosted redirect.
+      const useEmbedded = !!req.body.embedded && embeddedEnabled();
       try {
-        const session = await stripe.checkout.sessions.create({
+        const params = {
           mode: "payment",
           line_items: [
             {
@@ -513,15 +552,22 @@ export function registerPaymentRoutes(app) {
             fromUserId: String(req.user.id),
             toUserId: String(toUserId),
             lyricId: lyricId ? String(lyricId) : ""
-          },
-          success_url: `${appBase()}/app.html?gift=success`,
-          cancel_url: `${appBase()}/app.html?gift=cancel&giftId=${giftId}`
-        });
+          }
+        };
+        if (useEmbedded) {
+          params.ui_mode = "embedded";
+          params.return_url = `${appBase()}/app.html?gift=return&session_id={CHECKOUT_SESSION_ID}`;
+        } else {
+          params.success_url = `${appBase()}/app.html?gift=success`;
+          params.cancel_url = `${appBase()}/app.html?gift=cancel&giftId=${giftId}`;
+        }
+        const session = await stripe.checkout.sessions.create(params);
         await pool.query(
           "UPDATE lb_gifts SET stripe_checkout_session_id = $2 WHERE id = $1",
           [giftId, session.id]
         );
-        res.json({ url: session.url });
+        if (useEmbedded) res.json({ clientSecret: session.client_secret, publishableKey: PUBLISHABLE_KEY });
+        else res.json({ url: session.url });
       } catch (err) {
         await pool.query("DELETE FROM lb_gifts WHERE id = $1 AND status = 'pending'", [giftId]);
         throw err;
