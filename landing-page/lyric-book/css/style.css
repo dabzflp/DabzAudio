@@ -399,6 +399,16 @@ body.auth-bg .site-header {
 .gift-form textarea:focus { outline: none; border-color: var(--orange); }
 .gift-form textarea { resize: vertical; min-height: 60px; font-family: inherit; }
 .gift-form .btn { margin-top: 2px; }
+/* Style controls inside any .gift-label (e.g. the Naira setup modal, currency picker). */
+.gift-label select,
+.gift-label input,
+.gift-label textarea {
+  background: #0f0f0f; border: 1px solid var(--line); color: #eee;
+  border-radius: 9px; padding: 10px 12px; font-size: 14px; width: 100%;
+}
+.gift-label select:focus,
+.gift-label input:focus,
+.gift-label textarea:focus { outline: none; border-color: var(--orange); }
 .gift-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-top: -4px; }
 .gift-preset {
   background: var(--charcoal); border: 1px solid var(--line); color: #ddd;

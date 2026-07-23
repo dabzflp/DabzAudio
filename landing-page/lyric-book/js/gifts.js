@@ -45,11 +45,36 @@
     tabReceived: document.getElementById("tabReceived"),
     tabSent: document.getElementById("tabSent"),
     giftReceived: document.getElementById("giftReceived"),
-    giftSent: document.getElementById("giftSent")
+    giftSent: document.getElementById("giftSent"),
+    // Embedded (on-page) Stripe modals
+    embedCheckoutModal: document.getElementById("embedCheckoutModal"),
+    embedCheckoutClose: document.getElementById("embedCheckoutClose"),
+    embedCheckoutContainer: document.getElementById("embedCheckoutContainer"),
+    embedOnboardModal: document.getElementById("embedOnboardModal"),
+    embedOnboardClose: document.getElementById("embedOnboardClose"),
+    embedOnboardContainer: document.getElementById("embedOnboardContainer"),
+    // Naira (Paystack)
+    ngnPayoutCard: document.getElementById("ngnPayoutCard"),
+    ngnPayoutStatus: document.getElementById("ngnPayoutStatus"),
+    ngnPayoutActions: document.getElementById("ngnPayoutActions"),
+    ngnModal: document.getElementById("ngnModal"),
+    ngnClose: document.getElementById("ngnClose"),
+    ngnBank: document.getElementById("ngnBank"),
+    ngnAccountNumber: document.getElementById("ngnAccountNumber"),
+    ngnResolved: document.getElementById("ngnResolved"),
+    ngnSaveBtn: document.getElementById("ngnSaveBtn"),
+    ngnMsg: document.getElementById("ngnMsg"),
+    giftCurrencyRow: document.getElementById("giftCurrencyRow"),
+    giftCurrencySelect: document.getElementById("giftCurrencySelect")
   };
   if (!els.giftsBtn || !els.giftBtn) return;
 
   let config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, minWithdrawalCents: 500, feeBps: 0 };
+  let paystackConfig = { enabled: false, publicKey: "", currency: "ngn", feeBps: 0, minAmount: 100, maxAmount: 5000000 };
+  let stripeGifting = false;
+  let selectedRecipient = null;
+  let activeCurrency = "usd";      // gift-modal currency: config.currency (Stripe) or "ngn" (Paystack)
+  let resolveTimer = null;
   let currentLyricId = null;
   // The lyric to attach to the gift — only set when the chosen recipient is a
   // collaborator on the open lyric (otherwise the gift is lyric-agnostic).
@@ -62,15 +87,31 @@
     try {
       config = await window.LB.apiFetch("/api/gifts/config");
     } catch {
-      return; // server too old / unreachable — leave the feature dormant
+      config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, minWithdrawalCents: 500, feeBps: 0 };
     }
-    if (!config.enabled) return; // gifting not configured on the server
+    stripeGifting = !!config.enabled;
 
+    // Second rail: Naira (Paystack). Optional — dormant unless configured.
+    try {
+      paystackConfig = await window.LB.apiFetch("/api/paystack/config");
+    } catch {
+      paystackConfig = { enabled: false };
+    }
+
+    // Nothing configured at all → leave the whole feature dormant.
+    if (!stripeGifting && !paystackConfig.enabled) return;
+
+    // Enable on-page (embedded) Stripe when the server provides a publishable key.
+    if (config.embedded && config.publishableKey && window.LBStripe) {
+      window.LBStripe.pk = config.publishableKey;
+    }
+
+    activeCurrency = config.currency;
     els.giftsBtn.hidden = false;
     if (els.giftAnyBtn) els.giftAnyBtn.hidden = false;
-    els.giftCurrency.textContent = config.currency.toUpperCase();
-    els.giftAmount.min = config.minAmount;
-    els.giftAmount.max = config.maxAmount;
+    els.giftCurrency.textContent = giftCurrencyCode().toUpperCase();
+    els.giftAmount.min = activeMin();
+    els.giftAmount.max = activeMax();
     renderPresets();
     wire();
     renderBreakdown();
@@ -91,9 +132,18 @@
     els.giftRecipientSearch.addEventListener("input", onSearchInput);
     els.tabReceived.addEventListener("click", () => switchTab("received"));
     els.tabSent.addEventListener("click", () => switchTab("sent"));
-    [els.giftModal, els.giftsModal].forEach((m) => {
+    if (els.embedCheckoutClose) els.embedCheckoutClose.addEventListener("click", closeCheckout);
+    if (els.embedOnboardClose) els.embedOnboardClose.addEventListener("click", () => hide(els.embedOnboardModal));
+    if (els.giftCurrencySelect) els.giftCurrencySelect.addEventListener("change", onCurrencyChange);
+    if (els.ngnClose) els.ngnClose.addEventListener("click", () => hide(els.ngnModal));
+    if (els.ngnSaveBtn) els.ngnSaveBtn.addEventListener("click", saveNgn);
+    if (els.ngnBank) els.ngnBank.addEventListener("change", tryResolveNgn);
+    if (els.ngnAccountNumber) els.ngnAccountNumber.addEventListener("input", () => { clearTimeout(resolveTimer); resolveTimer = setTimeout(tryResolveNgn, 350); });
+    if (els.ngnModal) els.ngnModal.addEventListener("click", (e) => { if (e.target === els.ngnModal) hide(els.ngnModal); });
+    [els.giftModal, els.giftsModal, els.embedCheckoutModal, els.embedOnboardModal].forEach((m) => {
+      if (!m) return;
       m.addEventListener("click", (e) => {
-        if (e.target === m) hide(m);
+        if (e.target === m) { if (m === els.embedCheckoutModal) closeCheckout(); else hide(m); }
       });
     });
     document.addEventListener("lb-lyric-open", (e) => {
@@ -172,9 +222,10 @@
     users.forEach((u) => {
       // Rows are always clickable; if the artist can't receive yet we say so
       // on click rather than leaving a dead, unclickable option.
+      const canGet = !!(u.canReceive || u.canReceiveNgn);
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "gift-result" + (u.canReceive ? "" : " muted");
+      row.className = "gift-result" + (canGet ? "" : " muted");
       const av = document.createElement("span");
       av.className = "gift-result-av";
       if (u.avatarUrl) av.style.backgroundImage = `url(${u.avatarUrl})`;
@@ -182,9 +233,14 @@
       const nm = document.createElement("span");
       nm.className = "gift-result-name";
       const handle = u.username ? "@" + u.username : "";
+      const methods = [];
+      if (u.canReceive) methods.push("card");
+      if (u.canReceiveNgn) methods.push("\u20a6");
       nm.innerHTML = `<b>${escapeHtml(u.name || handle)}</b>` +
         (handle ? ` <span class="gift-result-handle">${escapeHtml(handle)}</span>` : "") +
-        (u.canReceive ? "" : ` <span class="gift-result-handle">· no payouts yet</span>`);
+        (canGet
+          ? (methods.length ? ` <span class="gift-result-handle">· ${methods.join(" / ")}</span>` : "")
+          : ` <span class="gift-result-handle">· no payouts yet</span>`);
       row.appendChild(av);
       row.appendChild(nm);
       row.addEventListener("click", () => selectRecipient(u, scopedLyricId));
@@ -199,11 +255,12 @@
   }
 
   function selectRecipient(u, scopedLyricId) {
-    if (!u.canReceive) {
+    if (!u.canReceive && !u.canReceiveNgn) {
       const who = u.username ? "@" + u.username : u.name;
       setMsg(`${who} hasn't set up payouts yet, so they can't receive gifts.`, "err");
       return;
     }
+    selectedRecipient = u;
     els.giftRecipient.value = String(u.userId);
     selectedLyricId = scopedLyricId || null;
     els.giftRecipientResults.hidden = true;
@@ -221,14 +278,23 @@
     x.addEventListener("click", () => { clearRecipient(); els.giftRecipientSearch.focus(); });
     chip.appendChild(x);
     els.giftSelected.appendChild(chip);
+    setupCurrencyForRecipient(u);
     setMsg("");
   }
 
   function clearRecipient() {
     els.giftRecipient.value = "";
     selectedLyricId = null;
+    selectedRecipient = null;
     els.giftSelected.hidden = true;
     els.giftSelected.innerHTML = "";
+    if (els.giftCurrencyRow) els.giftCurrencyRow.hidden = true;
+    activeCurrency = config.currency;
+    els.giftCurrency.textContent = giftCurrencyCode().toUpperCase();
+    els.giftAmount.min = activeMin();
+    els.giftAmount.max = activeMax();
+    renderPresets();
+    renderBreakdown();
   }
 
   async function submitGift(e) {
@@ -237,18 +303,25 @@
     const amount = Number(els.giftAmount.value);
     const message = els.giftMessage.value.trim();
     if (!toUserId) return setMsg("Pick an artist to gift.", "err");
-    if (!(amount >= config.minAmount && amount <= config.maxAmount)) {
-      return setMsg(`Enter an amount between ${config.minAmount} and ${config.maxAmount}.`, "err");
+    if (!(amount >= activeMin() && amount <= activeMax())) {
+      return setMsg(`Enter an amount between ${activeMin()} and ${activeMax()}.`, "err");
     }
+    if (activeCurrency === "ngn") return submitGiftPaystack(toUserId, amount, message);
+
+    const wantEmbedded = !!(config.embedded && window.LBStripe && window.LBStripe.pk);
     setMsg("Opening secure checkout…");
     els.giftForm.querySelector("button[type=submit]").disabled = true;
     try {
       const data = await window.LB.apiFetch("/api/gifts", {
         method: "POST",
-        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message })
+        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message, embedded: wantEmbedded })
       });
-      if (data.url) {
-        window.location.href = data.url; // Stripe Checkout
+      if (data.clientSecret) {
+        // Pay on-page — no redirect to a Stripe-hosted page.
+        hide(els.giftModal);
+        await openCheckout(data.clientSecret);
+      } else if (data.url) {
+        window.location.href = data.url; // hosted Checkout fallback
       } else {
         setMsg("Could not start checkout.", "err");
       }
@@ -259,13 +332,71 @@
     }
   }
 
+  // Naira gift → Paystack inline popup (no redirect), then verify.
+  async function submitGiftPaystack(toUserId, amount, message) {
+    const btn = els.giftForm.querySelector("button[type=submit]");
+    setMsg("Opening secure checkout…");
+    btn.disabled = true;
+    let data;
+    try {
+      data = await window.LB.apiFetch("/api/gifts/paystack", {
+        method: "POST",
+        body: JSON.stringify({ toUserId, lyricId: selectedLyricId, amount, message })
+      });
+    } catch (err) {
+      setMsg(err.message || "Could not start the gift.", "err");
+      btn.disabled = false;
+      return;
+    }
+    hide(els.giftModal);
+    try {
+      await window.LBPaystack.payWithAccessCode(data.accessCode);
+      // Instant UI update; the webhook remains the source of truth.
+      try {
+        await window.LB.apiFetch("/api/gifts/paystack/verify", {
+          method: "POST",
+          body: JSON.stringify({ reference: data.reference })
+        });
+      } catch (e) { /* webhook will reconcile */ }
+      toast("Gift sent — thank you! 💛");
+      openGiftsModal();
+    } catch (err) {
+      if (err && err.message === "cancelled") {
+        toast("Gift cancelled — no charge was made.");
+      } else if (data && data.authorizationUrl) {
+        window.location.href = data.authorizationUrl; // hosted fallback
+      } else {
+        toast("Could not open checkout. Please try again.");
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function openCheckout(clientSecret) {
+    if (!els.embedCheckoutModal) return;
+    els.embedCheckoutModal.hidden = false;
+    els.embedCheckoutContainer.innerHTML = "<p class='sub'>Loading secure checkout…</p>";
+    try {
+      await window.LBStripe.mountEmbeddedCheckout(els.embedCheckoutContainer, async () => clientSecret);
+    } catch (err) {
+      els.embedCheckoutContainer.innerHTML = "<p class='sub'>Could not load checkout. Please try again.</p>";
+    }
+  }
+
+  function closeCheckout() {
+    if (window.LBStripe && window.LBStripe.unmountCheckout) window.LBStripe.unmountCheckout();
+    if (els.embedCheckoutContainer) els.embedCheckoutContainer.innerHTML = "";
+    hide(els.embedCheckoutModal);
+  }
+
   function renderPresets() {
     els.giftPresets.innerHTML = "";
-    [5, 10, 20, 50].forEach((v) => {
+    presetValues().forEach((v) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "gift-preset";
-      b.textContent = formatMajor(v);
+      b.textContent = formatMajor(v, giftCurrencyCode());
       b.addEventListener("click", () => { els.giftAmount.value = v; renderBreakdown(); });
       els.giftPresets.appendChild(b);
     });
@@ -274,7 +405,9 @@
   // Show exactly how a gift splits: what the artist receives vs the DabzAudio fee.
   function renderBreakdown() {
     if (!els.giftBreakdown) return;
-    const feePct = (config.feeBps || 0) / 100;
+    const bps = activeFeeBps();
+    const feePct = bps / 100;
+    const cur = giftCurrencyCode();
     const amount = Number(els.giftAmount.value);
     if (!(amount > 0)) {
       if (feePct > 0) {
@@ -286,13 +419,13 @@
       }
       return;
     }
-    const fee = Math.round(amount * (config.feeBps || 0)) / 10000;
+    const fee = Math.round(amount * bps) / 10000;
     const net = amount - fee;
     els.giftBreakdown.hidden = false;
     els.giftBreakdown.innerHTML =
-      `<span class="gift-breakdown-row"><span>Artist receives</span><b>${formatMajor(net)}</b></span>` +
+      `<span class="gift-breakdown-row"><span>Artist receives</span><b>${formatMajor(net, cur)}</b></span>` +
       (feePct > 0
-        ? `<span class="gift-breakdown-row muted"><span>DabzAudio fee (${feePct.toLocaleString()}%)</span><span>${formatMajor(fee)}</span></span>`
+        ? `<span class="gift-breakdown-row muted"><span>DabzAudio fee (${feePct.toLocaleString()}%)</span><span>${formatMajor(fee, cur)}</span></span>`
         : `<span class="gift-breakdown-row muted"><span>DabzAudio fee</span><span>Free</span></span>`);
   }
 
@@ -308,7 +441,7 @@
     els.giftSent.innerHTML = "";
     switchTab("received");
     if (els.handleMsg) els.handleMsg.textContent = "";
-    await Promise.all([loadHandle(), loadPayoutStatus(), loadWallet(), loadHistory()]);
+    await Promise.all([loadHandle(), loadPayoutStatus(), loadNgnPayoutStatus(), loadWallet(), loadHistory()]);
   }
 
   /* ---------- Gift handle (@username) ---------- */
@@ -443,6 +576,16 @@
 
   async function startConnect(btn) {
     if (btn) btn.disabled = true;
+    // Prefer on-page (embedded) onboarding; fall back to hosted redirect.
+    if (config.embedded && window.LBStripe && window.LBStripe.pk && els.embedOnboardModal) {
+      try {
+        await openOnboarding();
+        if (btn) btn.disabled = false;
+        return;
+      } catch (err) {
+        // fall through to hosted redirect below
+      }
+    }
     try {
       const d = await window.LB.apiFetch("/api/payouts/connect", { method: "POST" });
       if (d.url) window.location.href = d.url;
@@ -450,6 +593,27 @@
       alert(err.message || "Could not start payout setup.");
       if (btn) btn.disabled = false;
     }
+  }
+
+  async function openOnboarding() {
+    els.embedOnboardModal.hidden = false;
+    els.embedOnboardContainer.innerHTML = "<p class='sub'>Loading secure onboarding…</p>";
+    await window.LBStripe.mountConnectOnboarding(
+      els.embedOnboardContainer,
+      async () => {
+        const d = await window.LB.apiFetch("/api/payouts/account-session", { method: "POST" });
+        if (!d.clientSecret) throw new Error("No client secret");
+        return d.clientSecret;
+      },
+      {
+        onExit: () => {
+          hide(els.embedOnboardModal);
+          // Refresh payout status + wallet after they finish/exit onboarding.
+          loadPayoutStatus();
+          loadWallet();
+        }
+      }
+    );
   }
 
   async function loadHistory() {
@@ -493,7 +657,7 @@
       right.className = "gift-row-amt";
       const amt = document.createElement("div");
       amt.className = "amt";
-      amt.textContent = formatCents(g.amountCents);
+      amt.textContent = formatCents(g.amountCents, g.currency);
       const st = document.createElement("div");
       st.className = "gift-state " + (g.status === "paid" ? "ok" : g.status === "failed" ? "err" : "pend");
       st.textContent = g.status === "paid" ? "Paid" : g.status === "failed" ? "Failed" : "Pending";
@@ -528,7 +692,8 @@
     const qs = p.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
 
-    if (gift === "success") {
+    if (gift === "success" || gift === "return") {
+      // "return" is the embedded-checkout completion redirect.
       toast("Gift sent — thank you! 💛");
       openGiftsModal();
     } else if (gift === "cancel") {
@@ -545,6 +710,159 @@
     }
   }
 
+  /* ---------- currency / provider selection ---------- */
+  function giftCurrencyCode() { return activeCurrency || config.currency || "usd"; }
+  function activeMin() {
+    return activeCurrency === "ngn" ? (paystackConfig.minAmount || 1) : (config.minAmount || 1);
+  }
+  function activeMax() {
+    return activeCurrency === "ngn" ? (paystackConfig.maxAmount || 5000000) : (config.maxAmount || 1000);
+  }
+  function activeFeeBps() {
+    return activeCurrency === "ngn" ? (paystackConfig.feeBps || 0) : (config.feeBps || 0);
+  }
+  function presetValues() {
+    return activeCurrency === "ngn" ? [1000, 2000, 5000, 10000] : [5, 10, 20, 50];
+  }
+
+  function setupCurrencyForRecipient(u) {
+    if (!els.giftCurrencySelect) { activeCurrency = config.currency; return; }
+    const opts = [];
+    if (u.canReceive && stripeGifting) {
+      opts.push({ code: config.currency, label: "Pay in " + config.currency.toUpperCase() });
+    }
+    if (u.canReceiveNgn && paystackConfig.enabled) {
+      opts.push({ code: "ngn", label: "Pay in Naira (\u20a6)" });
+    }
+    els.giftCurrencySelect.innerHTML = "";
+    opts.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.code;
+      opt.textContent = o.label;
+      els.giftCurrencySelect.appendChild(opt);
+    });
+    els.giftCurrencyRow.hidden = opts.length < 2;
+    els.giftCurrencySelect.value = opts.length ? opts[0].code : config.currency;
+    onCurrencyChange();
+  }
+
+  function onCurrencyChange() {
+    if (els.giftCurrencySelect && els.giftCurrencySelect.value) {
+      activeCurrency = els.giftCurrencySelect.value;
+    }
+    els.giftCurrency.textContent = giftCurrencyCode().toUpperCase();
+    els.giftAmount.min = activeMin();
+    els.giftAmount.max = activeMax();
+    renderPresets();
+    renderBreakdown();
+  }
+
+  /* ---------- Naira (Paystack) payouts ---------- */
+  let banksLoaded = false;
+
+  async function loadNgnPayoutStatus() {
+    if (!els.ngnPayoutCard) return;
+    if (!paystackConfig.enabled) { els.ngnPayoutCard.hidden = true; return; }
+    els.ngnPayoutCard.hidden = false;
+    els.ngnPayoutActions.innerHTML = "";
+    try {
+      const s = await window.LB.apiFetch("/api/paystack/account");
+      if (!s.enabled) { els.ngnPayoutCard.hidden = true; return; }
+      if (s.active) {
+        els.ngnPayoutStatus.innerHTML = "<span class='payout-ok'>\u2713 Naira payouts active</span> \u2014 " +
+          escapeHtml(s.accountName) + " \u00b7 " + escapeHtml(s.bankName) + " " + escapeHtml(s.accountNumberMasked);
+        addNgnAction("Update bank account", openNgnModal);
+      } else {
+        els.ngnPayoutStatus.textContent = "Set up Naira (\u20a6) payouts to receive gifts and invoices from fans in Nigeria.";
+        addNgnAction("Set up Naira payouts", openNgnModal);
+      }
+    } catch (err) {
+      els.ngnPayoutStatus.textContent = err.message || "Could not load Naira payout status.";
+    }
+  }
+
+  function addNgnAction(label, handler) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn small";
+    b.textContent = label;
+    b.addEventListener("click", () => handler(b));
+    els.ngnPayoutActions.appendChild(b);
+  }
+
+  async function openNgnModal() {
+    if (!els.ngnModal) return;
+    els.ngnModal.hidden = false;
+    setNgnMsg("");
+    els.ngnResolved.className = "msg";
+    els.ngnResolved.textContent = "";
+    els.ngnAccountNumber.value = "";
+    if (!banksLoaded) await loadBanks();
+  }
+
+  async function loadBanks() {
+    try {
+      const d = await window.LB.apiFetch("/api/paystack/banks");
+      els.ngnBank.innerHTML = "<option value=''>Choose your bank\u2026</option>";
+      (d.banks || []).forEach((b) => {
+        const o = document.createElement("option");
+        o.value = b.code;
+        o.textContent = b.name;
+        els.ngnBank.appendChild(o);
+      });
+      banksLoaded = true;
+    } catch (err) {
+      els.ngnBank.innerHTML = "<option value=''>Could not load banks</option>";
+    }
+  }
+
+  async function tryResolveNgn() {
+    const bankCode = els.ngnBank.value;
+    const accountNumber = els.ngnAccountNumber.value.trim();
+    els.ngnResolved.className = "msg";
+    if (!bankCode || !/^\d{10}$/.test(accountNumber)) { els.ngnResolved.textContent = ""; return; }
+    els.ngnResolved.textContent = "Checking account\u2026";
+    try {
+      const d = await window.LB.apiFetch("/api/paystack/resolve", {
+        method: "POST",
+        body: JSON.stringify({ bankCode, accountNumber })
+      });
+      els.ngnResolved.className = "msg ok";
+      els.ngnResolved.textContent = "\u2713 " + d.accountName;
+    } catch (err) {
+      els.ngnResolved.className = "msg err";
+      els.ngnResolved.textContent = err.message || "Could not verify that account.";
+    }
+  }
+
+  async function saveNgn() {
+    const bankCode = els.ngnBank.value;
+    const accountNumber = els.ngnAccountNumber.value.trim();
+    if (!bankCode) return setNgnMsg("Choose your bank.", "err");
+    if (!/^\d{10}$/.test(accountNumber)) return setNgnMsg("Enter a valid 10-digit account number.", "err");
+    els.ngnSaveBtn.disabled = true;
+    setNgnMsg("Verifying & saving\u2026");
+    try {
+      const d = await window.LB.apiFetch("/api/paystack/subaccount", {
+        method: "POST",
+        body: JSON.stringify({ bankCode, accountNumber })
+      });
+      setNgnMsg("Saved \u2014 Naira payouts active for " + d.accountName + " (" + d.bankName + ").", "ok");
+      await loadNgnPayoutStatus();
+      setTimeout(() => hide(els.ngnModal), 1400);
+    } catch (err) {
+      setNgnMsg(err.message || "Could not set up Naira payouts.", "err");
+    } finally {
+      els.ngnSaveBtn.disabled = false;
+    }
+  }
+
+  function setNgnMsg(text, kind) {
+    if (!els.ngnMsg) return;
+    els.ngnMsg.className = "msg" + (kind ? " " + kind : "");
+    els.ngnMsg.textContent = text || "";
+  }
+
   /* ---------- helpers ---------- */
   function addAction(label, cls, handler) {
     const b = document.createElement("button");
@@ -559,16 +877,17 @@
     els.giftMsg.textContent = text;
   }
   function hide(m) { m.hidden = true; }
-  function formatCents(cents) { return formatMajor((cents || 0) / 100); }
-  function formatMajor(v) {
+  function formatCents(cents, cur) { return formatMajor((cents || 0) / 100, cur); }
+  function formatMajor(v, cur) {
+    const code = String(cur || config.currency || "usd").toUpperCase();
     try {
       return new Intl.NumberFormat(undefined, {
         style: "currency",
-        currency: config.currency.toUpperCase(),
+        currency: code,
         minimumFractionDigits: Number.isInteger(v) ? 0 : 2
       }).format(v);
     } catch {
-      return config.currency.toUpperCase() + " " + v;
+      return code + " " + v;
     }
   }
   function formatDate(iso) {

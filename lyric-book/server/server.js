@@ -33,6 +33,7 @@ import { getLyricAccess, displayNameForUser } from "./access.js";
 import { initCollab, revokeCollabAccess } from "./collab.js";
 import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 import { registerInvoiceRoutes } from "./invoices.js";
+import { registerPaystackRoutes, paystackWebhookHandler } from "./paystack.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
 
 dotenv.config();
@@ -76,6 +77,8 @@ app.use(
 // Stripe webhook must read the RAW body for signature verification, so it is
 // mounted before express.json() parses the body for every other route.
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
+// Paystack webhook also needs the RAW body to verify its HMAC signature.
+app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), paystackWebhookHandler);
 
 // Allow base64 image payloads for avatar uploads (default 100kb is too small).
 app.use(express.json({ limit: "8mb" }));
@@ -87,6 +90,9 @@ registerPaymentRoutes(app);
 // Invoicing routes — additive; online payment reuses Stripe Connect, the rest
 // (create/send/proof/manual-honor) works without Stripe.
 registerInvoiceRoutes(app);
+
+// Paystack (Naira) routes — additive; no-op if PAYSTACK_SECRET_KEY unset.
+registerPaystackRoutes(app);
 
 // Serve the frontend statically too (handy for local dev / standalone deploy).
 app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-book")));

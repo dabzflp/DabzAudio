@@ -10,6 +10,8 @@
   <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/stripe-embedded.js"></script>
+  <script src="js/paystack-inline.js"></script>
 </head>
 <body class="dabz-lite">
   <header class="site-header">
@@ -17,7 +19,7 @@
       <span class="dabz-brand"><span class="sitename">DA</span><span class="dot">.</span></span>
       <div class="brand-text"><b>DabzAudio</b><small>Invoice</small></div>
     </a>
-    <a class="back-link" href="lyric-book/">Lyric Book →</a>
+    <a class="back-link" href="app.html">Lyric Book →</a>
   </header>
 
   <div class="invoice-page">
@@ -44,10 +46,11 @@
       <div class="invoice-note" id="invNote" hidden></div>
 
       <div class="invoice-actions" id="invActions"></div>
+      <div id="invCheckout"></div>
       <div class="msg" id="invMsg"></div>
 
       <p class="invoice-fineprint">
-        Invoicing tool provided by DabzAudio. Card payments are processed securely by Stripe.
+        Invoicing tool provided by DabzAudio. Payments are processed securely by Stripe (cards) or Paystack (Naira).
         Any tax shown is set by the sender and is their responsibility — DabzAudio is not the merchant of record or a tax adviser.
       </p>
     </div>
@@ -91,9 +94,12 @@
         proofNote: document.getElementById("proofNote"),
         proofSubmit: document.getElementById("proofSubmit"),
         proofCancel: document.getElementById("proofCancel"),
-        proofMsg: document.getElementById("proofMsg")
+        proofMsg: document.getElementById("proofMsg"),
+        checkout: document.getElementById("invCheckout")
       };
       var currency = "gbp";
+      var embedded = false;
+      var usePaystack = false;
 
       if (!token) {
         els.loading.innerHTML = "<p class='sub' style='text-align:center'>No invoice specified.</p>";
@@ -125,6 +131,9 @@
       function render(data) {
         var inv = data.invoice;
         currency = inv.currency || "gbp";
+        usePaystack = !!(data.paystack && window.LBPaystack);
+        embedded = !usePaystack && !!(data.embedded && data.publishableKey && window.LBStripe);
+        if (embedded) window.LBStripe.pk = data.publishableKey;
         els.loading.hidden = true;
         els.doc.hidden = false;
 
@@ -177,7 +186,8 @@
 
         if (data.canPayOnline) {
           var pay = document.createElement("button");
-          pay.className = "btn"; pay.type = "button"; pay.textContent = "Pay " + money(inv.totalCents) + " by card";
+          pay.className = "btn"; pay.type = "button";
+          pay.textContent = "Pay " + money(inv.totalCents) + (usePaystack ? "" : " by card");
           pay.addEventListener("click", payOnline);
           els.actions.appendChild(pay);
         }
@@ -188,12 +198,60 @@
       }
 
       async function payOnline() {
+        if (usePaystack) return payWithPaystack();
         setMsg(els.msg, "Opening secure checkout…");
         try {
-          var d = await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/pay", { method: "POST" });
-          if (d.url) window.location.href = d.url;
-          else setMsg(els.msg, "Could not start payment.", "err");
+          var d = await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/pay", {
+            method: "POST",
+            body: JSON.stringify({ embedded: embedded })
+          });
+          if (d.clientSecret && window.LBStripe) {
+            // Pay on-page — recipient never leaves DabzAudio.
+            els.actions.innerHTML = "";
+            setMsg(els.msg, "");
+            els.checkout.innerHTML = "<p class='sub'>Loading secure checkout…</p>";
+            await window.LBStripe.mountEmbeddedCheckout(els.checkout, async function () { return d.clientSecret; });
+          } else if (d.url) {
+            window.location.href = d.url;
+          } else {
+            setMsg(els.msg, "Could not start payment.", "err");
+          }
         } catch (err) { setMsg(els.msg, err.message || "Could not start payment.", "err"); }
+      }
+
+      // Naira invoice → Paystack inline popup (no redirect), then verify.
+      async function payWithPaystack() {
+        setMsg(els.msg, "Opening secure checkout…");
+        var d;
+        try {
+          d = await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/paystack", {
+            method: "POST",
+            body: JSON.stringify({})
+          });
+        } catch (err) {
+          setMsg(els.msg, err.message || "Could not start payment.", "err");
+          return;
+        }
+        try {
+          await window.LBPaystack.payWithAccessCode(d.accessCode);
+          setMsg(els.msg, "Confirming payment…");
+          try {
+            await window.LB.apiFetch("/api/public/invoices/" + encodeURIComponent(token) + "/paystack/verify", {
+              method: "POST",
+              body: JSON.stringify({ reference: d.reference })
+            });
+          } catch (e) { /* webhook will reconcile */ }
+          els.actions.innerHTML = "";
+          setMsg(els.msg, "Payment received — thank you! The sender has been notified.", "ok");
+        } catch (err) {
+          if (err && err.message === "cancelled") {
+            setMsg(els.msg, "Payment cancelled — no charge was made.", "");
+          } else if (d && d.authorizationUrl) {
+            window.location.href = d.authorizationUrl; // hosted fallback
+          } else {
+            setMsg(els.msg, "Could not open checkout. Please try again.", "err");
+          }
+        }
       }
 
       els.proofCancel.addEventListener("click", function () { els.proofBox.hidden = true; });
