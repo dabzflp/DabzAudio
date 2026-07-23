@@ -24,6 +24,7 @@ import Stripe from "stripe";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
+import { handleInvoiceEvent } from "./invoices.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 export const stripe = SECRET ? new Stripe(SECRET) : null;
@@ -142,6 +143,10 @@ export function stripeWebhookHandler(req, res) {
 }
 
 async function handleEvent(event) {
+  // Invoices share this webhook; a session with metadata.invoiceId is an invoice
+  // payment (metadata.giftId will be absent, so the gift branch below skips it).
+  await handleInvoiceEvent(event).catch((e) => console.error("invoice event error", e?.message));
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const giftId = session.metadata && session.metadata.giftId;

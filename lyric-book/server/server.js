@@ -32,6 +32,7 @@ import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
 import { initCollab, revokeCollabAccess } from "./collab.js";
 import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
+import { registerInvoiceRoutes } from "./invoices.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
 
 dotenv.config();
@@ -82,6 +83,10 @@ app.use(cookieParser());
 
 // Gift Me (Stripe Connect) routes — additive; no-op if STRIPE_SECRET_KEY unset.
 registerPaymentRoutes(app);
+
+// Invoicing routes — additive; online payment reuses Stripe Connect, the rest
+// (create/send/proof/manual-honor) works without Stripe.
+registerInvoiceRoutes(app);
 
 // Serve the frontend statically too (handy for local dev / standalone deploy).
 app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-book")));

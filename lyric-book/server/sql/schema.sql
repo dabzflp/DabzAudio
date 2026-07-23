@@ -130,3 +130,64 @@ CREATE INDEX IF NOT EXISTS idx_lb_gifts_to ON lb_gifts(to_user_id, created_at DE
 CREATE INDEX IF NOT EXISTS idx_lb_gifts_from ON lb_gifts(from_user_id, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_gifts_checkout
   ON lb_gifts(stripe_checkout_session_id) WHERE stripe_checkout_session_id IS NOT NULL;
+
+-- Invoicing. A Lyric Book user (from_user_id) bills anyone by email — the
+-- recipient does NOT need a DabzAudio account. The recipient can "honor" the
+-- invoice by paying online (funds route to the sender's connected account minus
+-- the DabzAudio platform fee), by uploading proof of an offline payment, or the
+-- sender can manually mark it honored. Tax is the sender's own liability; we
+-- compute and display it (none / VAT-exclusive / VAT-inclusive) but DabzAudio is
+-- a tool, not the merchant of record.
+CREATE TABLE IF NOT EXISTS lb_invoices (
+  id BIGSERIAL PRIMARY KEY,
+  from_user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  to_user_id BIGINT REFERENCES lb_users(id) ON DELETE SET NULL,  -- set if the payer has an account
+  to_email TEXT NOT NULL,
+  to_name TEXT NOT NULL DEFAULT '',
+  currency TEXT NOT NULL DEFAULT 'gbp',
+  note TEXT NOT NULL DEFAULT '',
+  tax_mode TEXT NOT NULL DEFAULT 'none',      -- 'none' | 'exclusive' | 'inclusive'
+  tax_rate_bps INTEGER NOT NULL DEFAULT 0,    -- e.g. 2000 = 20%
+  tax_label TEXT NOT NULL DEFAULT 'VAT',
+  subtotal_cents BIGINT NOT NULL DEFAULT 0,   -- sum of line items (goods/services)
+  tax_cents BIGINT NOT NULL DEFAULT 0,
+  total_cents BIGINT NOT NULL DEFAULT 0,      -- amount the payer owes
+  fee_cents BIGINT NOT NULL DEFAULT 0,        -- DabzAudio platform fee if paid online
+  status TEXT NOT NULL DEFAULT 'draft',       -- draft|sent|viewed|awaiting_confirmation|honored|cancelled
+  honored_method TEXT,                        -- 'online' | 'manual' | 'proof'
+  honored_seen BOOLEAN NOT NULL DEFAULT FALSE,-- sender has seen the "honored" notification
+  public_token TEXT,                          -- unguessable token for the public pay/honor link
+  due_date DATE,
+  stripe_checkout_session_id TEXT,
+  stripe_payment_intent_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sent_at TIMESTAMPTZ,
+  viewed_at TIMESTAMPTZ,
+  honored_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_lb_invoices_from ON lb_invoices(from_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lb_invoices_to_email ON lb_invoices(LOWER(to_email));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_invoices_token
+  ON lb_invoices(public_token) WHERE public_token IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS lb_invoice_items (
+  id BIGSERIAL PRIMARY KEY,
+  invoice_id BIGINT NOT NULL REFERENCES lb_invoices(id) ON DELETE CASCADE,
+  description TEXT NOT NULL DEFAULT '',
+  quantity NUMERIC NOT NULL DEFAULT 1,
+  unit_cents BIGINT NOT NULL DEFAULT 0,
+  position INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_lb_invoice_items_invoice ON lb_invoice_items(invoice_id, position);
+
+-- Proof-of-payment uploads for an invoice (e.g. a bank-transfer receipt image).
+CREATE TABLE IF NOT EXISTS lb_invoice_proofs (
+  id BIGSERIAL PRIMARY KEY,
+  invoice_id BIGINT NOT NULL REFERENCES lb_invoices(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  uploaded_by_email TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_invoice_proofs_invoice ON lb_invoice_proofs(invoice_id, created_at DESC);
