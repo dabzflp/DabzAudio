@@ -273,11 +273,28 @@ export function registerPaymentRoutes(app) {
     if (!stripe) return res.json({ enabled: false, connected: false });
     try {
       let row = await getAccountRow(req.user.id);
+      let requirements = null;
       if (row) {
         try {
           const acct = await stripe.accounts.retrieve(row.stripe_account_id);
           await saveAccountStatus(req.user.id, acct);
           row = await getAccountRow(req.user.id);
+          const req0 = acct.requirements || {};
+          const currentlyDue = req0.currently_due || [];
+          const pastDue = req0.past_due || [];
+          const pendingVerification = req0.pending_verification || [];
+          requirements = {
+            disabledReason: req0.disabled_reason || null,
+            currentlyDue,
+            pastDue,
+            pendingVerification,
+            // Nothing left for the artist to enter, Stripe is just verifying.
+            verifying:
+              !acct.payouts_enabled &&
+              currentlyDue.length === 0 &&
+              pastDue.length === 0 &&
+              pendingVerification.length > 0
+          };
         } catch (e) {
           console.error("account retrieve failed", e?.message);
         }
@@ -287,7 +304,8 @@ export function registerPaymentRoutes(app) {
         connected: !!row,
         chargesEnabled: !!(row && row.charges_enabled),
         payoutsEnabled: !!(row && row.payouts_enabled),
-        detailsSubmitted: !!(row && row.details_submitted)
+        detailsSubmitted: !!(row && row.details_submitted),
+        requirements
       });
     } catch (err) {
       console.error("payouts/account error", err);

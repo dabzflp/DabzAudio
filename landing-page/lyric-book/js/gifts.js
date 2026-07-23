@@ -593,8 +593,21 @@
           }
         });
       } else if (s.connected) {
-        els.payoutStatus.textContent = "Your payout setup is incomplete. Finish it to receive gifts.";
-        addAction("Finish payout setup", "btn small", startConnect);
+        const rq = s.requirements || {};
+        if (rq.disabledReason && String(rq.disabledReason).indexOf("rejected") === 0) {
+          els.payoutStatus.textContent = "Stripe couldn't approve this payout account. Contact support or try a different account.";
+          addAction("Review on Stripe", "btn small", startConnect);
+        } else if (rq.verifying || (s.detailsSubmitted && (!rq.currentlyDue || rq.currentlyDue.length === 0) && (!rq.pastDue || rq.pastDue.length === 0))) {
+          // Details are in — Stripe is verifying. Nothing for the artist to do.
+          els.payoutStatus.innerHTML = "<span class='payout-ok'>✓ Details submitted</span> — Stripe is verifying your account. Nothing more to do; this turns on automatically once approved (usually minutes, occasionally up to a day), and then you can receive gifts.";
+          addAction("Re-check status", "btn small subtle", async (btn) => {
+            btn.disabled = true;
+            try { await loadPayoutStatus(); } finally { btn.disabled = false; }
+          });
+        } else {
+          els.payoutStatus.textContent = "Your payout setup needs a bit more info before Stripe can pay you. Finish it to receive gifts.";
+          addAction("Finish payout setup", "btn small", startConnect);
+        }
       } else {
         els.payoutStatus.textContent = "Set up payouts to receive gifts from collaborators — Stripe handles ID checks and pays out to your bank.";
         addAction("Set up payouts", "btn small", startConnect);
