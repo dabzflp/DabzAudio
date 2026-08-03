@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Sign Music Contract | DabzAudio</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sign.js" defer></script>
+  <style>
+    .sign-page { max-width: 760px; }
+    .sign-page pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; line-height: 1.6; }
+    .status-list { list-style: none; padding: 0; margin: 12px 0 0; }
+    .status-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .status-list li:last-child { border-bottom: none; }
+    .signed { color: #7ee787; }
+    .pending { color: var(--muted); }
+    .signature-canvas { width: 100%; max-width: 420px; height: 140px; background: #0f0f0f; border: 1px solid var(--line); border-radius: 10px; cursor: crosshair; touch-action: none; }
+    .sig-actions { display: flex; gap: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body class="dabz-lite">
+  <header class="site-header">
+    <a class="brand" href="../index.html" style="text-decoration:none">
+      <span class="dabz-brand"><span class="sitename">DA</span><span class="dot">.</span></span>
+      <div class="brand-text"><b>DabzAudio</b><small>Sign Contract</small></div>
+    </a>
+  </header>
+
+  <main class="invoice-page sign-page">
+    <div class="invoice-doc" id="loading">
+      <p class="sub" style="text-align:center;margin:24px 0">Loading contract…</p>
+    </div>
+
+    <div class="invoice-doc" id="docBox" hidden>
+      <h2 style="margin:0 0 8px" id="docTitle"></h2>
+      <div id="docText"></div>
+
+      <h3 style="margin:24px 0 8px">Signing status</h3>
+      <ul class="status-list" id="statusList"></ul>
+
+      <div id="signBox" class="invoice-proof" style="margin-top:24px" hidden>
+        <h4 style="margin:0 0 8px">Your signature</h4>
+        <div class="field">
+          <label for="signerName">Name</label>
+          <input id="signerName" type="text" placeholder="Your full name" />
+        </div>
+        <div class="field" style="margin-top:16px">
+          <label>Draw your signature</label>
+          <canvas id="sigCanvas" class="signature-canvas" width="420" height="140"></canvas>
+          <div class="sig-actions">
+            <button class="btn subtle small" id="clearSig" type="button">Clear</button>
+          </div>
+        </div>
+        <div class="invoice-actions">
+          <button class="btn" id="signBtn" type="button">Sign this contract</button>
+        </div>
+        <div class="msg" id="signMsg"></div>
+      </div>
+
+      <div id="doneBox" class="invoice-note" style="margin-top:24px" hidden>
+        <h4 style="margin:0 0 8px">Signed</h4>
+        <p id="doneMsg"></p>
+      </div>
+    </div>
+
+    <div class="invoice-doc" id="errorBox" hidden>
+      <p class="sub" style="text-align:center">This signing link is not valid or has expired.</p>
+    </div>
+  </main>
+</body>
+</html>

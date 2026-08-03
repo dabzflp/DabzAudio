@@ -6,6 +6,9 @@
  *  - httpOnly cookie `lb_token` (used when the frontend is proxied same-origin)
  *  - Authorization: Bearer <token> header (used for cross-origin / localStorage)
  */
+import dotenv from "dotenv";
+dotenv.config();
+
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
