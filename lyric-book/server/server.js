@@ -34,6 +34,7 @@ import { initCollab, revokeCollabAccess } from "./collab.js";
 import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 import { registerInvoiceRoutes } from "./invoices.js";
 import { registerPaystackRoutes, paystackWebhookHandler } from "./paystack.js";
+import { registerContractRoutes } from "./contracts.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
 
 dotenv.config();
@@ -93,6 +94,9 @@ registerInvoiceRoutes(app);
 
 // Paystack (Naira) routes — additive; no-op if PAYSTACK_SECRET_KEY unset.
 registerPaystackRoutes(app);
+
+// Music contracts — create/store contracts and signers.
+registerContractRoutes(app);
 
 // Serve the frontend statically too (handy for local dev / standalone deploy).
 app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-book")));

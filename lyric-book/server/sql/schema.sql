@@ -223,3 +223,34 @@ CREATE INDEX IF NOT EXISTS idx_lb_gifts_paystack_ref ON lb_gifts(paystack_refere
 ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'stripe';
 ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS paystack_reference TEXT;
 CREATE INDEX IF NOT EXISTS idx_lb_invoices_paystack_ref ON lb_invoices(paystack_reference) WHERE paystack_reference IS NOT NULL;
+
+-- =============================== Music Contracts =============================
+-- Phase 1: create and store music-rights contracts with named signers.
+-- Future phases will add email signing requests, PDF generation, and completion.
+CREATE TABLE IF NOT EXISTS lb_contracts (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  song_title TEXT NOT NULL DEFAULT '',
+  artist_name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  territory TEXT NOT NULL DEFAULT 'Worldwide',
+  governing_law TEXT NOT NULL DEFAULT '',
+  effective_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_contracts_user_updated ON lb_contracts(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS lb_contract_signers (
+  id BIGSERIAL PRIMARY KEY,
+  contract_id BIGINT NOT NULL REFERENCES lb_contracts(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  master_share_percent INTEGER NOT NULL DEFAULT 0,
+  publishing_share_percent INTEGER NOT NULL DEFAULT 0,
+  signing_token TEXT NOT NULL UNIQUE,
+  signed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_contract_signers_contract ON lb_contract_signers(contract_id);

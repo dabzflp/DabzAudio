@@ -199,3 +199,48 @@ export async function sendInvoiceProofEmail(to, { senderName, number, payer, amo
   await resend.emails.send({ from: FROM, to, subject, html });
   return { sent: true };
 }
+
+function escHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function sendContractInvite(to, { songTitle, artistName, signUrl }) {
+  if (!to) return { sent: false };
+  const song = escHtml(songTitle || "a song");
+  const artist = escHtml(artistName || "A DabzAudio artist");
+  const subject = `Sign the music contract for "${song}"`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">Music contract ready for signature</h2>
+    <p style="color:#9b9b9b;line-height:1.5">${artist} sent you a music contract for <b style="color:#fff">${song}</b>.</p>
+    <p style="color:#9b9b9b;line-height:1.5">Click the button below to review and sign it. Once all listed signers have signed, everyone will receive a completed copy.</p>
+    ${ctaButton(signUrl, "Review & sign contract")}`);
+  if (!resend) {
+    console.log(`[email disabled] Contract invite for ${to}: ${signUrl}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+export async function sendContractCompleted(to, { songTitle, artistName, contractHtml }) {
+  if (!to) return { sent: false };
+  const song = escHtml(songTitle || "a song");
+  const artist = escHtml(artistName || "A DabzAudio artist");
+  const subject = `Music contract signed for "${song}"`;
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">All signers have signed</h2>
+    <p style="color:#9b9b9b;line-height:1.5">The music contract for <b style="color:#fff">${song}</b> by ${artist} is now fully signed. Here is the completed agreement:</p>
+    <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>
+    <p style="color:#6f6f6f;font-size:12px;margin-top:14px">This is a record of the agreement. It is not legal advice; have a qualified attorney review it if needed.</p>`);
+  if (!resend) {
+    console.log(`[email disabled] Contract completed for ${to}: ${song}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Music Contract | DabzAudio</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/contract.js" defer></script>
+  <style>
+    .contract-page.contract-page { max-width: 760px; }
+    .contract-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .contract-form .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .signer-card { margin: 12px 0; }
+    .signer-head { display: flex; justify-content: space-between; align-items: center; }
+    .signer-head h4 { margin: 0; color: #fff; }
+    .signer-head .btn { padding: 5px 10px; font-size: 12px; }
+    .contract-preview pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+    @media (max-width: 640px) {
+      .contract-form .row, .contract-form .row.three { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="dabz-lite">
+  <header class="site-header">
+    <a class="brand" href="../index.html" style="text-decoration:none">
+      <span class="dabz-brand"><span class="sitename">DA</span><span class="dot">.</span></span>
+      <div class="brand-text"><b>DabzAudio</b><small>Music Contract</small></div>
+    </a>
+    <a class="back-link" href="app.html">Lyric Book →</a>
+  </header>
+
+  <main class="invoice-page contract-page">
+    <h2>Create a music rights contract</h2>
+    <p class="sub">Record the song, ownership splits, and signers. In a future update, each signer will receive an email to sign and a final PDF when everyone has signed.</p>
+
+    <form id="contractForm" class="contract-form invoice-doc" autocomplete="off">
+      <div class="field">
+        <label for="songTitle">Song title</label>
+        <input id="songTitle" type="text" placeholder="e.g. Midnight Dreams" required />
+      </div>
+
+      <div class="field">
+        <label for="artistName">Primary artist / songwriter</label>
+        <input id="artistName" type="text" placeholder="e.g. Dabz" required />
+      </div>
+
+      <div class="field">
+        <label for="description">Description of the musical work</label>
+        <textarea id="description" rows="4" placeholder="Lyrics, melody, production, recordings covered by this agreement…"></textarea>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="territory">Territory</label>
+          <input id="territory" type="text" value="Worldwide" />
+        </div>
+        <div class="field">
+          <label for="governingLaw">Governing law / jurisdiction</label>
+          <input id="governingLaw" type="text" placeholder="e.g. England and Wales" />
+        </div>
+      </div>
+
+      <div class="row" style="grid-template-columns: 1fr 1fr">
+        <div class="field">
+          <label for="effectiveDate">Effective date</label>
+          <input id="effectiveDate" type="date" />
+        </div>
+      </div>
+
+      <h3 style="margin: 28px 0 4px">Signers / collaborators</h3>
+      <p class="sub">Add every person who needs to sign. Shares are percentages (0–100).</p>
+      <div id="signersBox"></div>
+      <button class="btn ghost small" id="addSigner" type="button">+ Add signer</button>
+
+      <div class="invoice-actions">
+        <button class="btn" id="saveBtn" type="submit">Save contract</button>
+        <button class="btn subtle" type="reset">Reset</button>
+      </div>
+      <div class="msg" id="formMsg"></div>
+    </form>
+
+    <div class="invoice-doc contract-preview" id="previewBox" hidden></div>
+
+    <div class="invoice-actions" id="sendBox" hidden>
+      <button class="btn" id="sendBtn" type="button">Send signing emails</button>
+      <span id="sendStatus"></span>
+    </div>
+
+    <p class="invoice-fineprint">
+      <strong>Not legal advice.</strong> This tool helps you organise music-rights agreement details. It does not replace a music-business lawyer and is not legal advice for any territory. Have a qualified attorney review and adapt any contract before use.
+    </p>
+  </main>
+</body>
+</html>
