@@ -14,7 +14,20 @@ dotenv.config();
 import pg from "pg";
 const { Pool } = pg;
 
+function normalizeEnvValue(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("${{") && trimmed.includes("}}")) return "";
+  return trimmed;
+}
+
 const isProd = process.env.NODE_ENV === "production";
+const pgHost = normalizeEnvValue(process.env.PGHOST || "/tmp");
+const pgPort = normalizeEnvValue(process.env.PGPORT || "5432");
+const pgUser = normalizeEnvValue(process.env.PGUSER || process.env.USER || process.env.USERNAME || "postgres");
+const pgPassword = normalizeEnvValue(process.env.PGPASSWORD);
+const pgDatabase = normalizeEnvValue(process.env.PGDATABASE || process.env.POSTGRES_DB || process.env.USER || process.env.USERNAME || "postgres");
 const hasPgParts =
   !!process.env.PGHOST &&
   !!process.env.PGPORT &&
@@ -22,17 +35,20 @@ const hasPgParts =
   !!process.env.PGPASSWORD &&
   !!process.env.PGDATABASE;
 
-if (!process.env.DATABASE_URL && !hasPgParts) {
-  throw new Error(
-    "Missing DB config. Set DATABASE_URL or PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE in Railway Variables."
-  );
-}
+const connectionString = normalizeEnvValue(process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL) || (isProd ? "" : `postgresql://${pgUser}@/${pgDatabase}?host=${encodeURIComponent(pgHost)}`);
 
-const connectionString = process.env.DATABASE_URL || "";
+if (!connectionString && !hasPgParts) {
+  if (isProd) {
+    throw new Error(
+      "Missing DB config. Set DATABASE_URL or PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE in Railway Variables."
+    );
+  }
+  console.warn("⚠️ No database config found; using local PostgreSQL socket connection for development.");
+}
 
 let shouldUseSsl = isProd;
 try {
-  const u = hasPgParts ? new URL(`postgresql://${process.env.PGHOST}`) : new URL(connectionString);
+  const u = hasPgParts ? new URL(`postgresql://${pgHost}`) : new URL(connectionString);
   // Railway private networking hosts typically do not need TLS from service->db.
   if (u.hostname.endsWith(".railway.internal")) {
     shouldUseSsl = false;
@@ -43,11 +59,11 @@ try {
 
 const poolConfig = hasPgParts
   ? {
-      host: process.env.PGHOST,
-      port: Number(process.env.PGPORT || 5432),
-      user: process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      database: process.env.PGDATABASE,
+      host: pgHost,
+      port: Number(pgPort || 5432),
+      user: pgUser,
+      password: pgPassword,
+      database: pgDatabase,
       ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
       keepAlive: true,
       connectionTimeoutMillis: 10000,

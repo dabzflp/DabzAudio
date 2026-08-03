@@ -4,6 +4,7 @@
 # Node
 node_modules/
 npm-debug.log*
+*.log
 
 # Plugins / installers
 *.pkg
