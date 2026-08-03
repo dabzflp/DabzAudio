@@ -17,11 +17,13 @@ function clampPercent(n) {
   return Math.max(0, Math.min(100, num));
 }
 
-function signingUrl(req, token) {
-  const configured = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
-  const base =
-    configured ||
-    `${req.headers["x-forwarded-proto"] || req.protocol}://${req.get("host")}`;
+function signingUrl(_req, token) {
+  const base = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
+  if (!base) {
+    throw new Error(
+      "APP_BASE_URL is required for signing links. Set it in environment variables."
+    );
+  }
   return `${base}/sign.html?token=${encodeURIComponent(token)}`;
 }
 
@@ -361,6 +363,18 @@ export function registerContractRoutes(app) {
   app.post("/api/contract-sign", async (req, res) => {
     const { token, name, signature } = req.body || {};
     if (!token) return res.status(400).json({ error: "Missing signing token." });
+    if (signature) {
+      const sig = String(signature);
+      if (!sig.startsWith("data:image/png;base64,")) {
+        return res.status(400).json({ error: "Only PNG signature images are accepted." });
+      }
+      if (sig.length > 250000) {
+        return res.status(400).json({ error: "Signature image is too large." });
+      }
+    }
+    if (name && String(name).length > 200) {
+      return res.status(400).json({ error: "Name is too long." });
+    }
 
     const client = await pool.connect();
     try {

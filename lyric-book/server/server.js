@@ -35,6 +35,7 @@ import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 import { registerInvoiceRoutes } from "./invoices.js";
 import { registerPaystackRoutes, paystackWebhookHandler } from "./paystack.js";
 import { registerContractRoutes } from "./contracts.js";
+import { rateLimit } from "./rate-limit.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
 
 dotenv.config();
@@ -119,10 +120,14 @@ function sanitizeProfile(row) {
   };
 }
 
-function appBaseUrl(req) {
-  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/$/, "");
-  const proto = req.headers["x-forwarded-proto"] || req.protocol;
-  return `${proto}://${req.get("host")}`;
+function appBaseUrl() {
+  const base = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
+  if (!base) {
+    throw new Error(
+      "APP_BASE_URL is required. Set it in Railway Variables."
+    );
+  }
+  return base;
 }
 
 // Attach any pending invites addressed to this email to the user's account
@@ -147,7 +152,7 @@ app.get("/api/health", (req, res) => {
 
 /* ----------------------------- AUTH ----------------------------- */
 
-app.post("/api/auth/signup", async (req, res) => {
+app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
   try {
     const {
       email,
@@ -211,7 +216,7 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", rateLimit({ max: 10 }), async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -384,7 +389,7 @@ app.post("/api/profile/avatar", requireAuth, async (req, res) => {
 
 /* ------------------------ PASSWORD RESET ------------------------ */
 
-app.post("/api/auth/forgot", async (req, res) => {
+app.post("/api/auth/forgot", rateLimit({ max: 5 }), async (req, res) => {
   // Always respond the same way so we never reveal which emails exist.
   const generic = {
     ok: true,
