@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /lyric-book/app.html
+Disallow: /lyric-book/login.html
+Disallow: /lyric-book/signup.html
+Disallow: /lyric-book/forgot.html
+Disallow: /lyric-book/reset.html
+Disallow: /lyric-book/sign.html
+Disallow: /lyric-book/invoice.html
+Disallow: /lyric-book/contract.html
+
+Sitemap: https://dabzflp.com/sitemap.xml

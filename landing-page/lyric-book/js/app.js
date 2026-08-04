@@ -18,6 +18,7 @@
   const els = {
     who: document.getElementById("who"),
     logoutBtn: document.getElementById("logoutBtn"),
+    deleteAccountBtn: document.getElementById("deleteAccountBtn"),
     avatarBtn: document.getElementById("avatarBtn"),
     avatarImg: document.getElementById("avatarImg"),
     avatarInput: document.getElementById("avatarInput"),
@@ -121,6 +122,7 @@
 
   function wire() {
     els.logoutBtn.addEventListener("click", logout);
+    els.deleteAccountBtn.addEventListener("click", deleteAccount);
     els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
     els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
@@ -481,6 +483,24 @@
       await window.LB.apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
     window.LB.clearToken();
+    location.replace("login.html");
+  }
+
+  async function deleteAccount() {
+    const confirmed = confirm(
+      "This will permanently delete your DabzAudio Lyric Book account, all your lyrics, contracts, invoices and shared data. This action cannot be undone.\n\nAre you sure?"
+    );
+    if (!confirmed) return;
+    flushSave();
+    closeCollab();
+    try {
+      await window.LB.apiFetch("/api/me", { method: "DELETE" });
+    } catch (err) {
+      alert(err.message || "Could not delete your account.");
+      return;
+    }
+    window.LB.clearToken();
+    localStorage.removeItem("lb_pending_invite");
     location.replace("login.html");
   }
 

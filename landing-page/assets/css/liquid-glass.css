@@ -219,7 +219,7 @@ body.index-page::before {
 /* ------------------------------------------------------------------ */
 .section-title p {
   color: #fff;
-  background: linear-gradient(180deg, #fff 0%, #ffd9b3 120%);
+  background: linear-gradient(180deg, #040303 0%, #070707 120%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -239,7 +239,7 @@ body.index-page::before {
 .contact .info-item {
   border-radius: 18px;
   padding: 22px;
-  background: var(--glass-bg);
+  /* background: var(--glass-bg); */
   -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
   backdrop-filter: blur(var(--blur)) saturate(150%);
   border: 1px solid var(--glass-border);

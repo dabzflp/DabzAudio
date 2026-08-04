@@ -99,8 +99,41 @@ registerPaystackRoutes(app);
 // Music contracts — create/store contracts and signers.
 registerContractRoutes(app);
 
-// Serve the frontend statically too (handy for local dev / standalone deploy).
-app.use(express.static(path.join(__dirname, "..", "..", "landing-page", "lyric-book")));
+// Self-delete account (irreversible). Deletes the user row; cascades to
+// profiles, lyrics, collaborations, contracts, invoices, reset tokens, etc.
+app.delete("/api/me", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await pool.query("DELETE FROM lb_users WHERE id = $1", [userId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Account not found." });
+    }
+    res.clearCookie(COOKIE_NAME, cookieOptions());
+    res.json({ ok: true, message: "Account deleted." });
+  } catch (err) {
+    console.error("Delete account error:", err);
+    res.status(500).json({ error: "Could not delete account." });
+  }
+});
+
+// Local dev only: serve the whole DabzAudio landing + products from port 4000
+// so the global theme toggle (localStorage) works end-to-end in this setup.
+const landingRoot = path.join(__dirname, "..", "..", "landing-page");
+if (process.env.NODE_ENV !== "production") {
+  app.use("/assets", express.static(path.join(landingRoot, "assets")));
+  app.use("/lyric-book", express.static(path.join(landingRoot, "lyric-book")));
+  app.use("/key-bpm-tool", express.static(path.join(landingRoot, "key-bpm-tool")));
+  app.use("/reverb-delay-calculator", express.static(path.join(landingRoot, "reverb-delay-calculator")));
+  app.use(express.static(landingRoot));
+
+  // Local dev: the landing nav links to /community-hub/; redirect to the hub server.
+  app.get("/community-hub*", (req, res) => {
+    res.redirect("http://localhost:3000" + req.path.replace(/^\/community-hub/, ""));
+  });
+} else {
+  // Production: serve only the Lyric Book frontend from the root.
+  app.use(express.static(path.join(landingRoot, "lyric-book")));
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

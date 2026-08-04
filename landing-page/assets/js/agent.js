@@ -88,7 +88,7 @@
       keywords: ["community", "hub", "forum", "connect", "network", "other artists", "social"],
       answer:
         "The <strong>Community Hub</strong> is where DabzAudio artists connect and share. " +
-        "<a href='https://dabzaudio-production.up.railway.app' target='_blank' rel='noopener'>Visit the Community Hub →</a>"
+        "<a href='https://dabzflp.com/community-hub' target='_blank' rel='noopener'>Visit the Community Hub →</a>"
     },
     {
       id: "assets",
