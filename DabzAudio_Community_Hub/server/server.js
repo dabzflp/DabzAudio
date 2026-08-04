@@ -45,9 +45,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-// Share landing-page theme assets with the community hub frontend.
-app.use("/assets", express.static(path.join(__dirname, "..", "..", "landing-page", "assets")));
-
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
