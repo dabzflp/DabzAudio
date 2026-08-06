@@ -1,7 +1,8 @@
 // Lyric Book frontend config.
-// On Netlify the frontend is served cross-origin from the Railway API, so point
-// at the Railway service URL. For same-origin local dev, set this to "".
+// - Local dev on localhost:4000 uses the same-origin backend.
+// - In production the Lyric Book is served under /lyric-book on the main domain,
+//   so all API calls use that path prefix and the Netlify _redirects proxy.
 window.LB_API_BASE =
-  ["localhost:4000", "127.0.0.1:4000"].includes(window.location.host)
+  ["localhost", "127.0.0.1"].includes(location.hostname)
     ? ""
-    : "https://dabzaudio-production-7fd4.up.railway.app";
+    : "/lyric-book";

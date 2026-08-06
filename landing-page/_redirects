@@ -1,10 +1,14 @@
-/api/key/analyze  https://openkeyscan-analyzer-production.up.railway.app/analyze/single  200
-/api/*  https://openkeyscan-analyzer-production.up.railway.app/:splat  200
+/api/*  https://key-scan-service-production.up.railway.app/:splat  200!
+
+# Lyric Book — proxy the Railway backend under dabzflp.com/lyric-book
+# 200 rewrite keeps the address bar on our domain and makes API calls same-origin.
+/lyric-book/*  https://dabzaudio-production-7fd4.up.railway.app/:splat  200!
+/lyric-book    /lyric-book/  301!
 
 # Community Hub — proxy the Railway backend under dabzflp.com/community-hub
-# This is a 200 rewrite (not a redirect), so the browser address bar stays on dabzflp.com/community-hub.
+# 200 rewrite keeps the address bar on our domain; API calls go through the proxy.
 # Proxy rule MUST come first: Netlify normalizes trailing slashes, so a
 # "/community-hub -> /community-hub/" redirect would also catch "/community-hub/"
 # and loop. Matching the proxy first means the slashed URL is served directly.
-/community-hub/*  https://dabzaudio-production.up.railway.app/:splat  200!
+/community-hub/*  https://community-hub-production-ee48.up.railway.app/:splat  200!
 /community-hub    /community-hub/  301!
