@@ -11,6 +11,7 @@ import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY || "";
 const FROM = process.env.EMAIL_FROM || "DabzAudio <onboarding@resend.dev>";
+const APP_BASE_URL = (process.env.APP_BASE_URL || "https://dabzflp.com/lyric-book").replace(/\/$/, "");
 const resend = apiKey ? new Resend(apiKey) : null;
 
 export function emailEnabled() {
@@ -103,7 +104,7 @@ export async function sendInvoiceEmail(to, { senderName, number, amount, note, d
   const noteHtml = note ? `<p style="color:#9b9b9b;line-height:1.5">“${note}”</p>` : "";
   const join = hasAccount
     ? ""
-    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio — the songwriting studio where artists write, collaborate and get paid. <a href="https://dabzaudio.netlify.app/lyric-book/" style="color:#ff7a00">Create a free account</a>.</p>`;
+    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio — the songwriting studio where artists write, collaborate and get paid. <a href="${APP_BASE_URL}/" style="color:#ff7a00">Create a free account</a>.</p>`;
   const html = shell(`
     <h2 style="color:#fff;margin:0 0 12px">You've received an invoice</h2>
     <p style="color:#9b9b9b;line-height:1.5">${safeSender} sent you invoice <b style="color:#fff">${number}</b> for <b style="color:#fff">${amount}</b> via DabzAudio.</p>
@@ -152,7 +153,7 @@ export async function sendInvoiceReceiptEmail(to, { number, fromName, amount, do
   const subject = `Receipt for invoice ${number} — ${amount}`;
   const join = hasAccount
     ? ""
-    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio. <a href="https://dabzaudio.netlify.app/lyric-book/" style="color:#ff7a00">Create a free account</a> to keep all your invoices in one place.</p>`;
+    : `<p style="color:#6f6f6f;font-size:12px;border-top:1px solid #272727;padding-top:14px;margin-top:18px">Invoicing powered by DabzAudio. <a href="${APP_BASE_URL}/" style="color:#ff7a00">Create a free account</a> to keep all your invoices in one place.</p>`;
   const html = shell(`
     <h2 style="color:#fff;margin:0 0 12px">Payment confirmed — here's your receipt</h2>
     <p style="color:#9b9b9b;line-height:1.5">Invoice <b style="color:#fff">${number}</b> from ${safeSender} for <b style="color:#fff">${amount}</b> has been marked as paid.</p>
@@ -235,8 +236,7 @@ export async function sendContractCompleted(to, { songTitle, artistName, contrac
   const html = shell(`
     <h2 style="color:#fff;margin:0 0 12px">All signers have signed</h2>
     <p style="color:#9b9b9b;line-height:1.5">The music contract for <b style="color:#fff">${song}</b> by ${artist} is now fully signed. Here is the completed agreement:</p>
-    <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>
-    <p style="color:#6f6f6f;font-size:12px;margin-top:14px">This is a record of the agreement. It is not legal advice; have a qualified attorney review it if needed.</p>`);
+    <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>`);
   if (!resend) {
     console.log(`[email disabled] Contract completed for ${to}: ${song}`);
     return { sent: false };
