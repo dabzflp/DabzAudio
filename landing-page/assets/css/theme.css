@@ -501,3 +501,43 @@ html[data-theme="light"] body[data-product="reverb"] th,
 html[data-theme="light"] body[data-product="reverb"] td {
   color: var(--default-color);
 }
+
+/* --- Lyric Book gift modals --- */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-results,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-card,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .payout-card,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .wallet-card,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ngnPayoutCard {
+  background: var(--card-bg);
+  border-color: #e0e0e0;
+  color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown-row,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown-row b,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .wallet-label,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .wallet-balance,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .payout-status,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-label,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-row-main .n {
+  color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown-row.muted,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown-note,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .wallet-pending,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .wallet-extra,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-hint,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-fineprint {
+  color: var(--muted);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-tab {
+  border-bottom-color: var(--line);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-tab.active {
+  color: var(--default-color);
+  border-bottom-color: var(--orange);
+}
