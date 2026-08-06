@@ -1,4 +1,8 @@
-/api/*  https://key-scan-service-production.up.railway.app/:splat  200!
+# Key & BPM finder — proxy to the key-scan service.
+# Keep the /api prefix: :splat is only the part matched by *, so
+# "/api/:splat" is required or every call lands on /key/analyze (404)
+# and the tool silently falls back to the less accurate browser estimator.
+/api/*  https://key-scan-service-production.up.railway.app/api/:splat  200!
 
 # Lyric Book — proxy the Railway backend under dabzflp.com/lyric-book
 # 200 rewrite keeps the address bar on our domain and makes API calls same-origin.
