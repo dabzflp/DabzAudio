@@ -541,3 +541,28 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-tab.active {
   color: var(--default-color);
   border-bottom-color: var(--orange);
 }
+
+/* --- Lyric Book gift & invoice inputs --- */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-form input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-form select,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-form textarea,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label select,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label textarea,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .share-form input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .share-form select,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof textarea,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof input[type=file] {
+  background: var(--card-bg);
+  border-color: #e0e0e0;
+  color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-form input::placeholder,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-form textarea::placeholder,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label input::placeholder,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label textarea::placeholder,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-input::placeholder {
+  color: #777777;
+}
