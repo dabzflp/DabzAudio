@@ -4,10 +4,9 @@
 # and the tool silently falls back to the less accurate browser estimator.
 /api/*  https://key-scan-service-production.up.railway.app/api/:splat  200!
 
-# Lyric Book — proxy the Railway backend under dabzflp.com/lyric-book
-# 200 rewrite keeps the address bar on our domain and makes API calls same-origin.
-/lyric-book/*  https://dabzaudio-production-7fd4.up.railway.app/:splat  200!
-/lyric-book    /lyric-book/  301!
+# Lyric Book — only proxy /lyric-book/api/* to the backend.
+# The HTML/JS/CSS lives in landing-page/lyric-book and is served by Netlify.
+/lyric-book/api/*  https://dabzaudio-production-7fd4.up.railway.app/api/:splat  200!
 
 # Community Hub — proxy the Railway backend under dabzflp.com/community-hub
 # 200 rewrite keeps the address bar on our domain; API calls go through the proxy.
