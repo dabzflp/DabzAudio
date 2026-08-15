@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DabzAudio Music ID</title>
+    <link rel="stylesheet" href="/public/css/registry.css">
+</head>
+<body>
+    <main class="registry-shell">
+        <section class="registry-card">
+            <div class="brand-row">
+                <div class="brand-mark">D</div>
+                <div>
+                    <span class="eyebrow">DABZAUDIO</span>
+                    <h1>Music ID</h1>
+                </div>
+                <div class="status-pill">
+                    <span></span>
+                    REGISTRY ONLINE
+                </div>
+            </div>
+
+            <div class="hero-copy">
+                <div class="orb"></div>
+                <p class="eyebrow">MUSIC IDENTITY LAYER</p>
+                <h2>Give every recording a <span>verifiable identity.</span></h2>
+                <p class="hero-text">
+                    Register your music, contributors and ownership metadata.
+                    DabzAudio fingerprints the recording and creates a permanent
+                    verification record.
+                </p>
+            </div>
+
+            <form id="registrationForm" class="registration-form">
+                <div class="upload-zone" id="uploadZone">
+                    <input id="audio" name="audio" type="file" accept="audio/*" hidden required>
+                    <div class="upload-icon">↥</div>
+                    <strong id="fileLabel">Drop your master here</strong>
+                    <span>WAV, MP3, FLAC, AAC · max 50MB</span>
+                    <button type="button" id="chooseFile">Choose audio</button>
+                </div>
+
+                <div class="field-grid">
+                    <label>
+                        <span>Track title</span>
+                        <input name="title" placeholder="Midnight" required>
+                    </label>
+
+                    <label>
+                        <span>Primary artist</span>
+                        <input name="artist" placeholder="Artist name" required>
+                    </label>
+
+                    <label>
+                        <span>Producer</span>
+                        <input name="producer" placeholder="Producer name">
+                    </label>
+
+                    <label>
+                        <span>ISRC</span>
+                        <input name="isrc" placeholder="Optional">
+                    </label>
+                </div>
+
+                <label>
+                    <span>Genre</span>
+                    <input name="genre" placeholder="Afrobeats, Hip-Hop, R&B...">
+                </label>
+
+                <div class="split-panel">
+                    <div>
+                        <p class="eyebrow">OPTIONAL</p>
+                        <h3>Ownership split</h3>
+                        <p>Add contributors later through the API. The first MVP keeps this field simple.</p>
+                    </div>
+
+                    <textarea
+                        name="ownership"
+                        placeholder='[{"name":"Artist","role":"Artist","percentage":60},{"name":"Producer","role":"Producer","percentage":40}]'
+                    ></textarea>
+                </div>
+
+                <button class="primary-button" type="submit" id="registerButton">
+                    <span>Register Music ID</span>
+                    <span>→</span>
+                </button>
+
+                <p class="microcopy">
+                    The uploaded audio is fingerprinted for registration and is not permanently stored by this MVP.
+                </p>
+            </form>
+
+            <div id="result" class="result-panel hidden"></div>
+        </section>
+    </main>
+
+    <script src="/public/js/registry.js"></script>
+</body>
+</html>

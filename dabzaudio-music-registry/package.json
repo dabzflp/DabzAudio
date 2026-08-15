@@ -1,0 +1,20 @@
+{
+  "name": "dabzaudio-music-registry",
+  "version": "0.1.0",
+  "description": "DabzAudio Music ID — blockchain-backed music identity, verification and rights registry.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0",
+    "mongodb": "^6.17.0",
+    "multer": "^2.0.2"
+  }
+}
