@@ -566,3 +566,40 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label textarea
 html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-input::placeholder {
   color: #777777;
 }
+
+/* --- Public invoice page --- */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-doc,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note {
+  background: var(--card-bg);
+  border-color: #e0e0e0;
+  color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-num,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-from,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta b,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items td,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.grand,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof h3 {
+  color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items th,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.muted,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-fineprint,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof p,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-status.pend {
+  color: var(--muted);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items th,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items td,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.grand,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof {
+  border-color: #e0e0e0;
+}
