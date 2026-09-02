@@ -131,8 +131,11 @@ if (process.env.NODE_ENV !== "production") {
     res.redirect("http://localhost:3000" + req.path.replace(/^\/community-hub/, ""));
   });
 } else {
-  // Production: serve only the Lyric Book frontend from the root.
-  app.use(express.static(path.join(landingRoot, "lyric-book")));
+  // Production: serve the Lyric Book at both paths. The public site uses the
+  // /lyric-book prefix, while older Railway links use the root path.
+  const lyricBookRoot = path.join(landingRoot, "lyric-book");
+  app.use("/lyric-book", express.static(lyricBookRoot));
+  app.use(express.static(lyricBookRoot));
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
