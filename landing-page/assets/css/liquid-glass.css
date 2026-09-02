@@ -333,7 +333,73 @@ body.index-page::before {
 .main, .header, .footer { position: relative; z-index: 1; }
 
 /* Responsive hero sizing */
-@media (max-width: 768px) {
+@media (max-width: 1199px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .header .container-fluid {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header .navmenu {
+    width: auto;
+  }
+
+  .header .navmenu ul {
+    display: none;
+  }
+
+  .header .navmenu ul li {
+    min-width: 0;
+  }
+
+  body.mobile-nav-active .header .navmenu > ul {
+    display: block !important;
+    position: fixed !important;
+    top: 60px;
+    right: 20px;
+    bottom: auto;
+    left: 20px;
+    width: auto;
+    height: auto;
+    max-height: calc(100vh - 80px);
+    padding: 10px 0;
+    overflow-y: auto;
+    background: var(--nav-mobile-background-color) !important;
+    border-radius: 12px;
+    z-index: 10002 !important;
+  }
+
+  body.mobile-nav-active .header {
+    z-index: 10000 !important;
+  }
+
+  body.mobile-nav-active .header .navmenu {
+    z-index: 10001 !important;
+    position: fixed !important;
+  }
+
+  body.mobile-nav-active .header .mobile-nav-toggle {
+    z-index: 10003 !important;
+  }
+
+  body.mobile-nav-active .dz-cookie {
+    display: none;
+  }
+
+  body.mobile-nav-active .header .navmenu > ul a {
+    width: 100%;
+  }
+
+  body.mobile-nav-active .header .navmenu > ul .theme-toggle {
+    margin: 10px 20px;
+  }
+
   .hero h2 { font-size: 40px; }
   .hero .hero-tagline { font-size: 16px; }
   .header .container-fluid { border-radius: 16px; padding: 8px 14px; }

@@ -1761,18 +1761,20 @@ h2 {
 # Responsive Navigation & Audio Animations
 --------------------------------------------------------------*/
 
-/* Show navbar on all screen sizes */
-.navmenu ul {
-  display: flex !important;
-  position: static !important;
-  inset: auto !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  flex-direction: row;
-  list-style: none;
-  align-items: center;
-  margin: 0;
-  padding: 0;
+/* Keep the full navbar layout for desktop screens. */
+@media (min-width: 1200px) {
+  .navmenu ul {
+    display: flex;
+    position: static;
+    inset: auto;
+    background-color: transparent;
+    box-shadow: none;
+    flex-direction: row;
+    list-style: none;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 .navmenu li {

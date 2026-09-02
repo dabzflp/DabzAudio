@@ -106,7 +106,11 @@ html[data-theme="light"] .navmenu .dropdown ul li:hover > a {
 }
 
 html[data-theme="light"] .mobile-nav-active .navmenu > ul {
-  background: var(--card-bg);
+  background: #242424 !important;
+}
+html[data-theme="light"] .mobile-nav-active .navmenu > ul a,
+html[data-theme="light"] .mobile-nav-active .navmenu > ul a:focus {
+  color: #ffffff !important;
 }
 html[data-theme="light"] .mobile-nav-active .mobile-nav-toggle {
   color: #ffffff;
@@ -502,53 +506,6 @@ html[data-theme="light"] body[data-product="reverb"] td {
   color: var(--default-color);
 }
 
-/* --- Product: Music ID Registry --- */
-html[data-theme="light"] body[data-product="music-registry"] {
-  color: var(--default-color);
-}
-
-html[data-theme="light"] body[data-product="music-registry"] .registry-card {
-  background: var(--card-bg);
-  border-color: #e0e0e0;
-}
-
-html[data-theme="light"] body[data-product="music-registry"] .brand-row,
-html[data-theme="light"] body[data-product="music-registry"] .upload-zone,
-html[data-theme="light"] body[data-product="music-registry"] input,
-html[data-theme="light"] body[data-product="music-registry"] textarea,
-html[data-theme="light"] body[data-product="music-registry"] .split-panel,
-html[data-theme="light"] body[data-product="music-registry"] .result-panel,
-html[data-theme="light"] body[data-product="music-registry"] .result-id,
-html[data-theme="light"] body[data-product="music-registry"] .upload-icon,
-html[data-theme="light"] body[data-product="music-registry"] .upload-zone .btn {
-  background: var(--card-bg);
-  border-color: #e0e0e0;
-  color: var(--default-color);
-}
-
-html[data-theme="light"] body[data-product="music-registry"] .hero-copy h2,
-html[data-theme="light"] body[data-product="music-registry"] .brand-row h1,
-html[data-theme="light"] body[data-product="music-registry"] .split-panel h3,
-html[data-theme="light"] body[data-product="music-registry"] .result-panel h3,
-html[data-theme="light"] body[data-product="music-registry"] .upload-zone strong,
-html[data-theme="light"] body[data-product="music-registry"] .primary-button {
-  color: var(--default-color);
-}
-
-html[data-theme="light"] body[data-product="music-registry"] .hero-text,
-html[data-theme="light"] body[data-product="music-registry"] .microcopy,
-html[data-theme="light"] body[data-product="music-registry"] label > span,
-html[data-theme="light"] body[data-product="music-registry"] .split-panel p:not(.eyebrow),
-html[data-theme="light"] body[data-product="music-registry"] .upload-zone span,
-html[data-theme="light"] body[data-product="music-registry"] .upload-zone .btn {
-  color: var(--muted);
-}
-
-html[data-theme="light"] body[data-product="music-registry"] .primary-button {
-  background: var(--orange);
-  color: #ffffff;
-}
-
 /* --- Lyric Book gift modals --- */
 html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-results,
 html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-breakdown,
@@ -612,41 +569,4 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label input::p
 html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label textarea::placeholder,
 html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-input::placeholder {
   color: #777777;
-}
-
-/* --- Public invoice page --- */
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-doc,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note {
-  background: var(--card-bg);
-  border-color: #e0e0e0;
-  color: var(--default-color);
-}
-
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-num,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-from,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta b,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items td,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.grand,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof h3 {
-  color: var(--default-color);
-}
-
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items th,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.muted,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-fineprint,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof p,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-status.pend {
-  color: var(--muted);
-}
-
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items th,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items td,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.grand,
-html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-proof {
-  border-color: #e0e0e0;
 }
