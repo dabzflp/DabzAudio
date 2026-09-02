@@ -85,7 +85,7 @@ export function stripeEnabled() {
 }
 
 function appBase() {
-  return (process.env.APP_BASE_URL || "https://dabzaudio.netlify.app/lyric-book").replace(/\/$/, "");
+  return (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
 }
 
 function notConfigured(res) {

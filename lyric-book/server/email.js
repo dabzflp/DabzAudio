@@ -11,7 +11,10 @@ import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY || "";
 const FROM = process.env.EMAIL_FROM || "DabzAudio <onboarding@resend.dev>";
-const APP_BASE_URL = (process.env.APP_BASE_URL || "https://dabzflp.com/lyric-book").replace(/\/$/, "");
+const configuredBaseUrl = (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
+const APP_BASE_URL = /\/lyric-book$/i.test(configuredBaseUrl)
+  ? configuredBaseUrl
+  : `${configuredBaseUrl}/lyric-book`;
 const resend = apiKey ? new Resend(apiKey) : null;
 
 export function emailEnabled() {

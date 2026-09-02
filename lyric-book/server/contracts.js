@@ -18,7 +18,7 @@ function clampPercent(n) {
 }
 
 function signingUrl(_req, token) {
-  const base = (process.env.APP_BASE_URL || "https://dabzflp.com/lyric-book").replace(/\/$/, "");
+  const base = (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
   return `${base}/sign.html?token=${encodeURIComponent(token)}`;
 }
 

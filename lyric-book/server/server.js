@@ -163,7 +163,7 @@ function appBaseUrl() {
       "APP_BASE_URL is required. Set it in Railway Variables."
     );
   }
-  return base;
+  return /\/lyric-book$/i.test(base) ? base : `${base}/lyric-book`;
 }
 
 // Attach any pending invites addressed to this email to the user's account

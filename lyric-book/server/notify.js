@@ -8,7 +8,7 @@ import { displayNameForUser } from "./access.js";
 import { sendGiftReceivedEmail } from "./email.js";
 
 function appBase() {
-  return (process.env.APP_BASE_URL || "https://dabzaudio.netlify.app/lyric-book").replace(/\/$/, "");
+  return (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
 }
 
 function formatMoney(cents, currency) {

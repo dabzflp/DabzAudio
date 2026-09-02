@@ -49,7 +49,8 @@ const TAX_MODES = new Set(["none", "exclusive", "inclusive"]);
 const MAX_ITEMS = 50;
 
 function appBase() {
-  return (process.env.APP_BASE_URL || "https://dabzaudio.netlify.app/lyric-book").replace(/\/$/, "");
+  const base = (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
+  return /\/lyric-book$/i.test(base) ? base : `${base}/lyric-book`;
 }
 
 function stripeError(res, err, fallback) {
