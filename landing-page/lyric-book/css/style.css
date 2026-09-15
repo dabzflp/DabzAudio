@@ -266,6 +266,23 @@ body.auth-bg .site-header {
   .editor-back { display: inline-flex; }
   /* On touch there is no hover, so keep the editor actions visible. */
   .editor-actions { opacity: 1; transform: none; pointer-events: auto; }
+  .editor-bar {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .editor-bar .title-input {
+    min-width: 0;
+  }
+  .editor-actions {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .editor-actions .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
 }
@@ -285,6 +302,13 @@ body.auth-bg .site-header {
   .site-header.menu-open .header-actions { display: flex; }
   .header-actions .btn,
   .header-actions .bell-btn { width: 100%; justify-content: center; }
+  .header-actions #contractBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
   .header-actions .who { order: -1; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 }
 
