@@ -161,6 +161,31 @@
       y += noteLines.length * 4.5;
     }
 
+    // Leave room for both parties to sign a printed copy manually.
+    if (y > 225) { doc.addPage(); y = 30; }
+    y += 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Manual signatures", margin, y);
+    y += 14;
+
+    var signatureGap = 12;
+    var signatureWidth = (pageW - margin * 2 - signatureGap) / 2;
+    var leftSignatureX = margin;
+    var rightSignatureX = margin + signatureWidth + signatureGap;
+    var signatureLineY = y + 18;
+    doc.setDrawColor(100, 100, 100);
+    doc.line(leftSignatureX, signatureLineY, leftSignatureX + signatureWidth, signatureLineY);
+    doc.line(rightSignatureX, signatureLineY, rightSignatureX + signatureWidth, signatureLineY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 90, 90);
+    doc.text("Sender: " + (inv.fromName || "Sender"), leftSignatureX, signatureLineY + 5);
+    doc.text("Recipient: " + (inv.toName || inv.toEmail || "Recipient"), rightSignatureX, signatureLineY + 5);
+    doc.text("Date: ____________________", leftSignatureX, signatureLineY + 11);
+    doc.text("Date: ____________________", rightSignatureX, signatureLineY + 11);
+
     // Footer fineprint.
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);

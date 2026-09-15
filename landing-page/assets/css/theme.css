@@ -32,6 +32,18 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* Shared product controls: keep button geometry consistent across tools.
+   The Live Key control intentionally keeps its pill shape. */
+body.dabz-lite .btn,
+body.dabz-lite[data-product] button:not(.live-key-btn) {
+  box-sizing: border-box;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+
 html[data-theme="light"] html,
 html[data-theme="light"] body {
   background-color: var(--bg);
@@ -416,6 +428,59 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .field textarea {
   background: #ffffff;
   color: var(--default-color);
   border-color: #e0e0e0;
+}
+
+/* Invoice editor inputs need an explicit light-mode foreground. The shared
+   invoice styles use #eee for dark mode, which is unreadable on #ededed. */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form select,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form textarea {
+  background: #ffffff;
+  color: var(--default-color);
+  border-color: #d0d0d0;
+  caret-color: var(--default-color);
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form input::placeholder,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form textarea::placeholder {
+  color: #6f6f6f;
+  opacity: 1;
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form input:focus,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form select:focus,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-form textarea:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.18);
+}
+
+/* Keep invoice details readable on the light card. The base invoice styles
+   use dark-theme whites and muted grays that become too faint on white. */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-from,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items td,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-fineprint,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .inv-total-line {
+  color: #222222;
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-meta b,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-items th,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.muted,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .inv-sub,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .inv-total-line.muted {
+  color: #555555;
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-note {
+  background: #f0f0f0;
+}
+
+html[data-theme="light"] body.dabz-lite:not([data-product]) .invoice-total-row.grand,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .inv-total-line.grand {
+  color: var(--default-color);
 }
 
 html[data-theme="light"] body.dabz-lite:not([data-product]) table,

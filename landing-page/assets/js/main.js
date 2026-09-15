@@ -9,6 +9,19 @@
 (function() {
   "use strict";
 
+  let scrollFramePending = false;
+
+  function scheduleScrollWork() {
+    if (scrollFramePending) return;
+    scrollFramePending = true;
+    requestAnimationFrame(() => {
+      scrollFramePending = false;
+      toggleScrolled();
+      toggleScrollTop();
+      navmenuScrollspy();
+    });
+  }
+
   /**
    * Apply .scrolled class to the body as the page is scrolled down
    */
@@ -19,7 +32,7 @@
     window.scrollY > 100 ? selectBody.classList.add('scrolled') : selectBody.classList.remove('scrolled');
   }
 
-  document.addEventListener('scroll', toggleScrolled);
+  document.addEventListener('scroll', scheduleScrollWork, { passive: true });
   window.addEventListener('load', toggleScrolled);
 
   /**
@@ -89,7 +102,7 @@
   });
 
   window.addEventListener('load', toggleScrollTop);
-  document.addEventListener('scroll', toggleScrollTop);
+  // Scroll UI updates are coalesced into the browser's animation frames above.
 
   /**
    * Animation on scroll function and init
@@ -206,6 +219,6 @@
     })
   }
   window.addEventListener('load', navmenuScrollspy);
-  document.addEventListener('scroll', navmenuScrollspy);
+  // Scrollspy updates are coalesced into the browser's animation frames above.
 
 })();
