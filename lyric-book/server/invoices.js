@@ -364,8 +364,13 @@ export function registerInvoiceRoutes(app) {
       );
       if (!rows.length) return res.status(404).json({ error: "Invoice not found." });
       const inv = rows[0];
-      const me = await displayNameForUser(inv.from_user_id, req.user.email);
-      res.json({ invoice: mapInvoice(inv, { items: await loadItems(inv.id), proofs: await loadProofs(inv.id), fromName: me.name }) });
+      const me = await senderContact(inv.from_user_id);
+      res.json({ invoice: mapInvoice(inv, {
+        items: await loadItems(inv.id),
+        proofs: await loadProofs(inv.id),
+        fromName: me.name,
+        fromEmail: me.email
+      }) });
     } catch (err) {
       console.error("invoice get error", err);
       res.status(500).json({ error: "Could not load invoice." });
@@ -581,7 +586,7 @@ export function registerInvoiceRoutes(app) {
       if (inv.status === "sent") {
         await pool.query("UPDATE lb_invoices SET status='viewed', viewed_at=NOW() WHERE id=$1 AND status='sent'", [inv.id]);
       }
-      const sender = await displayNameForUser(inv.from_user_id);
+      const sender = await senderContact(inv.from_user_id);
       const isNgn = String(inv.currency).toLowerCase() === "ngn";
       let canPayOnline = false;
       // Naira invoices are paid via Paystack; everything else via Stripe.
@@ -597,6 +602,7 @@ export function registerInvoiceRoutes(app) {
         invoice: {
           number: invoiceNumber(inv.id),
           fromName: sender.name,
+          fromEmail: sender.email,
           fromAvatar: sender.avatarUrl || "",
           toName: inv.to_name || "",
           toEmail: inv.to_email,

@@ -161,31 +161,39 @@
       y += noteLines.length * 4.5;
     }
 
-    // Keep signatures on a dedicated second page so every sent PDF has a
-    // consistent signing page, including short invoices.
-    doc.addPage();
-    y = 30;
+    // Keep both manual signature areas compact so the invoice remains one page.
+    y += 5;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(50, 50, 50);
     doc.text("Manual signatures", margin, y);
-    y += 14;
+    y += 9;
 
     var signatureGap = 12;
     var signatureWidth = (pageW - margin * 2 - signatureGap) / 2;
     var leftSignatureX = margin;
     var rightSignatureX = margin + signatureWidth + signatureGap;
-    var signatureLineY = y + 18;
+    var signatureLineY = y + 11;
     doc.setDrawColor(100, 100, 100);
     doc.line(leftSignatureX, signatureLineY, leftSignatureX + signatureWidth, signatureLineY);
     doc.line(rightSignatureX, signatureLineY, rightSignatureX + signatureWidth, signatureLineY);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(90, 90, 90);
-    doc.text("Sender: " + (inv.fromName || "Sender"), leftSignatureX, signatureLineY + 5);
-    doc.text("Recipient: " + (inv.toName || inv.toEmail || "Recipient"), rightSignatureX, signatureLineY + 5);
-    doc.text("Date: ____________________", leftSignatureX, signatureLineY + 11);
-    doc.text("Date: ____________________", rightSignatureX, signatureLineY + 11);
+    doc.text("Sender: " + (inv.fromName || "Sender"), leftSignatureX, signatureLineY + 4);
+    doc.text("Recipient: " + (inv.toName || inv.toEmail || "Recipient"), rightSignatureX, signatureLineY + 4);
+    doc.text("Date: ______________", leftSignatureX, signatureLineY + 9);
+    doc.text("Date: ______________", rightSignatureX, signatureLineY + 9);
+
+    var contactLines = [];
+    if (inv.fromEmail) contactLines.push("Sender email: " + inv.fromEmail);
+    if (inv.fromPhone) contactLines.push("Sender phone: " + inv.fromPhone);
+    if (inv.toEmail) contactLines.push("Recipient email: " + inv.toEmail);
+    if (inv.toPhone) contactLines.push("Recipient phone: " + inv.toPhone);
+    if (contactLines.length) {
+      doc.setFontSize(7);
+      doc.text(doc.splitTextToSize(contactLines.join("  |  "), pageW - margin * 2), margin, signatureLineY + 15);
+    }
 
     // Footer fineprint.
     doc.setFont("helvetica", "normal");
