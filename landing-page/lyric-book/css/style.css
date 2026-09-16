@@ -283,6 +283,9 @@ body.auth-bg .site-header {
     flex: 1 1 auto;
     min-width: 0;
   }
+  .editor-actions .btn.danger {
+    flex-shrink: 1;
+  }
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
 }

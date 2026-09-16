@@ -161,9 +161,10 @@
       y += noteLines.length * 4.5;
     }
 
-    // Leave room for both parties to sign a printed copy manually.
-    if (y > 225) { doc.addPage(); y = 30; }
-    y += 8;
+    // Keep signatures on a dedicated second page so every sent PDF has a
+    // consistent signing page, including short invoices.
+    doc.addPage();
+    y = 30;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
