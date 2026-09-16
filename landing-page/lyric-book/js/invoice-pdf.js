@@ -200,7 +200,7 @@
     doc.setFontSize(7.5);
     doc.setTextColor(150, 150, 150);
     var fine = "Invoicing tool provided by DabzAudio. Payments are processed securely by Stripe (cards) or Paystack (Naira). " +
-      "Any tax shown is set by the sender and is their responsibility — DabzAudio is not the merchant of record or a tax adviser.";
+      "Any tax shown is set by the sender and is their responsibility — DabzAudio is not the merchant of record or a tax adviser — Contact: DabzAudio@Dabzflp.com";
     doc.text(doc.splitTextToSize(fine, pageW - margin * 2), margin, 285);
 
     return doc;
