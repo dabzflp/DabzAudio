@@ -198,13 +198,19 @@
       item.className = "track-row";
       item.draggable = true;
       item.dataset.id = track.id;
-      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><audio controls preload="none"></audio><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
+      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
       const trackInfo = item.querySelector("small");
       const audio = item.querySelector("audio");
+      const repeat = item.querySelector(".repeat-track");
       trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
       audio.src = track.audioUrl;
+      repeat.addEventListener("click", () => {
+        audio.loop = !audio.loop;
+        repeat.classList.toggle("active", audio.loop);
+        repeat.setAttribute("aria-pressed", String(audio.loop));
+      });
       recordPlay(audio, track, trackInfo);
       item.querySelector(".track-delete").addEventListener("click", async (event) => {
         event.stopPropagation();

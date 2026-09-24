@@ -25,14 +25,20 @@
     release.tracks.forEach((track) => {
       const item = document.createElement("li");
       item.className = "shared-track";
-      item.innerHTML = '<div><span class="shared-track-number"></span><b></b><small class="shared-track-plays"></small></div><audio controls preload="metadata"></audio>';
+      item.innerHTML = '<div><span class="shared-track-number"></span><b></b><small class="shared-track-plays"></small></div><div class="shared-track-controls"><audio controls preload="metadata"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div>';
       item.querySelector(".shared-track-number").textContent = String(track.trackNumber).padStart(2, "0");
       item.querySelector("b").textContent = track.title;
       const count = item.querySelector(".shared-track-plays");
       const audio = item.querySelector("audio");
+      const repeat = item.querySelector(".repeat-track");
       audio.setAttribute("controlsList", "nodownload noplaybackrate");
       audio.setAttribute("disableRemotePlayback", "true");
       audio.addEventListener("contextmenu", (event) => event.preventDefault());
+      repeat.addEventListener("click", () => {
+        audio.loop = !audio.loop;
+        repeat.classList.toggle("active", audio.loop);
+        repeat.setAttribute("aria-pressed", String(audio.loop));
+      });
       count.textContent = playLabel(track.playCount);
       audio.src = track.audioUrl;
       audio.addEventListener("play", () => {

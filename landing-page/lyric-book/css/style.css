@@ -667,6 +667,9 @@ body.auth-bg .site-header {
 
 /* ---------- Playback ---------- */
 .playback-body { background: radial-gradient(circle at 85% 8%, rgba(255,122,0,0.13), transparent 28%), var(--bg); }
+.public-playback-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 22px; border-bottom: 1px solid var(--line); background: rgba(17,17,17,0.88); backdrop-filter: blur(6px); }
+.public-playback-brand { display: flex; align-items: baseline; gap: 8px; color: #fff; font-size: 16px; }
+.public-playback-brand span { color: var(--muted); font-size: 12px; }
 .playback-page, .shared-playback { max-width: 1060px; margin: 0 auto; padding: 42px 22px 70px; }
 .playback-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 .playback-kicker { margin: 0 0 8px; color: var(--orange); font-size: 11px; font-weight: 800; letter-spacing: 1.8px; }
@@ -709,6 +712,9 @@ body.auth-bg .site-header {
 .track-meta small { color: var(--muted); font-size: 11px; }
 .shared-track-plays { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
 .track-row audio { width: 150px; height: 30px; }
+.track-controls, .shared-track-controls { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.repeat-track { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; }
+.repeat-track:hover, .repeat-track.active { color: var(--orange); border-color: rgba(255,122,0,0.5); background: rgba(255,122,0,0.1); }
 .track-delete { flex: 0 0 26px; width: 26px; height: 26px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
 .track-delete:hover { color: var(--danger); border-color: rgba(255,82,82,0.4); background: rgba(255,82,82,0.08); }
 .release-share { display: flex; gap: 8px; margin-top: 12px; }
@@ -726,6 +732,7 @@ body.auth-bg .site-header {
 .shared-track b { font-size: 14px; color: #eee; }
 .shared-track audio { width: 220px; height: 32px; }
 @media (max-width: 650px) {
+  .public-playback-nav { padding: 12px 16px; }
   .playback-page, .shared-playback { padding: 28px 16px 50px; }
   .playback-hero, .shared-top { align-items: flex-start; flex-direction: column; }
   .playback-hero .btn { width: 100%; }
@@ -735,6 +742,7 @@ body.auth-bg .site-header {
   .release-card { flex-direction: column; }
   .release-art { width: 100%; height: min(62vw, 260px); flex-basis: auto; }
   .track-row, .shared-track { align-items: flex-start; flex-wrap: wrap; }
+  .track-controls, .shared-track-controls { flex: 1 1 100%; }
   .track-row audio, .shared-track audio { width: 100%; }
   .shared-cover { width: min(72vw, 280px); height: min(72vw, 280px); flex-basis: auto; }
 }

@@ -196,14 +196,39 @@ export function registerPlaybackRoutes(app) {
         [req.params.id, String(req.query.token || "")]
       );
       if (!rows.length || !rows[0].audio_data?.length) return res.status(404).json({ error: "Audio not found." });
+      const audio = rows[0].audio_data;
+      const total = audio.length;
+      const range = req.headers.range;
+      let start = 0;
+      let end = total - 1;
+      let status = 200;
+      if (range) {
+        const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+        if (!match || (!match[1] && !match[2])) {
+          return res.status(416).set("Content-Range", `bytes */${total}`).end();
+        }
+        if (match[1]) {
+          start = Number(match[1]);
+          if (match[2]) end = Number(match[2]);
+        } else {
+          start = Math.max(0, total - Number(match[2]));
+          end = total - 1;
+        }
+        if (start >= total || start > end) return res.status(416).set("Content-Range", `bytes */${total}`).end();
+        end = Math.min(end, total - 1);
+        status = 206;
+      }
+      const chunk = audio.subarray(start, end + 1);
       res.set({
         "Content-Type": rows[0].audio_mime_type || "audio/mpeg",
-        "Content-Length": rows[0].file_size,
+        "Content-Length": chunk.length,
+        "Accept-Ranges": "bytes",
+        ...(status === 206 ? { "Content-Range": `bytes ${start}-${end}/${total}` } : {}),
         "Content-Disposition": "inline",
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "X-Content-Type-Options": "nosniff"
       });
-      res.send(rows[0].audio_data);
+      res.status(status).send(chunk);
     } catch (err) {
       console.error("Playback audio stream error:", err);
       res.status(500).json({ error: "Could not play this track." });
