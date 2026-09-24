@@ -708,6 +708,8 @@ body.auth-bg .site-header {
 .track-meta b { display: block; color: #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-meta small { color: var(--muted); font-size: 11px; }
 .track-row audio { width: 150px; height: 30px; }
+.track-delete { flex: 0 0 26px; width: 26px; height: 26px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+.track-delete:hover { color: var(--danger); border-color: rgba(255,82,82,0.4); background: rgba(255,82,82,0.08); }
 .release-share { display: flex; gap: 8px; margin-top: 12px; }
 .release-share input { flex: 1; min-width: 0; background: #0f0f0f; border: 1px solid var(--line); border-radius: 8px; color: #bbb; padding: 8px; font-size: 11px; }
 .playback-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; gap: 12px; border: 1px dashed rgba(255,122,0,0.28); border-radius: 14px; }

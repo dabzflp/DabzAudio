@@ -203,6 +203,45 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
+  app.delete("/api/playback/releases/:releaseId/tracks/:trackId", requireAuth, async (req, res) => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const owned = await client.query(
+        `SELECT t.id
+           FROM lb_playback_tracks t
+           JOIN lb_playback_releases r ON r.id = t.release_id
+          WHERE t.id = $1 AND t.release_id = $2 AND r.user_id = $3`,
+        [req.params.trackId, req.params.releaseId, req.user.id]
+      );
+      if (!owned.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Track not found." });
+      }
+      await client.query("DELETE FROM lb_playback_tracks WHERE id = $1", [req.params.trackId]);
+      await client.query(
+        `WITH numbered AS (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY track_number, id) AS next_number
+            FROM lb_playback_tracks
+           WHERE release_id = $1
+        )
+        UPDATE lb_playback_tracks t
+           SET track_number = numbered.next_number
+          FROM numbered
+         WHERE t.id = numbered.id`,
+        [req.params.releaseId]
+      );
+      await client.query("COMMIT");
+      res.json({ ok: true });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Playback track delete error:", err);
+      res.status(500).json({ error: "Could not delete this track." });
+    } finally {
+      client.release();
+    }
+  });
+
   app.delete("/api/playback/releases/:id", requireAuth, async (req, res) => {
     try {
       const release = await getRelease(req.user.id, req.params.id);

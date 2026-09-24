@@ -173,11 +173,21 @@
       item.className = "track-row";
       item.draggable = true;
       item.dataset.id = track.id;
-      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><audio controls preload="none"></audio>';
+      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><audio controls preload="none"></audio><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
       item.querySelector("small").textContent = formatDuration(track.durationSeconds);
       item.querySelector("audio").src = track.audioUrl;
+      item.querySelector(".track-delete").addEventListener("click", async (event) => {
+        event.stopPropagation();
+        if (!confirm('Delete "' + track.title + '" from this release?')) return;
+        try {
+          await window.LB.apiFetch("/api/playback/releases/" + release.id + "/tracks/" + track.id, { method: "DELETE" });
+          release.tracks = release.tracks.filter((entry) => entry.id !== track.id);
+          release.tracks.forEach((entry, index) => { entry.trackNumber = index + 1; });
+          render();
+        } catch (err) { setMessage(err.message, true); }
+      });
       item.addEventListener("dragstart", () => item.classList.add("dragging"));
       item.addEventListener("dragend", async () => {
         item.classList.remove("dragging");
