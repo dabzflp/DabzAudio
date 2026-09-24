@@ -668,8 +668,9 @@ body.auth-bg .site-header {
 /* ---------- Playback ---------- */
 .playback-body { background: radial-gradient(circle at 85% 8%, rgba(255,122,0,0.13), transparent 28%), var(--bg); }
 .public-playback-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 22px; border-bottom: 1px solid var(--line); background: rgba(17,17,17,0.88); backdrop-filter: blur(6px); }
-.public-playback-brand { display: flex; align-items: baseline; gap: 8px; color: #fff; font-size: 16px; }
-.public-playback-brand span { color: var(--muted); font-size: 12px; }
+.public-playback-brand { display: flex; align-items: baseline; gap: 8px; color: var(--orange); font-size: 16px; letter-spacing: .2px; }
+.public-playback-brand b { color: #fff; }
+.public-playback-brand span { color: var(--orange); font-size: 12px; }
 .playback-page, .shared-playback { max-width: 1060px; margin: 0 auto; padding: 42px 22px 70px; }
 .playback-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 .playback-kicker { margin: 0 0 8px; color: var(--orange); font-size: 11px; font-weight: 800; letter-spacing: 1.8px; }
@@ -696,6 +697,11 @@ body.auth-bg .site-header {
 .release-type { color: var(--orange); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; font-weight: 700; }
 .release-title { margin: 4px 0 0; font-size: 20px; color: #fff; overflow-wrap: anywhere; }
 .release-description { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 8px 0; }
+.release-edit { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.release-edit input, .release-edit textarea { width: 100%; background: #0f0f0f; border: 1px solid var(--line); border-radius: 8px; color: #eee; padding: 9px 10px; font: inherit; }
+.release-edit textarea { min-height: 64px; resize: vertical; }
+.release-edit > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.release-edit-msg { margin: 0; }
 .cover-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
 .upload-status { flex: 1 1 100%; min-height: 16px; color: var(--muted); font-size: 11px; line-height: 1.35; }
 .upload-status.is-loading { color: var(--orange); }
@@ -711,6 +717,8 @@ body.auth-bg .site-header {
 .track-meta b { display: block; color: #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-meta small { color: var(--muted); font-size: 11px; }
 .shared-track-plays { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.track-edit { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; }
+.track-edit:hover { color: var(--orange); border-color: rgba(255,122,0,0.5); }
 .track-row audio { width: 150px; height: 30px; }
 .track-controls, .shared-track-controls { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .repeat-track { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; }

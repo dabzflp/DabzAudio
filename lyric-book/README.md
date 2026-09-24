@@ -72,8 +72,10 @@ npm start              # API + static frontend on http://localhost:4000
 | DELETE | /api/lyrics/:id | yes | - |
 | GET | /api/playback | yes | - |
 | POST | /api/playback/releases | yes | title, description, releaseType |
+| PUT | /api/playback/releases/:id | yes | title, description |
 | PUT | /api/playback/releases/:id/cover | yes | multipart cover |
 | POST | /api/playback/releases/:id/tracks | yes | multipart audio, title |
+| PUT | /api/playback/releases/:releaseId/tracks/:trackId | yes | title |
 | DELETE | /api/playback/releases/:releaseId/tracks/:trackId | yes | - |
 | PUT | /api/playback/releases/:id/tracks/order | yes | trackIds |
 | DELETE | /api/playback/releases/:id | yes | - |

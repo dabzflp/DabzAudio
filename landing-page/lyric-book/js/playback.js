@@ -117,6 +117,11 @@
     const description = card.querySelector(".release-description");
     const share = card.querySelector(".share-btn");
     const deleteRelease = card.querySelector(".delete-release");
+    const editRelease = card.querySelector(".edit-release");
+    const releaseEdit = card.querySelector(".release-edit");
+    const releaseEditTitle = card.querySelector(".release-edit-title");
+    const releaseEditDescription = card.querySelector(".release-edit-description");
+    const releaseEditMsg = card.querySelector(".release-edit-msg");
     const shareBox = card.querySelector(".release-share");
     const shareInput = shareBox.querySelector("input");
     const coverInput = card.querySelector(".cover-input");
@@ -141,6 +146,25 @@
     }
 
     share.addEventListener("click", () => { shareBox.hidden = !shareBox.hidden; });
+    editRelease.addEventListener("click", () => {
+      releaseEdit.hidden = !releaseEdit.hidden;
+      releaseEditTitle.value = release.title;
+      releaseEditDescription.value = release.description || "";
+      if (!releaseEdit.hidden) releaseEditTitle.focus();
+    });
+    card.querySelector(".cancel-release-edit").addEventListener("click", () => { releaseEdit.hidden = true; });
+    releaseEdit.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      releaseEditMsg.textContent = "Saving...";
+      try {
+        const data = await window.LB.apiFetch("/api/playback/releases/" + release.id, {
+          method: "PUT",
+          body: JSON.stringify({ title: releaseEditTitle.value, description: releaseEditDescription.value })
+        });
+        Object.assign(release, data.release);
+        render();
+      } catch (err) { releaseEditMsg.textContent = err.message; releaseEditMsg.className = "msg err release-edit-msg"; }
+    });
     deleteRelease.addEventListener("click", async () => {
       if (!confirm("Delete this release and its tracks? This cannot be undone.")) return;
       try {
@@ -198,7 +222,7 @@
       item.className = "track-row";
       item.draggable = true;
       item.dataset.id = track.id;
-      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
+      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><button class="track-edit" type="button" title="Rename track">Edit</button><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
       const trackInfo = item.querySelector("small");
@@ -212,6 +236,18 @@
         repeat.setAttribute("aria-pressed", String(audio.loop));
       });
       recordPlay(audio, track, trackInfo);
+      item.querySelector(".track-edit").addEventListener("click", async (event) => {
+        event.stopPropagation();
+        const title = window.prompt("Track name", track.title);
+        if (title == null || !title.trim() || title.trim() === track.title) return;
+        try {
+          const data = await window.LB.apiFetch("/api/playback/releases/" + release.id + "/tracks/" + track.id, {
+            method: "PUT", body: JSON.stringify({ title: title.trim() })
+          });
+          Object.assign(track, data.track);
+          render();
+        } catch (err) { setMessage(err.message, true); }
+      });
       item.querySelector(".track-delete").addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!confirm('Delete "' + track.title + '" from this release?')) return;

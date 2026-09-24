@@ -136,6 +136,27 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
+  app.put("/api/playback/releases/:id", requireAuth, async (req, res) => {
+    const title = String(req.body?.title || "").trim().slice(0, 160);
+    const description = String(req.body?.description || "").trim().slice(0, 1000);
+    if (!title) return res.status(400).json({ error: "Give this release a title." });
+    try {
+      const { rows } = await pool.query(
+        `UPDATE lb_playback_releases
+            SET title = $1, description = $2, updated_at = NOW()
+          WHERE id = $3 AND user_id = $4
+        RETURNING *`,
+        [title, description, req.params.id, req.user.id]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Release not found." });
+      const tracks = await pool.query("SELECT * FROM lb_playback_tracks WHERE release_id = $1 ORDER BY track_number", [req.params.id]);
+      res.json({ release: publicRelease(rows[0], tracks.rows) });
+    } catch (err) {
+      console.error("Playback release update error:", err);
+      res.status(500).json({ error: "Could not update this release." });
+    }
+  });
+
   app.put("/api/playback/releases/:id/cover", requireAuth, uploadSingle("cover"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Choose a cover image." });
     if (req.file.size > MAX_COVER_BYTES) return res.status(413).json({ error: "Cover art must be 5 MB or smaller." });
@@ -232,6 +253,27 @@ export function registerPlaybackRoutes(app) {
     } catch (err) {
       console.error("Playback audio stream error:", err);
       res.status(500).json({ error: "Could not play this track." });
+    }
+  });
+
+  app.put("/api/playback/releases/:releaseId/tracks/:trackId", requireAuth, async (req, res) => {
+    const title = String(req.body?.title || "").trim().slice(0, 160);
+    if (!title) return res.status(400).json({ error: "Give this track a name." });
+    try {
+      const { rows } = await pool.query(
+        `UPDATE lb_playback_tracks t
+            SET title = $1
+           FROM lb_playback_releases r
+          WHERE t.id = $2 AND t.release_id = $3 AND r.id = t.release_id AND r.user_id = $4
+        RETURNING t.*`,
+        [title, req.params.trackId, req.params.releaseId, req.user.id]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Track not found." });
+      const release = await getRelease(req.user.id, req.params.releaseId);
+      res.json({ track: publicTrack(rows[0], release.share_token) });
+    } catch (err) {
+      console.error("Playback track update error:", err);
+      res.status(500).json({ error: "Could not rename this track." });
     }
   });
 
