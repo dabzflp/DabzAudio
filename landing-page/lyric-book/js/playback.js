@@ -10,19 +10,61 @@
     pageMsg.className = "msg" + (error ? " err" : " ok");
   }
 
-  async function upload(path, formData, method = "POST") {
-    const headers = {};
-    const token = window.LB.getToken();
-    if (token) headers.Authorization = "Bearer " + token;
-    const response = await fetch((window.LB_API_BASE || "").replace(/\/$/, "") + path, {
-      method,
-      headers,
-      body: formData,
-      credentials: "include"
+  function upload(path, formData, method = "POST", onProgress) {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      const startedAt = Date.now();
+      request.open(method, (window.LB_API_BASE || "").replace(/\/$/, "") + path);
+      request.withCredentials = true;
+      const token = window.LB.getToken();
+      if (token) request.setRequestHeader("Authorization", "Bearer " + token);
+      request.upload.addEventListener("progress", (event) => {
+        if (!event.lengthComputable || typeof onProgress !== "function") return;
+        const elapsed = (Date.now() - startedAt) / 1000;
+        const rate = event.loaded / Math.max(elapsed, 0.1);
+        const remaining = rate ? Math.max(0, (event.total - event.loaded) / rate) : 0;
+        onProgress({ percent: Math.round((event.loaded / event.total) * 100), remaining });
+      });
+      request.addEventListener("error", () => reject(new Error("Network error. Check your connection and try again.")));
+      request.addEventListener("timeout", () => reject(new Error("Upload timed out. Please try again.")));
+      request.timeout = 10 * 60 * 1000;
+      request.addEventListener("load", () => {
+        let data = {};
+        try { data = JSON.parse(request.responseText || "{}"); } catch { /* non-JSON server error */ }
+        if (request.status < 200 || request.status >= 300) {
+          reject(new Error(data.error || "Upload failed. Please try again."));
+          return;
+        }
+        resolve(data);
+      });
+      request.send(formData);
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Upload failed.");
-    return data;
+  }
+
+  function uploadLabel(progress) {
+    if (progress.percent < 100) {
+      const eta = progress.remaining > 1 ? " · about " + Math.ceil(progress.remaining) + "s left" : "";
+      return "Uploading " + progress.percent + "%" + eta;
+    }
+    return "Upload received · processing...";
+  }
+
+  async function copyLink(text, input, button) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        input.focus();
+        input.select();
+        if (!document.execCommand("copy")) throw new Error("Copy unavailable");
+      }
+      button.textContent = "Copied";
+      setTimeout(() => { button.textContent = "Copy link"; }, 1800);
+    } catch {
+      input.focus();
+      input.select();
+      window.prompt("Copy this Playback link", text);
+    }
   }
 
   function formatDuration(seconds) {
@@ -57,6 +99,8 @@
     const trackInput = card.querySelector(".track-input");
     const trackTitle = card.querySelector(".track-title");
     const trackList = card.querySelector(".track-list");
+    const coverStatus = card.querySelector(".cover-status");
+    const trackStatus = card.querySelector(".track-status");
 
     title.textContent = release.title;
     type.textContent = release.releaseType === "album" ? "Album" : "Single";
@@ -81,35 +125,46 @@
       } catch (err) { setMessage(err.message, true); }
     });
     shareBox.querySelector(".copy-btn").addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(release.shareUrl);
-        shareBox.querySelector(".copy-btn").textContent = "Copied";
-      } catch { shareInput.select(); document.execCommand("copy"); }
+      await copyLink(release.shareUrl, shareInput, shareBox.querySelector(".copy-btn"));
     });
     coverInput.addEventListener("change", async () => {
       const file = coverInput.files[0];
       if (!file) return;
+      coverStatus.className = "upload-status is-loading";
+      coverStatus.textContent = "Preparing cover upload...";
       try {
         const form = new FormData();
         form.append("cover", file);
-        const data = await upload("/api/playback/releases/" + release.id + "/cover", form, "PUT");
+        const data = await upload("/api/playback/releases/" + release.id + "/cover", form, "PUT", (progress) => {
+          coverStatus.textContent = progress.percent < 100 ? uploadLabel(progress) : "Upload received · saving cover...";
+        });
         Object.assign(release, data.release);
         render();
-      } catch (err) { setMessage(err.message, true); }
+      } catch (err) {
+        coverStatus.className = "upload-status is-error";
+        coverStatus.textContent = err.message;
+      }
     });
     trackInput.addEventListener("change", async () => {
       const file = trackInput.files[0];
       if (!file) return;
       trackForm.classList.add("is-uploading");
+      trackStatus.className = "upload-status is-loading";
+      trackStatus.textContent = "Preparing track upload...";
       try {
         const form = new FormData();
         form.append("audio", file);
         form.append("title", trackTitle.value.trim());
-        const data = await upload("/api/playback/releases/" + release.id + "/tracks", form);
+        const data = await upload("/api/playback/releases/" + release.id + "/tracks", form, "POST", (progress) => {
+          trackStatus.textContent = uploadLabel(progress);
+        });
         release.tracks.push(data.track);
         trackTitle.value = "";
         render();
-      } catch (err) { setMessage(err.message, true); }
+      } catch (err) {
+        trackStatus.className = "upload-status is-error";
+        trackStatus.textContent = err.message;
+      }
       finally { trackForm.classList.remove("is-uploading"); trackInput.value = ""; }
     });
 

@@ -694,6 +694,9 @@ body.auth-bg .site-header {
 .release-title { margin: 4px 0 0; font-size: 20px; color: #fff; overflow-wrap: anywhere; }
 .release-description { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 8px 0; }
 .cover-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.upload-status { flex: 1 1 100%; min-height: 16px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.upload-status.is-loading { color: var(--orange); }
+.upload-status.is-error { color: var(--danger); }
 .track-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 12px; }
 .track-form.is-uploading { opacity: .6; pointer-events: none; }
 .track-title { flex: 1; min-width: 125px; background: #0f0f0f; border: 1px solid var(--line); border-radius: 8px; color: #eee; padding: 8px 9px; }

@@ -22,6 +22,16 @@ const upload = multer({
   }
 });
 
+function uploadSingle(field) {
+  return (req, res, next) => upload.single(field)(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: field === "cover" ? "Cover art must be 5 MB or smaller." : "Audio files must be 25 MB or smaller." });
+    }
+    return res.status(400).json({ error: err.message || "Unsupported upload." });
+  });
+}
+
 function token() {
   return crypto.randomBytes(18).toString("base64url");
 }
@@ -49,12 +59,12 @@ function destroyAsset(publicId, resourceType) {
   });
 }
 
-function publicTrack(row) {
+function publicTrack(row, shareToken) {
   return {
     id: row.id,
     title: row.title,
     trackNumber: row.track_number,
-    audioUrl: row.audio_url,
+    audioUrl: row.audio_url || `${appBase()}/api/playback/tracks/${row.id}/audio?token=${encodeURIComponent(shareToken)}`,
     durationSeconds: row.duration_seconds,
     createdAt: row.created_at
   };
@@ -69,7 +79,7 @@ function publicRelease(row, tracks = []) {
     coverUrl: row.cover_url || "",
     shareToken: row.share_token,
     shareUrl: `${appBase()}/lyric-book/playback.html?share=${row.share_token}`,
-    tracks: tracks.map(publicTrack),
+    tracks: tracks.map((track) => publicTrack(track, row.share_token)),
     createdAt: row.created_at
   };
 }
@@ -120,7 +130,7 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
-  app.put("/api/playback/releases/:id/cover", requireAuth, upload.single("cover"), async (req, res) => {
+  app.put("/api/playback/releases/:id/cover", requireAuth, uploadSingle("cover"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Choose a cover image." });
     if (req.file.size > MAX_COVER_BYTES) return res.status(413).json({ error: "Cover art must be 5 MB or smaller." });
     try {
@@ -140,7 +150,7 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
-  app.post("/api/playback/releases/:id/tracks", requireAuth, upload.single("audio"), async (req, res) => {
+  app.post("/api/playback/releases/:id/tracks", requireAuth, uploadSingle("audio"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Choose an audio file." });
     try {
       const release = await getRelease(req.user.id, req.params.id);
@@ -155,27 +165,41 @@ export function registerPlaybackRoutes(app) {
       if (Number(usage.rows[0].bytes) + req.file.size > MAX_LIBRARY_BYTES) {
         return res.status(413).json({ error: "Your Playback library is full. Remove a track before uploading more." });
       }
-      if (!cloudinary.config().cloud_name) return res.status(503).json({ error: "Audio uploads are not configured." });
-      const result = await fileUpload(req.file.buffer, {
-        folder: "lyricbook/playback/audio",
-        resource_type: "video",
-        eager: [{ audio_codec: "mp3", bit_rate: "128k" }],
-        eager_async: false
-      });
-      const audioUrl = (result.eager && result.eager[0] && result.eager[0].secure_url) || result.secure_url;
       const title = String(req.body?.title || req.file.originalname.replace(/\.[^.]+$/, "")).trim().slice(0, 160) || "Untitled track";
       const nextNumber = await pool.query("SELECT COALESCE(MAX(track_number) + 1, 1) AS n FROM lb_playback_tracks WHERE release_id = $1", [release.id]);
       const { rows } = await pool.query(
-        `INSERT INTO lb_playback_tracks (release_id, title, audio_url, file_size, duration_seconds, track_number)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [release.id, title, audioUrl, req.file.size, Math.round(result.duration || 0), nextNumber.rows[0].n]
+        `INSERT INTO lb_playback_tracks
+          (release_id, title, audio_url, audio_data, audio_mime_type, file_size, duration_seconds, track_number)
+         VALUES ($1, $2, '', $3, $4, $5, 0, $6) RETURNING *`,
+        [release.id, title, req.file.buffer, req.file.mimetype, req.file.size, nextNumber.rows[0].n]
       );
-      await pool.query("UPDATE lb_playback_tracks SET audio_public_id = $1 WHERE id = $2", [result.public_id, rows[0].id]);
-      rows[0].audio_public_id = result.public_id;
-      res.status(201).json({ track: publicTrack(rows[0]) });
+      res.status(201).json({ track: publicTrack(rows[0], release.share_token) });
     } catch (err) {
       console.error("Playback track error:", err);
       res.status(500).json({ error: "Could not upload this track." });
+    }
+  });
+
+  app.get("/api/playback/tracks/:id/audio", async (req, res) => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT t.audio_data, t.audio_mime_type, t.file_size
+           FROM lb_playback_tracks t
+           JOIN lb_playback_releases r ON r.id = t.release_id
+          WHERE t.id = $1 AND r.share_token = $2`,
+        [req.params.id, String(req.query.token || "")]
+      );
+      if (!rows.length || !rows[0].audio_data?.length) return res.status(404).json({ error: "Audio not found." });
+      res.set({
+        "Content-Type": rows[0].audio_mime_type || "audio/mpeg",
+        "Content-Length": rows[0].file_size,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, max-age=3600"
+      });
+      res.send(rows[0].audio_data);
+    } catch (err) {
+      console.error("Playback audio stream error:", err);
+      res.status(500).json({ error: "Could not play this track." });
     }
   });
 

@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS lb_playback_tracks (
   release_id BIGINT NOT NULL REFERENCES lb_playback_releases(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   audio_url TEXT NOT NULL,
+  audio_data BYTEA NOT NULL DEFAULT decode('', 'hex'),
+  audio_mime_type TEXT NOT NULL DEFAULT 'audio/mpeg',
   audio_public_id TEXT NOT NULL DEFAULT '',
   file_size BIGINT NOT NULL DEFAULT 0,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
@@ -64,6 +66,8 @@ CREATE TABLE IF NOT EXISTS lb_playback_tracks (
 );
 ALTER TABLE lb_playback_releases ADD COLUMN IF NOT EXISTS cover_public_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_public_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_data BYTEA NOT NULL DEFAULT decode('', 'hex');
+ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_mime_type TEXT NOT NULL DEFAULT 'audio/mpeg';
 CREATE INDEX IF NOT EXISTS idx_lb_playback_releases_user ON lb_playback_releases(user_id, position, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lb_playback_tracks_release ON lb_playback_tracks(release_id, track_number);
 

@@ -20,7 +20,7 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - **Profiles**: artist questions captured at sign-up (name, genre, influences, etc.).
 - **Lyrics**: per-user create / list / read / update / delete.
 - **Playback**: owner-only release library for singles and albums, cover art,
-  Cloudinary-normalized MP3 delivery, drag reordering, and public share links.
+  PostgreSQL-backed audio delivery, drag reordering, and public share links.
 - **Suggestions**: rhymes / near-rhymes / syllable counts via the free
   [Datamuse API](https://www.datamuse.com/api/) — a real dictionary, not an AI bot.
 
@@ -49,8 +49,8 @@ npm start              # API + static frontend on http://localhost:4000
 2. Set Variables: `DATABASE_URL`, `JWT_SECRET`, `APP_BASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `NODE_ENV=production`.
 3. Run the migration once (Railway shell `npm run migrate`, or `psql $DATABASE_URL -f server/sql/schema.sql`).
 4. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
-  for Playback uploads. Each track is limited to 25 MB, cover art to 5 MB, and
-  each artist library to 500 MB. Uploaded audio is delivered as a 128 kbps MP3.
+  for Playback cover art. Audio bytes are stored in PostgreSQL. Each track is
+  limited to 25 MB, cover art to 5 MB, and each artist library to 500 MB.
 5. Point the frontend at the service URL via `landing-page/lyric-book/js/config.js`
    (or add a Netlify `_redirects` proxy for `/api/*`).
 
