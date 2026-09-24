@@ -30,6 +30,9 @@
       item.querySelector("b").textContent = track.title;
       const count = item.querySelector(".shared-track-plays");
       const audio = item.querySelector("audio");
+      audio.setAttribute("controlsList", "nodownload noplaybackrate");
+      audio.setAttribute("disableRemotePlayback", "true");
+      audio.addEventListener("contextmenu", (event) => event.preventDefault());
       count.textContent = playLabel(track.playCount);
       audio.src = track.audioUrl;
       audio.addEventListener("play", () => {

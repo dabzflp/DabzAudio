@@ -199,8 +199,9 @@ export function registerPlaybackRoutes(app) {
       res.set({
         "Content-Type": rows[0].audio_mime_type || "audio/mpeg",
         "Content-Length": rows[0].file_size,
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "private, max-age=3600"
+        "Content-Disposition": "inline",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "X-Content-Type-Options": "nosniff"
       });
       res.send(rows[0].audio_data);
     } catch (err) {
