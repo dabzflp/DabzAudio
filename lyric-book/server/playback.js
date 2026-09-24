@@ -42,6 +42,10 @@ function appBase() {
   return `${base}/lyric-book`;
 }
 
+function playbackPageBase() {
+  return appBase() || "/lyric-book";
+}
+
 function fileUpload(buffer, options) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
@@ -78,7 +82,7 @@ function publicRelease(row, tracks = []) {
     releaseType: row.release_type,
     coverUrl: row.cover_url || "",
     shareToken: row.share_token,
-    shareUrl: `${appBase()}/lyric-book/playback.html?share=${row.share_token}`,
+    shareUrl: `${playbackPageBase()}/playback.html?share=${row.share_token}`,
     tracks: tracks.map((track) => publicTrack(track, row.share_token)),
     createdAt: row.created_at
   };
