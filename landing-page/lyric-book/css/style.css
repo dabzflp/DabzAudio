@@ -707,6 +707,7 @@ body.auth-bg .site-header {
 .track-meta { flex: 1; min-width: 0; }
 .track-meta b { display: block; color: #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-meta small { color: var(--muted); font-size: 11px; }
+.shared-track-plays { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
 .track-row audio { width: 150px; height: 30px; }
 .track-delete { flex: 0 0 26px; width: 26px; height: 26px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
 .track-delete:hover { color: var(--danger); border-color: rgba(255,82,82,0.4); background: rgba(255,82,82,0.08); }

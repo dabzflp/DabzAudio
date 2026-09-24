@@ -1,6 +1,16 @@
 (async function () {
   const root = document.getElementById("sharedPlayback");
   const token = new URLSearchParams(location.search).get("share");
+  function playLabel(count) {
+    const value = Number(count || 0);
+    return value + (value === 1 ? " play" : " plays");
+  }
+  document.addEventListener("play", (event) => {
+    if (event.target.tagName !== "AUDIO") return;
+    document.querySelectorAll("audio").forEach((audio) => {
+      if (audio !== event.target) audio.pause();
+    });
+  }, true);
   if (!token) { root.innerHTML = '<div class="playback-empty"><div class="empty-note">This Playback link is incomplete.</div></div>'; return; }
   try {
     const data = await window.LB.apiFetch("/api/playback/share/" + encodeURIComponent(token));
@@ -15,10 +25,24 @@
     release.tracks.forEach((track) => {
       const item = document.createElement("li");
       item.className = "shared-track";
-      item.innerHTML = '<div><span class="shared-track-number"></span><b></b></div><audio controls preload="metadata"></audio>';
+      item.innerHTML = '<div><span class="shared-track-number"></span><b></b><small class="shared-track-plays"></small></div><audio controls preload="metadata"></audio>';
       item.querySelector(".shared-track-number").textContent = String(track.trackNumber).padStart(2, "0");
       item.querySelector("b").textContent = track.title;
-      item.querySelector("audio").src = track.audioUrl;
+      const count = item.querySelector(".shared-track-plays");
+      const audio = item.querySelector("audio");
+      count.textContent = playLabel(track.playCount);
+      audio.src = track.audioUrl;
+      audio.addEventListener("play", () => {
+        fetch(track.playUrl, { method: "POST", credentials: "omit" })
+          .then((response) => response.ok ? response.json() : null)
+          .then((data) => {
+            if (data && data.playCount != null) {
+              track.playCount = data.playCount;
+              count.textContent = playLabel(data.playCount);
+            }
+          })
+          .catch(() => {});
+      });
       tracks.appendChild(item);
     });
     if (!release.tracks.length) tracks.innerHTML = '<li class="empty-note">Tracks are being added to this release.</li>';

@@ -73,6 +73,31 @@
     return Math.floor(value / 60) + ":" + String(value % 60).padStart(2, "0");
   }
 
+  function playLabel(count) {
+    const value = Number(count || 0);
+    return value + (value === 1 ? " play" : " plays");
+  }
+
+  document.addEventListener("play", (event) => {
+    if (event.target.tagName !== "AUDIO") return;
+    document.querySelectorAll("audio").forEach((audio) => {
+      if (audio !== event.target) audio.pause();
+    });
+  }, true);
+
+  function recordPlay(audio, track, countElement) {
+    audio.addEventListener("play", () => {
+      fetch(track.playUrl, { method: "POST", credentials: "omit" })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          if (!data || data.playCount == null) return;
+          track.playCount = data.playCount;
+          countElement.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(data.playCount);
+        })
+        .catch(() => {});
+    });
+  }
+
   function render() {
     list.innerHTML = "";
     if (!releases.length) {
@@ -176,8 +201,11 @@
       item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><audio controls preload="none"></audio><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
-      item.querySelector("small").textContent = formatDuration(track.durationSeconds);
-      item.querySelector("audio").src = track.audioUrl;
+      const trackInfo = item.querySelector("small");
+      const audio = item.querySelector("audio");
+      trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
+      audio.src = track.audioUrl;
+      recordPlay(audio, track, trackInfo);
       item.querySelector(".track-delete").addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!confirm('Delete "' + track.title + '" from this release?')) return;

@@ -70,6 +70,8 @@ function publicTrack(row, shareToken) {
     trackNumber: row.track_number,
     audioUrl: row.audio_url || `${appBase()}/api/playback/tracks/${row.id}/audio?token=${encodeURIComponent(shareToken)}`,
     durationSeconds: row.duration_seconds,
+    playCount: Number(row.play_count || 0),
+    playUrl: `${appBase()}/api/playback/tracks/${row.id}/play?token=${encodeURIComponent(shareToken)}`,
     createdAt: row.created_at
   };
 }
@@ -204,6 +206,24 @@ export function registerPlaybackRoutes(app) {
     } catch (err) {
       console.error("Playback audio stream error:", err);
       res.status(500).json({ error: "Could not play this track." });
+    }
+  });
+
+  app.post("/api/playback/tracks/:id/play", async (req, res) => {
+    try {
+      const { rows } = await pool.query(
+        `UPDATE lb_playback_tracks t
+            SET play_count = t.play_count + 1
+           FROM lb_playback_releases r
+          WHERE t.release_id = r.id AND t.id = $1 AND r.share_token = $2
+        RETURNING t.play_count`,
+        [req.params.id, String(req.query.token || "")]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Track not found." });
+      res.json({ playCount: Number(rows[0].play_count) });
+    } catch (err) {
+      console.error("Playback play count error:", err);
+      res.status(500).json({ error: "Could not record this play." });
     }
   });
 

@@ -78,3 +78,4 @@ npm start              # API + static frontend on http://localhost:4000
 | PUT | /api/playback/releases/:id/tracks/order | yes | trackIds |
 | DELETE | /api/playback/releases/:id | yes | - |
 | GET | /api/playback/share/:shareToken | - | - |
+| POST | /api/playback/tracks/:id/play?token=... | - | - |

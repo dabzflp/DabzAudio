@@ -62,12 +62,14 @@ CREATE TABLE IF NOT EXISTS lb_playback_tracks (
   file_size BIGINT NOT NULL DEFAULT 0,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
   track_number INTEGER NOT NULL DEFAULT 1,
+  play_count BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE lb_playback_releases ADD COLUMN IF NOT EXISTS cover_public_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_public_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_data BYTEA NOT NULL DEFAULT decode('', 'hex');
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_mime_type TEXT NOT NULL DEFAULT 'audio/mpeg';
+ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS play_count BIGINT NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_lb_playback_releases_user ON lb_playback_releases(user_id, position, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lb_playback_tracks_release ON lb_playback_tracks(release_id, track_number);
 
