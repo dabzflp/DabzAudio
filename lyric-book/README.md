@@ -19,6 +19,8 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
   and/or `Authorization: Bearer`).
 - **Profiles**: artist questions captured at sign-up (name, genre, influences, etc.).
 - **Lyrics**: per-user create / list / read / update / delete.
+- **Playback**: owner-only release library for singles and albums, cover art,
+  Cloudinary-normalized MP3 delivery, drag reordering, and public share links.
 - **Suggestions**: rhymes / near-rhymes / syllable counts via the free
   [Datamuse API](https://www.datamuse.com/api/) — a real dictionary, not an AI bot.
 
@@ -28,6 +30,8 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - `lb_profiles` — display_name, artist_name, genre, influences, experience
 - `lb_lyrics` — title, body, owner, timestamps
 - `lb_reset_tokens` — hashed, single-use, 1-hour password-reset tokens
+- `lb_playback_releases` / `lb_playback_tracks` — release metadata, ownership,
+  ordering, share tokens, and Cloudinary asset references
 
 ## Run locally
 
@@ -44,7 +48,10 @@ npm start              # API + static frontend on http://localhost:4000
 1. Create a **new service** from this repo with root `lyric-book/` (Procfile: `web: node server/server.js`).
 2. Set Variables: `DATABASE_URL`, `JWT_SECRET`, `APP_BASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `NODE_ENV=production`.
 3. Run the migration once (Railway shell `npm run migrate`, or `psql $DATABASE_URL -f server/sql/schema.sql`).
-4. Point the frontend at the service URL via `landing-page/lyric-book/js/config.js`
+4. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
+  for Playback uploads. Each track is limited to 25 MB, cover art to 5 MB, and
+  each artist library to 500 MB. Uploaded audio is delivered as a 128 kbps MP3.
+5. Point the frontend at the service URL via `landing-page/lyric-book/js/config.js`
    (or add a Netlify `_redirects` proxy for `/api/*`).
 
 ## API
@@ -63,3 +70,10 @@ npm start              # API + static frontend on http://localhost:4000
 | GET | /api/lyrics/:id | yes | - |
 | PUT | /api/lyrics/:id | yes | title, body |
 | DELETE | /api/lyrics/:id | yes | - |
+| GET | /api/playback | yes | - |
+| POST | /api/playback/releases | yes | title, description, releaseType |
+| PUT | /api/playback/releases/:id/cover | yes | multipart cover |
+| POST | /api/playback/releases/:id/tracks | yes | multipart audio, title |
+| PUT | /api/playback/releases/:id/tracks/order | yes | trackIds |
+| DELETE | /api/playback/releases/:id | yes | - |
+| GET | /api/playback/share/:shareToken | - | - |

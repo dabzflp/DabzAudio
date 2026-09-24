@@ -35,6 +35,7 @@ import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 import { registerInvoiceRoutes } from "./invoices.js";
 import { registerPaystackRoutes, paystackWebhookHandler } from "./paystack.js";
 import { registerContractRoutes } from "./contracts.js";
+import { registerPlaybackRoutes } from "./playback.js";
 import { rateLimit } from "./rate-limit.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
 
@@ -98,6 +99,9 @@ registerPaystackRoutes(app);
 
 // Music contracts — create/store contracts and signers.
 registerContractRoutes(app);
+
+// Playback routes are additive and use their own lb_playback_* tables.
+registerPlaybackRoutes(app);
 
 // Self-delete account (irreversible). Deletes the user row; cascades to
 // profiles, lyrics, collaborations, contracts, invoices, reset tokens, etc.

@@ -312,6 +312,13 @@ body.auth-bg .site-header {
     width: 100%;
     text-align: center;
   }
+  .header-actions #playbackBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
   .header-actions .who { order: -1; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 }
 
@@ -656,4 +663,72 @@ body.auth-bg .site-header {
 @media (max-width: 560px) {
   .inv-grid { grid-template-columns: 1fr; }
   .inv-item-row { grid-template-columns: 1fr 52px 76px 30px; gap: 6px; }
+}
+
+/* ---------- Playback ---------- */
+.playback-body { background: radial-gradient(circle at 85% 8%, rgba(255,122,0,0.13), transparent 28%), var(--bg); }
+.playback-page, .shared-playback { max-width: 1060px; margin: 0 auto; padding: 42px 22px 70px; }
+.playback-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.playback-kicker { margin: 0 0 8px; color: var(--orange); font-size: 11px; font-weight: 800; letter-spacing: 1.8px; }
+.playback-hero h1, .shared-release h1 { margin: 0; color: #fff; font-size: clamp(30px, 5vw, 48px); line-height: 1; }
+.playback-hero .sub { max-width: 510px; margin: 12px 0 0; color: var(--muted); }
+.playback-create { background: #171717; border: 1px solid rgba(255,122,0,0.35); border-radius: 14px; padding: 20px; margin-bottom: 26px; }
+.playback-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.playback-panel-head h2 { margin: 0; font-size: 18px; }
+.playback-form { display: grid; grid-template-columns: 1fr 180px; gap: 14px; }
+.playback-form label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 13px; }
+.playback-form input, .playback-form select, .playback-form textarea { background: #0f0f0f; border: 1px solid var(--line); border-radius: 9px; color: #eee; padding: 10px 11px; font: inherit; }
+.playback-form textarea { min-height: 70px; resize: vertical; }
+.playback-form .full { grid-column: 1 / -1; }
+.playback-form-actions { display: flex; align-items: center; gap: 12px; }
+.optional, .cover-note, .track-note { color: #777; font-size: 11px; }
+.release-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(390px, 1fr)); gap: 18px; }
+.release-card { display: flex; gap: 16px; background: rgba(22,22,22,0.88); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+.release-art { width: 112px; height: 112px; flex: 0 0 112px; border-radius: 10px; background: linear-gradient(135deg, #2e2118, #111); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(255,122,0,0.24); }
+.release-art img { width: 100%; height: 100%; object-fit: cover; }
+.release-art-mark { color: var(--orange); font-size: 42px; }
+.release-content { flex: 1; min-width: 0; }
+.release-heading { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.release-card-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.release-type { color: var(--orange); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; font-weight: 700; }
+.release-title { margin: 4px 0 0; font-size: 20px; color: #fff; overflow-wrap: anywhere; }
+.release-description { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 8px 0; }
+.cover-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.track-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 12px; }
+.track-form.is-uploading { opacity: .6; pointer-events: none; }
+.track-title { flex: 1; min-width: 125px; background: #0f0f0f; border: 1px solid var(--line); border-radius: 8px; color: #eee; padding: 8px 9px; }
+.track-list, .shared-track-list { list-style: none; padding: 0; margin: 12px 0 0; }
+.track-row { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding: 8px 0; }
+.drag-handle { color: #777; cursor: grab; font-size: 18px; }
+.track-number { width: 18px; color: var(--orange); font-size: 12px; }
+.track-meta { flex: 1; min-width: 0; }
+.track-meta b { display: block; color: #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-meta small { color: var(--muted); font-size: 11px; }
+.track-row audio { width: 150px; height: 30px; }
+.release-share { display: flex; gap: 8px; margin-top: 12px; }
+.release-share input { flex: 1; min-width: 0; background: #0f0f0f; border: 1px solid var(--line); border-radius: 8px; color: #bbb; padding: 8px; font-size: 11px; }
+.playback-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; gap: 12px; border: 1px dashed rgba(255,122,0,0.28); border-radius: 14px; }
+.shared-playback { max-width: 760px; }
+.shared-release { background: rgba(22,22,22,0.9); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.shared-top { display: flex; gap: 24px; align-items: center; margin-bottom: 28px; }
+.shared-cover { width: 190px; height: 190px; object-fit: cover; border-radius: 12px; flex: 0 0 190px; }
+.shared-cover-empty { display: flex; align-items: center; justify-content: center; background: #231a13; color: var(--orange); font-size: 70px; }
+.shared-artist { color: #ddd; margin: 10px 0 0; font-size: 15px; }
+.shared-description { margin: 8px 0 0; }
+.shared-track { display: flex; justify-content: space-between; align-items: center; gap: 14px; border-top: 1px solid var(--line); padding: 13px 0; }
+.shared-track-number { color: var(--orange); font-size: 12px; margin-right: 12px; }
+.shared-track b { font-size: 14px; color: #eee; }
+.shared-track audio { width: 220px; height: 32px; }
+@media (max-width: 650px) {
+  .playback-page, .shared-playback { padding: 28px 16px 50px; }
+  .playback-hero, .shared-top { align-items: flex-start; flex-direction: column; }
+  .playback-hero .btn { width: 100%; }
+  .playback-form { grid-template-columns: 1fr; }
+  .playback-form .full { grid-column: auto; }
+  .release-grid { grid-template-columns: 1fr; }
+  .release-card { flex-direction: column; }
+  .release-art { width: 100%; height: min(62vw, 260px); flex-basis: auto; }
+  .track-row, .shared-track { align-items: flex-start; flex-wrap: wrap; }
+  .track-row audio, .shared-track audio { width: 100%; }
+  .shared-cover { width: min(72vw, 280px); height: min(72vw, 280px); flex-basis: auto; }
 }

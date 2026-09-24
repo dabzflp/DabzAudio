@@ -34,6 +34,39 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_profiles_username
 -- When the handle was last changed, to rate-limit renames (once / 30 days).
 ALTER TABLE lb_profiles ADD COLUMN IF NOT EXISTS username_updated_at TIMESTAMPTZ;
 
+-- Playback releases and tracks. Audio is stored outside Postgres; the database
+-- keeps ownership, ordering, metadata, and the unguessable public share token.
+CREATE TABLE IF NOT EXISTS lb_playback_releases (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  release_type TEXT NOT NULL DEFAULT 'single',
+  cover_url TEXT NOT NULL DEFAULT '',
+  cover_public_id TEXT NOT NULL DEFAULT '',
+  share_token TEXT NOT NULL UNIQUE,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT lb_playback_release_type CHECK (release_type IN ('single', 'album'))
+);
+
+CREATE TABLE IF NOT EXISTS lb_playback_tracks (
+  id BIGSERIAL PRIMARY KEY,
+  release_id BIGINT NOT NULL REFERENCES lb_playback_releases(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  audio_url TEXT NOT NULL,
+  audio_public_id TEXT NOT NULL DEFAULT '',
+  file_size BIGINT NOT NULL DEFAULT 0,
+  duration_seconds INTEGER NOT NULL DEFAULT 0,
+  track_number INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE lb_playback_releases ADD COLUMN IF NOT EXISTS cover_public_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_public_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_lb_playback_releases_user ON lb_playback_releases(user_id, position, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lb_playback_tracks_release ON lb_playback_tracks(release_id, track_number);
+
 CREATE TABLE IF NOT EXISTS lb_lyrics (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
