@@ -256,6 +256,39 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
+  app.put("/api/playback/releases/:releaseId/tracks/:trackId/audio", requireAuth, uploadSingle("audio"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "Choose an audio file." });
+    try {
+      const { rows } = await pool.query(
+        `SELECT t.file_size AS old_size, r.share_token,
+                (SELECT COALESCE(SUM(all_tracks.file_size), 0)::bigint
+                   FROM lb_playback_tracks all_tracks
+                   JOIN lb_playback_releases all_releases ON all_releases.id = all_tracks.release_id
+                  WHERE all_releases.user_id = r.user_id) AS library_size
+           FROM lb_playback_tracks t
+           JOIN lb_playback_releases r ON r.id = t.release_id
+          WHERE t.id = $1 AND t.release_id = $2 AND r.user_id = $3`,
+        [req.params.trackId, req.params.releaseId, req.user.id]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Track not found." });
+      const availableSize = Number(rows[0].library_size) - Number(rows[0].old_size) + req.file.size;
+      if (availableSize > MAX_LIBRARY_BYTES) {
+        return res.status(413).json({ error: "This replacement would exceed your 500 MB Playback library limit." });
+      }
+      const updated = await pool.query(
+        `UPDATE lb_playback_tracks
+            SET audio_url = '', audio_data = $1, audio_mime_type = $2, file_size = $3, duration_seconds = 0, audio_public_id = ''
+          WHERE id = $4 AND release_id = $5
+        RETURNING *`,
+        [req.file.buffer, req.file.mimetype, req.file.size, req.params.trackId, req.params.releaseId]
+      );
+      res.json({ track: publicTrack(updated.rows[0], rows[0].share_token) });
+    } catch (err) {
+      console.error("Playback audio replacement error:", err);
+      res.status(500).json({ error: "Could not replace this audio file." });
+    }
+  });
+
   app.put("/api/playback/releases/:releaseId/tracks/:trackId", requireAuth, async (req, res) => {
     const title = String(req.body?.title || "").trim().slice(0, 160);
     if (!title) return res.status(400).json({ error: "Give this track a name." });

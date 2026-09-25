@@ -222,12 +222,14 @@
       item.className = "track-row";
       item.draggable = true;
       item.dataset.id = track.id;
-      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small></div><button class="track-edit" type="button" title="Rename track">Edit</button><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
+      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small><span class="replace-status" aria-live="polite"></span></div><button class="track-edit" type="button" title="Rename track">Edit</button><label class="track-replace">Replace audio<input class="replace-audio-input" type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/mp4,audio/aac,audio/x-m4a" hidden /></label><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
       const trackInfo = item.querySelector("small");
       const audio = item.querySelector("audio");
       const repeat = item.querySelector(".repeat-track");
+      const replaceInput = item.querySelector(".replace-audio-input");
+      const replaceStatus = item.querySelector(".replace-status");
       trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
       audio.src = track.audioUrl;
       repeat.addEventListener("click", () => {
@@ -236,6 +238,24 @@
         repeat.setAttribute("aria-pressed", String(audio.loop));
       });
       recordPlay(audio, track, trackInfo);
+      replaceInput.addEventListener("change", async () => {
+        const file = replaceInput.files[0];
+        if (!file) return;
+        replaceStatus.className = "replace-status is-loading";
+        replaceStatus.textContent = "Preparing replacement...";
+        try {
+          const form = new FormData();
+          form.append("audio", file);
+          const data = await upload("/api/playback/releases/" + release.id + "/tracks/" + track.id + "/audio", form, "PUT", (progress) => {
+            replaceStatus.textContent = progress.percent < 100 ? uploadLabel(progress) : "Upload received · saving audio...";
+          });
+          Object.assign(track, data.track);
+          render();
+        } catch (err) {
+          replaceStatus.className = "replace-status is-error";
+          replaceStatus.textContent = err.message;
+        } finally { replaceInput.value = ""; }
+      });
       item.querySelector(".track-edit").addEventListener("click", async (event) => {
         event.stopPropagation();
         const title = window.prompt("Track name", track.title);

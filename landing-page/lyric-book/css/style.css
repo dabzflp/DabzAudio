@@ -723,9 +723,14 @@ body.auth-bg .site-header {
 .track-meta { flex: 1; min-width: 0; }
 .track-meta b { display: block; color: #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-meta small { color: var(--muted); font-size: 11px; }
+.replace-status { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.replace-status.is-loading { color: var(--orange); }
+.replace-status.is-error { color: var(--danger); }
 .shared-track-plays { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
 .track-edit { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; }
 .track-edit:hover { color: var(--orange); border-color: rgba(255,122,0,0.5); }
+.track-replace { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.track-replace:hover { color: var(--orange); border-color: rgba(255,122,0,0.5); }
 .track-row audio { width: 150px; height: 30px; }
 .track-controls, .shared-track-controls { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .repeat-track { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); padding: 5px 7px; font-size: 11px; cursor: pointer; }
