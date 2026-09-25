@@ -18,7 +18,8 @@ function clampPercent(n) {
 }
 
 function signingUrl(_req, token) {
-  const base = (process.env.APP_BASE_URL || "https://dabzaudio.com/lyric-book").replace(/\/$/, "");
+  const configured = (process.env.APP_BASE_URL || "https://dabzaudio.com").replace(/\/$/, "");
+  const base = /\/lyric-book$/i.test(configured) ? configured : `${configured}/lyric-book`;
   return `${base}/sign.html?token=${encodeURIComponent(token)}`;
 }
 
@@ -407,17 +408,27 @@ export function registerContractRoutes(app) {
 
       const completed = allSigners.every((s) => s.signed_at);
       if (completed) {
+        await client.query(
+          "UPDATE lb_contracts SET completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() WHERE id = $1",
+          [signer.contract_id]
+        );
         const { rows: contractRows } = await client.query(
           `SELECT * FROM lb_contracts WHERE id = $1`,
           [signer.contract_id]
         );
         const contract = contractRows[0];
         const contractHtml = formatContractHtml(contract, allSigners);
+        const { rows: signerTokens } = await client.query(
+          "SELECT id, signing_token FROM lb_contract_signers WHERE contract_id = $1",
+          [signer.contract_id]
+        );
         for (const s of allSigners) {
+          const signerToken = signerTokens.find((row) => row.id === s.id)?.signing_token;
           await sendContractCompleted(s.email, {
             songTitle: contract.song_title,
             artistName: contract.artist_name,
-            contractHtml
+            contractHtml,
+            downloadUrl: `${signingUrl(null, signerToken)}&download=1`
           });
         }
       }

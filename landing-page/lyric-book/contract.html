@@ -12,6 +12,7 @@
   <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/contract-pdf.js"></script>
   <script src="js/contract.js" defer></script>
   <style>
     .contract-page.contract-page { max-width: 760px; }
@@ -38,7 +39,7 @@
 
   <main class="invoice-page contract-page">
     <h2>Create a music rights contract</h2>
-    <p class="sub">Record the song, ownership splits, and signers. In a future update, each signer will receive an email to sign and a final PDF when everyone has signed.</p>
+    <p class="sub">Record the song, ownership splits, and signers. When everyone has signed, the completed contract stays in Lyric Book and each party can download a PDF copy.</p>
 
     <form id="contractForm" class="contract-form invoice-doc" autocomplete="off">
       <div class="field">
@@ -97,6 +98,11 @@
       <h4 style="margin:0 0 10px">Signing links</h4>
       <ul class="status-list" id="linksList"></ul>
     </div>
+
+    <section class="invoice-doc saved-contracts" id="savedContractsBox">
+      <h3 style="margin-top:0">Saved contracts</h3>
+      <ul class="status-list" id="savedContractsList"><li class="sub">Loading contracts…</li></ul>
+    </section>
 
   </main>
 </body>

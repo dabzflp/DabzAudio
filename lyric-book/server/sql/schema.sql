@@ -275,9 +275,11 @@ CREATE TABLE IF NOT EXISTS lb_contracts (
   territory TEXT NOT NULL DEFAULT 'Worldwide',
   governing_law TEXT NOT NULL DEFAULT '',
   effective_date DATE,
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE lb_contracts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_lb_contracts_user_updated ON lb_contracts(user_id, updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS lb_contract_signers (

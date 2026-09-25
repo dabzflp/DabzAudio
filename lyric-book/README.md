@@ -32,6 +32,8 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - `lb_reset_tokens` — hashed, single-use, 1-hour password-reset tokens
 - `lb_playback_releases` / `lb_playback_tracks` — release metadata, ownership,
   ordering, share tokens, and Cloudinary asset references
+- `lb_contracts` / `lb_contract_signers` — saved contracts, signer status,
+  signatures, and completion timestamps
 
 ## Run locally
 

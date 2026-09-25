@@ -567,6 +567,13 @@ body.auth-bg .site-header {
 }
 .lb-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+.saved-contracts { margin-top: 20px; }
+.saved-contract-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.saved-contract-row:last-child { border-bottom: none; }
+.saved-contract-row b, .saved-contract-row small { display: block; }
+.saved-contract-row b { color: #fff; font-size: 14px; }
+.saved-contract-row small { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
 /* ---------- Invoices ---------- */
 .modal.modal-wide { max-width: 640px; }
 .inv-badge {

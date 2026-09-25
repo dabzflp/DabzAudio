@@ -231,7 +231,7 @@ export async function sendContractInvite(to, { songTitle, artistName, signUrl })
   return { sent: true };
 }
 
-export async function sendContractCompleted(to, { songTitle, artistName, contractHtml }) {
+export async function sendContractCompleted(to, { songTitle, artistName, contractHtml, downloadUrl }) {
   if (!to) return { sent: false };
   const song = escHtml(songTitle || "a song");
   const artist = escHtml(artistName || "A DabzAudio artist");
@@ -239,7 +239,8 @@ export async function sendContractCompleted(to, { songTitle, artistName, contrac
   const html = shell(`
     <h2 style="color:#fff;margin:0 0 12px">All signers have signed</h2>
     <p style="color:#9b9b9b;line-height:1.5">The music contract for <b style="color:#fff">${song}</b> by ${artist} is now fully signed. Here is the completed agreement:</p>
-    <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>`);
+    <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>
+    ${downloadUrl ? `<p style="margin-top:18px">${ctaButton(downloadUrl, "Download completed PDF")}</p>` : ""}`);
   if (!resend) {
     console.log(`[email disabled] Contract completed for ${to}: ${song}`);
     return { sent: false };

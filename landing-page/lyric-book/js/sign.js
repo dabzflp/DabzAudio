@@ -14,6 +14,7 @@
     signMsg: document.getElementById("signMsg"),
     doneBox: document.getElementById("doneBox"),
     doneMsg: document.getElementById("doneMsg"),
+    downloadContractBtn: document.getElementById("downloadContractBtn"),
     errorBox: document.getElementById("errorBox"),
     sigCanvas: document.getElementById("sigCanvas"),
     clearSig: document.getElementById("clearSig")
@@ -22,6 +23,15 @@
   let ctx = null;
   let drawing = false;
   let hasDrawn = false;
+  let completedContract = null;
+  let completedSigners = [];
+  let currentContract = null;
+
+  function enableDownload(contract, signers) {
+    completedContract = contract;
+    completedSigners = signers || [];
+    els.downloadContractBtn.hidden = false;
+  }
 
   function esc(s) {
     return String(s == null ? "" : s)
@@ -170,6 +180,7 @@ This agreement constitutes the entire understanding between the parties concerni
     try {
       const data = await window.LB.apiFetch("/api/contract-sign?token=" + encodeURIComponent(token));
       const c = data.contract;
+      currentContract = c;
       const me = data.me;
       const signers = data.signers || [];
 
@@ -178,6 +189,10 @@ This agreement constitutes the entire understanding between the parties concerni
       els.docTitle.textContent = esc(c.song_title);
       els.docText.innerHTML = "<pre>" + renderContract(c, signers) + "</pre>";
       renderStatus(signers, me.id);
+      if (signers.length && signers.every((signer) => signer.signed_at)) {
+        enableDownload(c, signers);
+        if (params.get("download") === "1") setTimeout(() => els.downloadContractBtn.click(), 250);
+      }
       setupCanvas();
 
       if (me.signedAt) {
@@ -219,6 +234,7 @@ This agreement constitutes the entire understanding between the parties concerni
       els.doneBox.hidden = false;
       if (data.completed) {
         els.doneMsg.textContent = "You signed. All signers have now signed and a completed copy will be emailed to everyone.";
+        enableDownload(currentContract, data.signers);
       } else {
         els.doneMsg.textContent = "You signed. A completed copy will be emailed once all signers have signed.";
       }
@@ -231,5 +247,12 @@ This agreement constitutes the entire understanding between the parties concerni
   }
 
   els.signBtn.addEventListener("click", sign);
+  els.downloadContractBtn.addEventListener("click", async () => {
+    if (!completedContract) return;
+    els.downloadContractBtn.disabled = true;
+    try { await window.LBContractPDF.download(completedContract, completedSigners); }
+    catch (err) { els.doneMsg.textContent = err.message || "Could not create the PDF."; }
+    finally { els.downloadContractBtn.disabled = false; }
+  });
   load();
 })();
