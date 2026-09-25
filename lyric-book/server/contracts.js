@@ -95,7 +95,7 @@ function formatContractHtml(contract, signers) {
     )
     .join("");
 
-  const text = `UK MUSIC RIGHTS AGREEMENT TEMPLATE
+  const text = `MUSIC RIGHTS AGREEMENT
 
 Song: ${escHtml(contract.song_title)}
 Primary artist: ${escHtml(contract.artist_name)}
