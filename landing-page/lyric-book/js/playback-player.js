@@ -9,7 +9,7 @@
     audio.classList.add("native-audio");
     const player = document.createElement("div");
     player.className = "custom-player";
-    player.innerHTML = '<button class="player-play" type="button" aria-label="Play">▶</button><span class="player-time player-current">0:00</span><input class="player-seek" type="range" min="0" max="1000" value="0" aria-label="Seek through track" /><span class="player-time player-duration">0:00</span><button class="player-mute" type="button" aria-label="Mute">◖</button><input class="player-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />';
+    player.innerHTML = '<button class="player-play" type="button" aria-label="Play">▶</button><span class="player-time player-current">0:00</span><input class="player-seek" type="range" min="0" max="1000" value="0" aria-label="Seek through track" /><span class="player-time player-duration">0:00</span><button class="player-mute" type="button" aria-label="Mute">VOL</button><input class="player-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />';
     audio.parentNode.insertBefore(player, audio);
 
     const play = player.querySelector(".player-play");
@@ -40,11 +40,11 @@
     volume.addEventListener("input", () => {
       audio.volume = Number(volume.value);
       audio.muted = audio.volume === 0;
-      mute.textContent = audio.muted ? "×" : "◖";
+      mute.textContent = audio.muted ? "MUT" : "VOL";
     });
     mute.addEventListener("click", () => {
       audio.muted = !audio.muted;
-      mute.textContent = audio.muted ? "×" : "◖";
+      mute.textContent = audio.muted ? "MUT" : "VOL";
     });
     ["loadedmetadata", "durationchange", "timeupdate", "progress", "ended"].forEach((event) => audio.addEventListener(event, sync));
     ["play", "pause", "ended"].forEach((event) => audio.addEventListener(event, syncPlay));
