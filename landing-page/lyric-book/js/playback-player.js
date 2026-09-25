@@ -9,15 +9,13 @@
     audio.classList.add("native-audio");
     const player = document.createElement("div");
     player.className = "custom-player";
-    player.innerHTML = '<button class="player-play" type="button" aria-label="Play">▶</button><span class="player-time player-current">0:00</span><input class="player-seek" type="range" min="0" max="1000" value="0" aria-label="Seek through track" /><span class="player-time player-duration">0:00</span><button class="player-mute" type="button" aria-label="Mute">VOL</button><input class="player-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />';
+    player.innerHTML = '<button class="player-play" type="button" aria-label="Play">▶</button><span class="player-time player-current">0:00</span><input class="player-seek" type="range" min="0" max="1000" value="0" aria-label="Seek through track" /><span class="player-time player-duration">0:00</span>';
     audio.parentNode.insertBefore(player, audio);
 
     const play = player.querySelector(".player-play");
     const current = player.querySelector(".player-current");
     const duration = player.querySelector(".player-duration");
     const seek = player.querySelector(".player-seek");
-    const mute = player.querySelector(".player-mute");
-    const volume = player.querySelector(".player-volume");
 
     function sync() {
       current.textContent = clock(audio.currentTime);
@@ -36,15 +34,6 @@
       if (!audio.duration) return;
       audio.currentTime = (Number(seek.value) / 1000) * audio.duration;
       sync();
-    });
-    volume.addEventListener("input", () => {
-      audio.volume = Number(volume.value);
-      audio.muted = audio.volume === 0;
-      mute.textContent = audio.muted ? "MUT" : "VOL";
-    });
-    mute.addEventListener("click", () => {
-      audio.muted = !audio.muted;
-      mute.textContent = audio.muted ? "MUT" : "VOL";
     });
     ["loadedmetadata", "durationchange", "timeupdate", "progress", "ended"].forEach((event) => audio.addEventListener(event, sync));
     ["play", "pause", "ended"].forEach((event) => audio.addEventListener(event, syncPlay));
