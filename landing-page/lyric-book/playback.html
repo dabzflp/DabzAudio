@@ -51,7 +51,7 @@
     <article class="release-card">
       <div class="release-art"><img alt="" /><span class="release-art-mark">♪</span></div>
       <div class="release-content">
-        <div class="release-heading"><div><span class="release-type"></span><h2 class="release-title"></h2></div><div class="release-card-actions"><button class="btn subtle small edit-release" type="button">Edit details</button><button class="btn subtle small share-btn" type="button">Share</button><button class="btn danger small delete-release" type="button">Delete</button></div></div>
+        <div class="release-heading"><div><span class="release-type"></span><h2 class="release-title"></h2></div><div class="release-card-actions"><button class="btn subtle small preview-release" type="button">Preview</button><button class="btn subtle small edit-release" type="button">Edit details</button><button class="btn subtle small share-btn" type="button">Share</button><button class="btn danger small delete-release" type="button">Delete</button></div></div>
         <p class="release-description"></p>
         <form class="release-edit" hidden><input class="release-edit-title" maxlength="160" required /><textarea class="release-edit-description" maxlength="1000" placeholder="Release bio"></textarea><div><button class="btn small" type="submit">Save details</button><button class="btn subtle small cancel-release-edit" type="button">Cancel</button><span class="msg release-edit-msg"></span></div></form>
         <div class="cover-row"><label class="btn ghost small">Cover art<input class="cover-input" type="file" accept="image/jpeg,image/png,image/webp" hidden /></label><span class="cover-note">JPG, PNG or WebP · 5 MB max</span><span class="upload-status cover-status" aria-live="polite"></span></div>
@@ -62,6 +62,7 @@
     </article>
   </template>
 
+  <script src="js/playback-player.js"></script>
   <script src="js/playback.js"></script>
 </body>
 </html>

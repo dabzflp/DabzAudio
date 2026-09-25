@@ -41,6 +41,7 @@
       });
       count.textContent = playLabel(track.playCount);
       audio.src = track.audioUrl;
+      window.LBPlaybackPlayer.mount(audio, { protectedAudio: true });
       audio.addEventListener("play", () => {
         fetch(track.playUrl, { method: "POST", credentials: "omit" })
           .then((response) => response.ok ? response.json() : null)

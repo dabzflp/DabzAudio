@@ -116,6 +116,7 @@
     const title = card.querySelector(".release-title");
     const description = card.querySelector(".release-description");
     const share = card.querySelector(".share-btn");
+    const preview = card.querySelector(".preview-release");
     const deleteRelease = card.querySelector(".delete-release");
     const editRelease = card.querySelector(".edit-release");
     const releaseEdit = card.querySelector(".release-edit");
@@ -146,6 +147,9 @@
     }
 
     share.addEventListener("click", () => { shareBox.hidden = !shareBox.hidden; });
+    preview.addEventListener("click", () => {
+      window.open(release.shareUrl, "_blank", "noopener,noreferrer");
+    });
     editRelease.addEventListener("click", () => {
       releaseEdit.hidden = !releaseEdit.hidden;
       releaseEditTitle.value = release.title;
@@ -232,6 +236,7 @@
       const replaceStatus = item.querySelector(".replace-status");
       trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
       audio.src = track.audioUrl;
+      window.LBPlaybackPlayer.mount(audio);
       repeat.addEventListener("click", () => {
         audio.loop = !audio.loop;
         repeat.classList.toggle("active", audio.loop);
