@@ -42,7 +42,7 @@
 
   function text(contract, signers) {
     const lines = [
-      "UK MUSIC RIGHTS AGREEMENT TEMPLATE",
+      "MUSIC RIGHTS AGREEMENT",
       "",
       `Song: ${contract.song_title || ""}`,
       `Primary artist: ${contract.artist_name || ""}`,
@@ -98,7 +98,7 @@
     let y = 20;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("DabzAudio Music Contract", margin, y);
+    doc.text("Music Contract", margin, y);
     y += 10;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
