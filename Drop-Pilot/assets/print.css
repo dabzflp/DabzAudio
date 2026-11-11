@@ -1,0 +1,33 @@
+@media print {
+  .dp-no-print {
+    display: none !important;
+  }
+
+  .dp-print {
+    max-width: none;
+    padding: 0;
+    color: #1c1917;
+    background: #ffffff;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr,
+  .break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

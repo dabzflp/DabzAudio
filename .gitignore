@@ -33,4 +33,6 @@ uploads/
 #llm
 audio-llm/
 
-.
+
+# Transfer a file local storage
+lyric-book/server/.transfers/

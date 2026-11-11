@@ -24,16 +24,42 @@
 
   async function imageData(url) {
     if (!url) return null;
-    if (String(url).startsWith("data:image")) return url;
+    let dataUrl = String(url);
+    if (!dataUrl.startsWith("data:image")) {
+      try {
+        const response = await fetch(dataUrl, { mode: "cors" });
+        if (!response.ok) return null;
+        const blob = await response.blob();
+        dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    }
     try {
-      const response = await fetch(url, { mode: "cors" });
-      if (!response.ok) return null;
-      const blob = await response.blob();
       return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+        const image = new Image();
+        image.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d");
+          context.drawImage(image, 0, 0);
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < pixels.data.length; i += 4) {
+            pixels.data[i] = 17;
+            pixels.data[i + 1] = 17;
+            pixels.data[i + 2] = 17;
+          }
+          context.putImageData(pixels, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        image.onerror = reject;
+        image.src = dataUrl;
       });
     } catch {
       return null;
@@ -42,43 +68,30 @@
 
   function text(contract, signers) {
     const lines = [
-      "MUSIC RIGHTS AGREEMENT",
+      "SONG CONTRIBUTION & OWNERSHIP SPLIT SHEET",
       "",
       `Song: ${contract.song_title || ""}`,
       `Primary artist: ${contract.artist_name || ""}`,
       `Effective date: ${date(contract.effective_date)}`,
       "",
-      "DESCRIPTION OF THE MUSICAL WORK",
+        "SONG / CONTRIBUTION DETAILS",
       contract.description || "",
       "",
-      "TERRITORY AND GOVERNING LAW",
+        "ADDITIONAL DETAILS",
       `Territory: ${contract.territory || "Worldwide"}`,
       `Governing law / jurisdiction: ${contract.governing_law || "Not specified"}`,
       "",
-      "OWNERSHIP AND REVENUE SPLITS"
+        "CONTRIBUTORS AND OWNERSHIP PERCENTAGES"
     ];
     (signers || []).forEach((signer, index) => {
       lines.push(`${index + 1}. ${signer.name} (${signer.email}) - ${signer.role}`);
       lines.push(`   Master share: ${signer.master_share_percent}% | Publishing share: ${signer.publishing_share_percent}%`);
     });
     lines.push(
-      "",
-      "GRANT OF RIGHTS AND USE",
-      "Each party grants the rights reasonably required to create, reproduce, distribute, communicate to the public, perform, synchronise, promote and exploit the work and recordings within the Territory, subject to the ownership splits above.",
-      "",
-      "CREDITS AND MORAL RIGHTS",
-      "The parties will use reasonable endeavours to provide accurate credits. To the extent permitted by the Copyright, Designs and Patents Act 1988, each party consents to reasonable editing, adaptation and exploitation and waives or agrees not to assert moral rights only to the extent permitted by law.",
-      "",
-      "ACCOUNTING AND PAYMENT",
-      "Unless a written schedule states otherwise, this agreement records ownership percentages only and does not create a promise to pay an advance, fee or royalty. Each party is responsible for registering and collecting its own income and keeping accurate records.",
-      "",
-      "WARRANTIES, CONFIDENTIALITY, TERM AND TERMINATION",
-      "Each party warrants that it has authority to enter this agreement and its contribution does not knowingly infringe another person’s rights. Non-public terms and unreleased materials must be kept confidential. The agreement continues for the life of the rights granted unless the parties agree otherwise in writing; material breach may be grounds for termination.",
-      "",
-      "GOVERNING LAW AND DISPUTES",
-      `This agreement is governed by ${contract.governing_law || "the stated UK jurisdiction"}. The parties will first try in good faith to resolve disputes through discussion or mediation before court proceedings, unless an urgent legal remedy is required.`,
-      "",
-      "SIGNATURES AND PARTY DETAILS"
+        `Master share total: ${(signers || []).reduce((sum, signer) => sum + (Number(signer.master_share_percent) || 0), 0).toFixed(2)}%`,
+        `Publishing share total: ${(signers || []).reduce((sum, signer) => sum + (Number(signer.publishing_share_percent) || 0), 0).toFixed(2)}%`,
+        "",
+        "SIGNATURES AND PARTY DETAILS"
     );
     (signers || []).forEach((signer) => {
       lines.push(`${signer.name}`);
@@ -86,7 +99,11 @@
       lines.push(`Master share: ${signer.master_share_percent}% | Publishing share: ${signer.publishing_share_percent}%`);
       lines.push(`Signed name: ${signer.name} | Signed: ${date(signer.signed_at)}`);
     });
-    lines.push("", "This is a UK-oriented contract template generated by DabzAudio, not legal advice. The parties should obtain advice from a qualified UK music solicitor before signing or relying on it.");
+    lines.push(
+      "",
+        "This Split Sheet records the contributors and ownership percentages entered by the parties. It does not by itself transfer copyright or grant exploitation rights, and does not replace any separate rights, publishing, recording or royalty agreement.",
+        "Generated by DabzAudio; obtain independent music-law advice where needed."
+    );
     return lines.join("\n");
   }
 
@@ -98,7 +115,7 @@
     let y = 20;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("Music Contract", margin, y);
+    doc.text("DabzAudio Split Sheet", margin, y);
     y += 10;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
@@ -124,7 +141,7 @@
       doc.setFont("helvetica", "normal");
     }
     const safeName = String(contract.song_title || "music-contract").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "music-contract";
-    doc.save(`${safeName}-completed-contract.pdf`);
+    doc.save(`${safeName}-completed-split-sheet.pdf`);
   }
 
   window.LBContractPDF = { download };

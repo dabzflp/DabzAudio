@@ -37,6 +37,13 @@
     }
     if (!res.ok) {
       if (res.status === 401) clearToken();
+      if (res.status === 428 && data && data.code === "COUNTRY_REQUIRED" && !/country\.html$/i.test(location.pathname)) {
+        const returnTo = location.pathname.split("/").pop() + location.search;
+        location.assign("country.html?returnTo=" + encodeURIComponent(returnTo));
+      }
+      if (res.status === 402 && data && data.code === "SUBSCRIPTION_REQUIRED" && !/subscription\.html$/i.test(location.pathname)) {
+        location.assign("subscription.html");
+      }
       const message = (data && data.error) || `Request failed (${res.status})`;
       const err = new Error(message);
       err.status = res.status;

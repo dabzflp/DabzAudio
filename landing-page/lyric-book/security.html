@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Account security | DabzAudio Lyric Book</title>
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/product-skin.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body class="auth-bg dabz-lite">
+  <header class="site-header">
+    <a class="brand" href="app.html" style="text-decoration:none">
+      <span class="dabz-brand"><span class="sitename" role="img" aria-label="DA">D&Lambda;</span><span class="dot">.</span></span>
+      <div class="brand-text"><small>Account security</small></div>
+    </a>
+    <a class="back-link" href="app.html">Back to Lyric Book</a>
+  </header>
+
+  <main class="auth-wrap">
+    <section class="auth-card security-card">
+      <h1>Account security</h1>
+      <p class="sub">Add an authenticator app as a second sign-in step. Recovery codes can be used if you lose access to the app.</p>
+      <p id="mfaStatus" class="msg" role="status" aria-live="polite">Loading security settings…</p>
+
+      <button class="btn block" id="setupOpenBtn" type="button" hidden>Set up authenticator</button>
+      <form id="setupForm" hidden>
+        <div class="field">
+          <label for="setupPassword">Current password</label>
+          <input type="password" id="setupPassword" autocomplete="current-password" required />
+        </div>
+        <button class="btn block" type="submit" id="setupBtn">Continue setup</button>
+      </form>
+
+      <section id="setupPanel" hidden>
+        <p>In your authenticator app, add a new account using this setup link or enter the key manually.</p>
+        <p><a class="btn subtle small" id="authenticatorLink" href="#">Open authenticator app</a></p>
+        <label for="mfaSecret">Setup key</label>
+        <code class="security-secret" id="mfaSecret"></code>
+        <form id="enableForm">
+          <div class="field">
+            <label for="enableCode">Current 6-digit authenticator code</label>
+            <input type="text" id="enableCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
+          </div>
+          <button class="btn block" type="submit" id="enableBtn">Verify and enable MFA</button>
+        </form>
+      </section>
+
+      <section id="recoveryPanel" hidden>
+        <h2>Save your recovery codes</h2>
+        <p class="sub">Each code works once. Store them somewhere private; they will not be shown again.</p>
+        <pre class="security-recovery-codes" id="recoveryCodes"></pre>
+        <button class="btn subtle block" id="recoveryDoneBtn" type="button">I’ve saved these codes</button>
+      </section>
+
+      <form id="disableForm" hidden>
+        <h2>Disable authenticator MFA</h2>
+        <div class="field">
+          <label for="disablePassword">Current password</label>
+          <input type="password" id="disablePassword" autocomplete="current-password" required />
+        </div>
+        <div class="field">
+          <label for="disableCode">Authenticator or unused recovery code</label>
+          <input type="text" id="disableCode" autocomplete="one-time-code" maxlength="32" required />
+        </div>
+        <button class="btn subtle block" type="submit" id="disableBtn">Disable MFA</button>
+      </form>
+
+      <div class="msg" id="securityMsg" role="alert" aria-live="polite"></div>
+    </section>
+  </main>
+  <script src="js/security.js"></script>
+</body>
+</html>

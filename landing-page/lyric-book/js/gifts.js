@@ -77,6 +77,7 @@
   let config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, minWithdrawalCents: 500, feeBps: 0 };
   let paystackConfig = { enabled: false, publicKey: "", currency: "ngn", feeBps: 0, minAmount: 100, maxAmount: 5000000 };
   let stripeGifting = false;
+  let paymentProvider = "stripe";
   let selectedRecipient = null;
   let activeCurrency = "usd";      // gift-modal currency: config.currency (Stripe) or "ngn" (Paystack)
   let resolveTimer = null;
@@ -94,7 +95,8 @@
     } catch {
       config = { enabled: false, currency: "usd", minAmount: 1, maxAmount: 1000, minWithdrawalCents: 500, feeBps: 0 };
     }
-    stripeGifting = !!config.enabled;
+    paymentProvider = config.paymentProvider || "stripe";
+    stripeGifting = !!config.enabled && paymentProvider === "stripe";
 
     // Second rail: Naira (Paystack). Optional — dormant unless configured.
     try {
@@ -102,6 +104,7 @@
     } catch {
       paystackConfig = { enabled: false };
     }
+    paystackConfig.enabled = !!paystackConfig.enabled && paymentProvider === "paystack";
 
     // Nothing configured at all → leave the whole feature dormant.
     if (!stripeGifting && !paystackConfig.enabled) return;
@@ -111,7 +114,7 @@
       window.LBStripe.pk = config.publishableKey;
     }
 
-    activeCurrency = config.currency;
+    activeCurrency = paymentProvider === "paystack" ? "ngn" : config.currency;
     els.giftsBtn.hidden = false;
     if (els.giftAnyBtn) els.giftAnyBtn.hidden = false;
     els.giftCurrency.textContent = giftCurrencyCode().toUpperCase();
@@ -225,9 +228,7 @@
       els.giftRecipientResults.appendChild(h);
     }
     users.forEach((u) => {
-      // Rows are always clickable; if the artist can't receive yet we say so
-      // on click rather than leaving a dead, unclickable option.
-      const canGet = !!(u.canReceive || u.canReceiveNgn);
+      const canGet = paymentProvider === "paystack" ? !!u.canReceiveNgn : !!u.canReceive;
       const row = document.createElement("button");
       row.type = "button";
       row.className = "gift-result" + (canGet ? "" : " muted");
@@ -239,8 +240,8 @@
       nm.className = "gift-result-name";
       const handle = u.username ? "@" + u.username : "";
       const methods = [];
-      if (u.canReceive) methods.push("card");
-      if (u.canReceiveNgn) methods.push("\u20a6");
+      if (paymentProvider === "paystack" && u.canReceiveNgn) methods.push("\u20a6");
+      if (paymentProvider === "stripe" && u.canReceive) methods.push("card");
       nm.innerHTML = `<b>${escapeHtml(u.name || handle)}</b>` +
         (handle ? ` <span class="gift-result-handle">${escapeHtml(handle)}</span>` : "") +
         (canGet
@@ -260,9 +261,11 @@
   }
 
   function selectRecipient(u, scopedLyricId) {
-    if (!u.canReceive && !u.canReceiveNgn) {
+    const canReceiveWithProvider = paymentProvider === "paystack" ? !!u.canReceiveNgn : !!u.canReceive;
+    if (!canReceiveWithProvider) {
       const who = u.username ? "@" + u.username : u.name;
-      setMsg(`${who} hasn't set up payouts yet, so they can't receive gifts.`, "err");
+      const rail = paymentProvider === "paystack" ? "Naira Paystack" : "Stripe";
+      setMsg(`${who} hasn't set up ${rail} payouts, so they can't receive this gift.`, "err");
       return;
     }
     selectedRecipient = u;
@@ -294,7 +297,9 @@
     els.giftSelected.hidden = true;
     els.giftSelected.innerHTML = "";
     if (els.giftCurrencyRow) els.giftCurrencyRow.hidden = true;
-    activeCurrency = config.currency;
+    activeCurrency = paymentProvider === "paystack" ? "ngn" : config.currency;
+    const submit = els.giftForm.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = false;
     els.giftCurrency.textContent = giftCurrencyCode().toUpperCase();
     els.giftAmount.min = activeMin();
     els.giftAmount.max = activeMax();
@@ -324,7 +329,7 @@
       if (data.clientSecret) {
         // Pay on-page — no redirect to a Stripe-hosted page.
         hide(els.giftModal);
-        await openCheckout(data.clientSecret);
+        await openCheckout(data.clientSecret, data.stripeAccountId);
       } else if (data.url) {
         window.location.href = data.url; // hosted Checkout fallback
       } else {
@@ -378,12 +383,12 @@
     }
   }
 
-  async function openCheckout(clientSecret) {
+  async function openCheckout(clientSecret, connectedAccountId) {
     if (!els.embedCheckoutModal) return;
     els.embedCheckoutModal.hidden = false;
     els.embedCheckoutContainer.innerHTML = "<p class='sub'>Loading secure checkout…</p>";
     try {
-      await window.LBStripe.mountEmbeddedCheckout(els.embedCheckoutContainer, async () => clientSecret);
+      await window.LBStripe.mountEmbeddedCheckout(els.embedCheckoutContainer, async () => clientSecret, connectedAccountId);
     } catch (err) {
       els.embedCheckoutContainer.innerHTML = "<p class='sub'>Could not load checkout. Please try again.</p>";
     }
@@ -407,7 +412,7 @@
     });
   }
 
-  // Show exactly how a gift splits: what the artist receives vs the DabzAudio fee.
+  // Show the platform commission separately from processor fees paid by the artist.
   function renderBreakdown() {
     if (!els.giftBreakdown) return;
     const bps = activeFeeBps();
@@ -425,13 +430,13 @@
       return;
     }
     const fee = Math.round(amount * bps) / 10000;
-    const net = amount - fee;
     els.giftBreakdown.hidden = false;
     els.giftBreakdown.innerHTML =
-      `<span class="gift-breakdown-row"><span>Artist receives</span><b>${formatMajor(net, cur)}</b></span>` +
+      `<span class="gift-breakdown-row"><span>Gift amount</span><b>${formatMajor(amount - fee, cur)}</b></span>` +
       (feePct > 0
         ? `<span class="gift-breakdown-row muted"><span>DabzAudio fee (${feePct.toLocaleString()}%)</span><span>${formatMajor(fee, cur)}</span></span>`
-        : `<span class="gift-breakdown-row muted"><span>DabzAudio fee</span><span>Free</span></span>`);
+        : `<span class="gift-breakdown-row muted"><span>DabzAudio fee</span><span>Free</span></span>` +
+          `<span class="gift-breakdown-note">The payment provider deducts its processing fee from the artist's payout.</span>`);
   }
 
   /* ---------- Gifts & payouts ---------- */
@@ -609,8 +614,12 @@
           addAction("Finish payout setup", "btn small", startConnect);
         }
       } else {
-        els.payoutStatus.textContent = "Set up payouts to receive gifts from collaborators — Stripe handles ID checks and pays out to your bank.";
-        addAction("Set up payouts", "btn small", startConnect);
+        if (paymentProvider === "paystack") {
+          els.payoutStatus.textContent = "Nigerian accounts set up new payouts through Paystack. Use the Naira payout setup below.";
+        } else {
+          els.payoutStatus.textContent = "Set up payouts to receive gifts from collaborators — Stripe handles ID checks and pays out to your bank.";
+          addAction("Set up payouts", "btn small", startConnect);
+        }
       }
     } catch (err) {
       els.payoutStatus.textContent = err.message || "Could not load payout status.";
@@ -664,7 +673,7 @@
       const h = await window.LB.apiFetch("/api/gifts/history");
       if (h.totalReceivedNetCents > 0) {
         els.giftTotal.hidden = false;
-        els.giftTotal.innerHTML = "Total received: <b>" + formatCents(h.totalReceivedNetCents) + "</b>";
+        els.giftTotal.innerHTML = "Gift total before payment processing fees: <b>" + formatCents(h.totalReceivedNetCents) + "</b>";
       }
       renderHistory(els.giftReceived, h.received, "received");
       renderHistory(els.giftSent, h.sent, "sent");
@@ -780,12 +789,12 @@
   function setupCurrencyForRecipient(u) {
     if (!els.giftCurrencySelect) { activeCurrency = config.currency; return; }
     const opts = [];
-    if (u.canReceive && stripeGifting) {
+    if (paymentProvider === "stripe" && u.canReceive && stripeGifting) {
       stripeCurrencies().forEach((code) => {
         opts.push({ code, label: "Pay in " + String(code).toUpperCase() });
       });
     }
-    if (u.canReceiveNgn && paystackConfig.enabled) {
+    if (paymentProvider === "paystack" && u.canReceiveNgn && paystackConfig.enabled) {
       opts.push({ code: "ngn", label: "Pay in Naira (\u20a6)" });
     }
     els.giftCurrencySelect.innerHTML = "";
@@ -796,7 +805,14 @@
       els.giftCurrencySelect.appendChild(opt);
     });
     els.giftCurrencyRow.hidden = opts.length < 2;
-    els.giftCurrencySelect.value = opts.length ? opts[0].code : config.currency;
+    activeCurrency = paymentProvider === "paystack" ? "ngn" : config.currency;
+    els.giftCurrencySelect.value = opts.length ? opts[0].code : activeCurrency;
+    const submit = els.giftForm.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = opts.length === 0;
+    if (!opts.length) {
+      const rail = paymentProvider === "paystack" ? "Naira Paystack" : "Stripe";
+      setMsg(`This artist hasn't set up ${rail} payouts, so online gifting isn't available.`, "err");
+    }
     onCurrencyChange();
   }
 

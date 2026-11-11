@@ -4,14 +4,14 @@ import { v2 as cloudinary } from "cloudinary";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 
-const MAX_TRACK_BYTES = 25 * 1024 * 1024;
+const MAX_TRACK_BYTES = 100 * 1024 * 1024;
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
-const MAX_LIBRARY_BYTES = 500 * 1024 * 1024;
 const AUDIO_TYPES = new Set([
   "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
   "audio/ogg", "audio/flac", "audio/mp4", "audio/aac", "audio/x-m4a"
 ]);
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DEFAULT_MIX_SETTINGS = { lowDb: 0, midDb: 0, highDb: 0, bypass: false };
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -26,7 +26,7 @@ function uploadSingle(field) {
   return (req, res, next) => upload.single(field)(req, res, (err) => {
     if (!err) return next();
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(413).json({ error: field === "cover" ? "Cover art must be 5 MB or smaller." : "Audio files must be 25 MB or smaller." });
+      return res.status(413).json({ error: field === "cover" ? "Cover art must be 5 MB or smaller." : "Audio files must be 100 MB or smaller." });
     }
     return res.status(400).json({ error: err.message || "Unsupported upload." });
   });
@@ -70,9 +70,24 @@ function publicTrack(row, shareToken) {
     trackNumber: row.track_number,
     audioUrl: row.audio_url || `${appBase()}/api/playback/tracks/${row.id}/audio?token=${encodeURIComponent(shareToken)}`,
     durationSeconds: row.duration_seconds,
+    mixSettings: normalizeMixSettings(row.mix_settings),
     playCount: Number(row.play_count || 0),
     playUrl: `${appBase()}/api/playback/tracks/${row.id}/play?token=${encodeURIComponent(shareToken)}`,
     createdAt: row.created_at
+  };
+}
+
+function normalizeMixSettings(value) {
+  const settings = value && typeof value === "object" ? value : {};
+  const gain = (key) => {
+    const amount = Number(settings[key]);
+    return Number.isFinite(amount) ? Math.max(-12, Math.min(12, amount)) : 0;
+  };
+  return {
+    lowDb: gain("lowDb"),
+    midDb: gain("midDb"),
+    highDb: gain("highDb"),
+    bypass: settings.bypass === true
   };
 }
 
@@ -182,16 +197,6 @@ export function registerPlaybackRoutes(app) {
     try {
       const release = await getRelease(req.user.id, req.params.id);
       if (!release) return res.status(404).json({ error: "Release not found." });
-      const usage = await pool.query(
-        `SELECT COALESCE(SUM(t.file_size), 0)::bigint AS bytes
-           FROM lb_playback_tracks t
-           JOIN lb_playback_releases r ON r.id = t.release_id
-          WHERE r.user_id = $1`,
-        [req.user.id]
-      );
-      if (Number(usage.rows[0].bytes) + req.file.size > MAX_LIBRARY_BYTES) {
-        return res.status(413).json({ error: "Your Playback library is full. Remove a track before uploading more." });
-      }
       const title = String(req.body?.title || req.file.originalname.replace(/\.[^.]+$/, "")).trim().slice(0, 160) || "Untitled track";
       const nextNumber = await pool.query("SELECT COALESCE(MAX(track_number) + 1, 1) AS n FROM lb_playback_tracks WHERE release_id = $1", [release.id]);
       const { rows } = await pool.query(
@@ -260,21 +265,13 @@ export function registerPlaybackRoutes(app) {
     if (!req.file) return res.status(400).json({ error: "Choose an audio file." });
     try {
       const { rows } = await pool.query(
-        `SELECT t.file_size AS old_size, r.share_token,
-                (SELECT COALESCE(SUM(all_tracks.file_size), 0)::bigint
-                   FROM lb_playback_tracks all_tracks
-                   JOIN lb_playback_releases all_releases ON all_releases.id = all_tracks.release_id
-                  WHERE all_releases.user_id = r.user_id) AS library_size
+        `SELECT r.share_token
            FROM lb_playback_tracks t
            JOIN lb_playback_releases r ON r.id = t.release_id
           WHERE t.id = $1 AND t.release_id = $2 AND r.user_id = $3`,
         [req.params.trackId, req.params.releaseId, req.user.id]
       );
       if (!rows.length) return res.status(404).json({ error: "Track not found." });
-      const availableSize = Number(rows[0].library_size) - Number(rows[0].old_size) + req.file.size;
-      if (availableSize > MAX_LIBRARY_BYTES) {
-        return res.status(413).json({ error: "This replacement would exceed your 500 MB Playback library limit." });
-      }
       const updated = await pool.query(
         `UPDATE lb_playback_tracks
             SET audio_url = '', audio_data = $1, audio_mime_type = $2, file_size = $3, duration_seconds = 0, audio_public_id = ''
@@ -286,6 +283,30 @@ export function registerPlaybackRoutes(app) {
     } catch (err) {
       console.error("Playback audio replacement error:", err);
       res.status(500).json({ error: "Could not replace this audio file." });
+    }
+  });
+
+  // Registered before the generic :trackId rename route below, otherwise
+  // Express would match "order" as a :trackId value and never reach this.
+  app.put("/api/playback/releases/:id/tracks/order", requireAuth, async (req, res) => {
+    const ids = Array.isArray(req.body?.trackIds) ? req.body.trackIds.map(Number).filter(Number.isInteger) : [];
+    if (!ids.length) return res.status(400).json({ error: "Provide the track order." });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const release = await client.query("SELECT id FROM lb_playback_releases WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
+      if (!release.rows.length) return res.status(404).json({ error: "Release not found." });
+      for (let index = 0; index < ids.length; index++) {
+        await client.query("UPDATE lb_playback_tracks SET track_number = $1 WHERE id = $2 AND release_id = $3", [index + 1, ids[index], req.params.id]);
+      }
+      await client.query("COMMIT");
+      res.json({ ok: true });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Playback reorder error:", err);
+      res.status(500).json({ error: "Could not reorder tracks." });
+    } finally {
+      client.release();
     }
   });
 
@@ -307,6 +328,26 @@ export function registerPlaybackRoutes(app) {
     } catch (err) {
       console.error("Playback track update error:", err);
       res.status(500).json({ error: "Could not rename this track." });
+    }
+  });
+
+  app.put("/api/playback/releases/:releaseId/tracks/:trackId/mix", requireAuth, async (req, res) => {
+    const mixSettings = normalizeMixSettings(req.body?.mixSettings);
+    try {
+      const { rows } = await pool.query(
+        `UPDATE lb_playback_tracks t
+            SET mix_settings = $1::jsonb
+           FROM lb_playback_releases r
+          WHERE t.id = $2 AND t.release_id = $3 AND r.id = t.release_id AND r.user_id = $4
+        RETURNING t.*`,
+        [JSON.stringify(mixSettings), req.params.trackId, req.params.releaseId, req.user.id]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Track not found." });
+      const release = await getRelease(req.user.id, req.params.releaseId);
+      res.json({ track: publicTrack(rows[0], release.share_token) });
+    } catch (err) {
+      console.error("Playback mix settings error:", err);
+      res.status(500).json({ error: "Could not save this track's mix." });
     }
   });
 
@@ -384,28 +425,6 @@ export function registerPlaybackRoutes(app) {
     }
   });
 
-  app.put("/api/playback/releases/:id/tracks/order", requireAuth, async (req, res) => {
-    const ids = Array.isArray(req.body?.trackIds) ? req.body.trackIds.map(Number).filter(Number.isInteger) : [];
-    if (!ids.length) return res.status(400).json({ error: "Provide the track order." });
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      const release = await client.query("SELECT id FROM lb_playback_releases WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
-      if (!release.rows.length) return res.status(404).json({ error: "Release not found." });
-      for (let index = 0; index < ids.length; index++) {
-        await client.query("UPDATE lb_playback_tracks SET track_number = $1 WHERE id = $2 AND release_id = $3", [index + 1, ids[index], req.params.id]);
-      }
-      await client.query("COMMIT");
-      res.json({ ok: true });
-    } catch (err) {
-      await client.query("ROLLBACK");
-      console.error("Playback reorder error:", err);
-      res.status(500).json({ error: "Could not reorder tracks." });
-    } finally {
-      client.release();
-    }
-  });
-
   app.get("/api/playback/share/:shareToken", async (req, res) => {
     try {
       const { rows } = await pool.query(
@@ -426,4 +445,4 @@ export function registerPlaybackRoutes(app) {
   });
 }
 
-export { MAX_TRACK_BYTES, MAX_COVER_BYTES, MAX_LIBRARY_BYTES };
+export { MAX_TRACK_BYTES, MAX_COVER_BYTES };

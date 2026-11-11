@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Transfer a file | DabzAudio Lyric Book</title>
+  <script src="../assets/js/theme.js"></script>
+  <script src="../assets/js/dialog.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/product-skin.css" />
+  <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/brand-badge.js"></script>
+</head>
+<body class="dabz-lite playback-body">
+  <header class="site-header" data-theme-slot>
+    <div class="brand">
+      <a class="logo-circle playback-logo" href="app.html" data-user-badge aria-label="Back to Lyric Book">DA</a>
+      <a class="brand-text" href="app.html" style="text-decoration:none"><b>DabzAudio</b><small>Transfer a file</small></a>
+    </div>
+    <a class="btn subtle small" href="app.html">Back to Lyric Book</a>
+  </header>
+
+  <main class="playback-page tx-page">
+    <section class="playback-hero">
+      <div>
+        <p class="playback-kicker">SEND FILES TO CREATIVES</p>
+        <h1>Transfer a file</h1>
+        <p class="sub">Send stems, sessions, videos or anything else up to 10 GB. Links expire after 7 days. We’ll email you when a recipient downloads a file.</p>
+      </div>
+    </section>
+
+    <section class="tx-card" id="sendPanel">
+      <label class="tx-drop" id="dropZone" for="fileInput">
+        <span class="tx-drop-icon" aria-hidden="true">+</span>
+        <strong>Add files</strong>
+        <span>or drag and drop files or folders · zips, stems, any file type · up to 10 GB total</span>
+        <input id="fileInput" type="file" multiple hidden />
+        <input id="folderInput" type="file" webkitdirectory hidden />
+      </label>
+      <button class="btn ghost small tx-folder-btn" id="folderBtn" type="button">Choose a folder</button>
+      <ul class="tx-files" id="fileList"></ul>
+
+      <label class="tx-field">Send to <span class="optional">optional · leave blank to copy and share the link yourself</span>
+        <div class="tx-chips" id="chips"><input id="recipientInput" type="email" placeholder="creative@email.com" autocomplete="off" /></div>
+      </label>
+      <label class="tx-field">Message <span class="optional">optional</span>
+        <textarea id="messageInput" maxlength="1000" placeholder="Add a note for the receiver"></textarea>
+      </label>
+
+      <div class="tx-progress" id="progress" hidden>
+        <div class="tx-bar"><span id="bar"></span></div>
+        <small id="progressText"></small>
+      </div>
+
+      <div class="playback-form-actions">
+        <button class="btn" id="sendBtn" type="button" disabled>Transfer</button>
+        <span class="msg" id="sendMsg"></span>
+      </div>
+    </section>
+
+    <section class="tx-card tx-done" id="donePanel" hidden>
+      <h2 id="doneTitle">Your transfer is ready to share</h2>
+      <p class="sub" id="doneText"></p>
+      <div class="release-share"><input id="doneLink" readonly /><button class="btn ghost small" id="doneCopy" type="button">Copy link</button></div>
+      <div class="playback-form-actions"><button class="btn subtle small" id="againBtn" type="button">Send another</button></div>
+    </section>
+
+    <section class="tx-history">
+      <h2>Your transfers</h2>
+      <div class="msg" id="listMsg"></div>
+      <ul class="tx-list" id="transferList"></ul>
+    </section>
+  </main>
+
+  <script src="js/transfer.js"></script>
+</body>
+</html>

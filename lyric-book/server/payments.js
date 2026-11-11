@@ -19,7 +19,7 @@
  *  - GIFT_CURRENCY            primary ISO currency for gifts (default usd)
  *  - GIFT_CURRENCIES          comma-separated ISO currencies a sender may pay in
  *                             (default "usd,gbp,eur,cad,aud"; GIFT_CURRENCY is always added)
- *  - PLATFORM_FEE_BPS         platform fee in basis points, e.g. 500 = 5% (default 0)
+ *  - PLATFORM_FEE_BPS         invoice platform fee in basis points; gifts have no platform fee
  *  - APP_BASE_URL             frontend base, used for Stripe redirect URLs
  */
 import Stripe from "stripe";
@@ -28,6 +28,7 @@ import { requireAuth } from "./auth.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
 import { handleInvoiceEvent } from "./invoices.js";
 import { notifyGiftReceived } from "./notify.js";
+import { paymentProviderForCountry } from "./country-routing.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 export const stripe = SECRET ? new Stripe(SECRET) : null;
@@ -56,18 +57,16 @@ const GIFT_CURRENCIES = (() => {
   return [...new Set([CURRENCY, ...list])];
 })();
 
+export function giftCurrencies() {
+  return [...GIFT_CURRENCIES];
+}
+
 // Coerce a requested gift currency to one we actually support (else the primary).
 function normalizeGiftCurrency(c) {
   const cur = String(c || CURRENCY).toLowerCase();
   return GIFT_CURRENCIES.includes(cur) ? cur : CURRENCY;
 }
-// Platform fee in basis points (100 = 1%). Defaults to 1000 (10%) — fair for a
-// creator-tipping product and enough to cover Stripe's processing fees on typical
-// gifts. Override with PLATFORM_FEE_BPS (set to 0 for a no-fee, artist-keeps-all model).
-const FEE_BPS = Math.max(
-  0,
-  Math.min(10000, Number(process.env.PLATFORM_FEE_BPS ?? 1000))
-);
+const GIFT_PLATFORM_FEE_BPS = 0;
 
 // Sensible gift bounds (in major currency units). Minimum defaults to 5 so
 // Stripe's fixed processing fee (~20p) doesn't make small gifts loss-making;
@@ -111,8 +110,7 @@ function stripeError(res, err, fallback) {
 
 // Round the platform fee from basis points of the gross amount.
 function platformFeeCents(amountCents) {
-  if (!FEE_BPS) return 0;
-  return Math.floor((amountCents * FEE_BPS) / 10000);
+  return Math.floor((amountCents * GIFT_PLATFORM_FEE_BPS) / 10000);
 }
 
 // Upsert a user's connect status from a Stripe Account object.
@@ -154,7 +152,7 @@ async function ensureAccountId(user) {
   if (row && row.stripe_account_id) return row.stripe_account_id;
   const acct = await stripe.accounts.create({
     type: "express",
-    country: CONNECT_COUNTRY,
+    country: user.countryCode || CONNECT_COUNTRY,
     email: user.email,
     capabilities: {
       transfers: { requested: true },
@@ -215,6 +213,30 @@ async function handleEvent(event) {
       // Only email the artist on the actual transition to paid (fires once).
       if (upd.rowCount) await notifyGiftReceived(giftId);
     }
+    if (session.mode === "subscription" && session.metadata?.billingUserId) {
+      const { applyStripeCheckoutSession } = await import("./subscriptions.js");
+      await applyStripeCheckoutSession(session);
+    }
+    if (session.mode === "payment" && session.metadata?.creditReference && session.payment_status === "paid") {
+      const { fulfilCreditOrder } = await import("./credits.js");
+      await fulfilCreditOrder(session.metadata.creditReference);
+    }
+  } else if (
+    event.type === "customer.subscription.created" ||
+    event.type === "customer.subscription.updated" ||
+    event.type === "customer.subscription.deleted"
+  ) {
+    const { applyStripeSubscriptionEvent } = await import("./subscriptions.js");
+    await applyStripeSubscriptionEvent(event.data.object);
+  } else if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object;
+    const subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+    if (subscriptionId) {
+      await pool.query(
+        "UPDATE lb_subscriptions SET status = 'past_due', updated_at = NOW() WHERE stripe_subscription_id = $1 AND status = 'active'",
+        [subscriptionId]
+      );
+    }
   } else if (
     event.type === "checkout.session.expired" ||
     event.type === "checkout.session.async_payment_failed"
@@ -227,6 +249,20 @@ async function handleEvent(event) {
       await pool.query(
         "UPDATE lb_gifts SET status = 'failed' WHERE id = $1 AND status = 'pending'",
         [giftId]
+      );
+    }
+    if (session.metadata?.creditReference) {
+      const { failCreditOrder } = await import("./credits.js");
+      await failCreditOrder(session.metadata.creditReference);
+    }
+    const billingUserId = session.metadata && session.metadata.billingUserId;
+    if (billingUserId) {
+      await pool.query(
+        `UPDATE lb_subscriptions
+            SET status = CASE WHEN status = 'trialing' AND trial_ends_at > NOW() THEN status ELSE 'incomplete' END,
+                updated_at = NOW()
+          WHERE user_id = $1 AND stripe_checkout_session_id = $2`,
+        [billingUserId, session.id]
       );
     }
   } else if (event.type === "payment_intent.payment_failed") {
@@ -255,15 +291,16 @@ async function handleEvent(event) {
  */
 export function registerPaymentRoutes(app) {
   // Public config for the frontend (safe values only).
-  app.get("/api/gifts/config", (req, res) => {
+  app.get("/api/gifts/config", requireAuth, (req, res) => {
     res.json({
       enabled: stripeEnabled(),
+      paymentProvider: paymentProviderForCountry(req.user.countryCode),
       currency: CURRENCY,
       currencies: GIFT_CURRENCIES,
       minAmount: MIN_AMOUNT,
       maxAmount: MAX_AMOUNT,
       minWithdrawalCents: MIN_WITHDRAWAL_CENTS,
-      feeBps: FEE_BPS,
+      feeBps: GIFT_PLATFORM_FEE_BPS,
       // When both keys are present the frontend uses on-page (embedded) Stripe
       // flows instead of redirecting to a Stripe-hosted page.
       embedded: embeddedEnabled(),
@@ -321,6 +358,9 @@ export function registerPaymentRoutes(app) {
   app.post("/api/payouts/connect", requireAuth, async (req, res) => {
     if (!stripe) return notConfigured(res);
     try {
+      if (req.user.countryCode === "NG" && !(await getAccountRow(req.user.id))) {
+        return res.status(409).json({ error: "Nigerian accounts use Paystack for new payout setup." });
+      }
       const accountId = await ensureAccountId(req.user);
       const link = await stripe.accountLinks.create({
         account: accountId,
@@ -340,6 +380,9 @@ export function registerPaymentRoutes(app) {
   app.post("/api/payouts/account-session", requireAuth, async (req, res) => {
     if (!embeddedEnabled()) return res.status(503).json({ error: "Embedded onboarding isn't configured." });
     try {
+      if (req.user.countryCode === "NG" && !(await getAccountRow(req.user.id))) {
+        return res.status(409).json({ error: "Nigerian accounts use Paystack for new payout setup." });
+      }
       const accountId = await ensureAccountId(req.user);
       const session = await stripe.accountSessions.create({
         account: accountId,
@@ -569,6 +612,9 @@ export function registerPaymentRoutes(app) {
 
   // Create a gift → returns a Stripe Checkout URL for the sender to pay.
   app.post("/api/gifts", requireAuth, async (req, res) => {
+    if (paymentProviderForCountry(req.user.countryCode) !== "stripe") {
+      return res.status(409).json({ error: "Nigerian accounts send gifts through Paystack in Naira." });
+    }
     if (!stripe) return notConfigured(res);
     try {
       const toUserId = Number(req.body.toUserId);
@@ -635,8 +681,6 @@ export function registerPaymentRoutes(app) {
             }
           ],
           payment_intent_data: {
-            transfer_data: { destination: recipient.stripe_account_id },
-            application_fee_amount: feeCents || undefined,
             description: `DabzAudio gift to ${to.name}`,
             metadata: { giftId: String(giftId) }
           },
@@ -654,12 +698,18 @@ export function registerPaymentRoutes(app) {
           params.success_url = `${appBase()}/app.html?gift=success`;
           params.cancel_url = `${appBase()}/app.html?gift=cancel&giftId=${giftId}`;
         }
-        const session = await stripe.checkout.sessions.create(params);
+        const session = await stripe.checkout.sessions.create(params, {
+          stripeAccount: recipient.stripe_account_id
+        });
         await pool.query(
           "UPDATE lb_gifts SET stripe_checkout_session_id = $2 WHERE id = $1",
           [giftId, session.id]
         );
-        if (useEmbedded) res.json({ clientSecret: session.client_secret, publishableKey: PUBLISHABLE_KEY });
+        if (useEmbedded) res.json({
+          clientSecret: session.client_secret,
+          publishableKey: PUBLISHABLE_KEY,
+          stripeAccountId: recipient.stripe_account_id
+        });
         else res.json({ url: session.url });
       } catch (err) {
         await pool.query("DELETE FROM lb_gifts WHERE id = $1 AND status = 'pending'", [giftId]);

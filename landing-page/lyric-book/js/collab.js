@@ -82,9 +82,16 @@ function open(options) {
     transports: ["websocket", "polling"],
     withCredentials: true,
     reconnection: true,
-    reconnectionAttempts: 10
+    reconnectionAttempts: Infinity,
+    reconnectionDelayMax: 5000
   });
   s.socket = socket;
+
+  // Ignore events from a session that was already replaced or closed, so a
+  // deliberate disconnect of the old socket can't flash "reconnecting".
+  const report = (...args) => {
+    if (session === s && options.onStatus) options.onStatus(...args);
+  };
 
   // ---- Diff a string change into Yjs ops ----
   function applyDiff(ytext, oldVal, newVal) {
@@ -218,18 +225,19 @@ function open(options) {
     // Report our real Yjs clientID so the server can clean up our presence
     // state when this socket disconnects.
     socket.emit("hello", { clientId: doc.clientID });
-    if (options.onStatus) options.onStatus("connected");
+    report("connected");
   });
-  socket.io.on("reconnect_attempt", () => options.onStatus && options.onStatus("reconnecting"));
-  socket.on("disconnect", () => {
+  socket.io.on("reconnect_attempt", () => report("reconnecting"));
+  socket.on("disconnect", (reason) => {
     s.synced = false;
-    options.onStatus && options.onStatus("offline");
+    if (reason === "io client disconnect") return;
+    report("offline");
   });
   socket.on("connect_error", (err) => {
-    options.onStatus && options.onStatus("error", err.message);
+    report("error", err.message);
   });
   socket.on("err", (d) => {
-    options.onStatus && options.onStatus("error", d && d.code);
+    report("error", d && d.code);
   });
 
   socket.on("meta", (meta) => {
@@ -256,7 +264,7 @@ function open(options) {
           s.prevTitle = s.titleEl.value;
           s.prevBody = s.bodyEl.value;
           s.suppress = false;
-          options.onStatus && options.onStatus("synced");
+          report("synced");
           if (options.onRemoteText) options.onRemoteText(s.bodyEl.value);
         }
       } else if (msgType === MSG_AWARENESS) {

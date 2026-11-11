@@ -31,14 +31,14 @@
   let checkoutInstance = null;
 
   // getClientSecret: async () => "<client_secret>"
-  async function mountEmbeddedCheckout(container, getClientSecret) {
+  async function mountEmbeddedCheckout(container, getClientSecret, connectedAccountId) {
     await loadScript(CHECKOUT_JS);
     const secret = await getClientSecret();
     if (!secret) throw new Error("No client secret");
     // Derive the publishable key from the caller (set on window.LBStripe.pk).
     const pk = window.LBStripe.pk;
     if (!pk) throw new Error("No publishable key");
-    const stripe = window.Stripe(pk);
+    const stripe = window.Stripe(pk, connectedAccountId ? { stripeAccount: connectedAccountId } : undefined);
     if (checkoutInstance) { try { checkoutInstance.destroy(); } catch (e) {} checkoutInstance = null; }
     checkoutInstance = await stripe.initEmbeddedCheckout({ clientSecret: secret });
     container.innerHTML = "";

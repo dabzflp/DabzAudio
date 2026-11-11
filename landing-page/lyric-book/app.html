@@ -7,15 +7,19 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Lyric Book | DabzAudio</title>
   <script src="../assets/js/theme.js"></script>
+  <script src="../assets/js/dialog.js"></script>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
   <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/product-skin.css" />
   <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/pwtoggle.js" defer></script>
+  <script src="js/droppilot-link.js" defer></script>
 </head>
 <body class="dabz-lite">
-  <header class="site-header">
+  <header class="site-header" data-theme-slot>
     <div class="brand">
       <button class="logo-circle" id="avatarBtn" type="button" title="Click to add or change your profile photo">
         <span class="logo-initials" id="avatarImg">DA</span>
@@ -34,22 +38,60 @@
         <span aria-hidden="true">🔔</span>
         <span class="bell-count" id="invitesCount">0</span>
       </button>
-      <button class="btn small" id="giftAnyBtn" type="button" title="Send an artist a gift" hidden>Gift an artist</button>
+      <button class="btn subtle small" id="giftAnyBtn" type="button" title="Send an artist a gift" hidden>Gift an artist</button>
       <button class="btn subtle small" id="giftsBtn" type="button" title="Gifts & payouts" hidden>Gifts</button>
       <button class="btn subtle small" id="invoicesBtn" type="button" title="Invoices" hidden>Invoices <span class="inv-badge" id="invoicesBadge" hidden>0</span></button>
       <a class="btn subtle small" id="playbackBtn" href="playback.html" title="Your music Playback">Playback</a>
-      <a class="btn subtle small" id="contractBtn" href="contract.html" target="_blank" rel="noopener" title="Music contract">Music Contract</a>
-      <span class="who" id="who"></span>
+      <a class="btn subtle small" id="transferBtn" href="transfer.html" title="Send large files to other creatives">Transfer a file</a>
+      <button class="btn subtle small" id="dropPilotBtn" type="button" title="Drop Pilot: plan your release campaign (Pro)" hidden>Drop Pilot <span class="pro-tag">PRO</span></button>
+      <a class="btn subtle small" id="contractBtn" href="contract.html" title="Split Sheet">Split Sheet</a>
+      <a class="btn subtle small" id="membershipBtn" href="subscription.html" title="Lyric Book membership">Plan</a>
+      <span class="account-identity">
+        <span class="country-flag" id="countryFlag" role="img" hidden></span>
+        <span class="who" id="who"></span>
+      </span>
       <button class="btn subtle small" id="logoutBtn" type="button">Log out</button>
-      <button class="btn small danger" id="deleteAccountBtn" type="button" title="Permanently delete this account">Delete account</button>
+      <div class="acct-menu" id="acctMenu">
+        <button class="btn subtle small acct-toggle" id="acctMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="acctPop" title="More account options"><span aria-hidden="true">⋯</span><span class="acct-label">More</span></button>
+        <div class="acct-pop" id="acctPop" role="menu" hidden>
+          <a class="acct-item" href="security.html" role="menuitem">Security &amp; MFA</a>
+          <div class="acct-note">Danger zone</div>
+          <button class="acct-item danger" id="deleteAccountBtn" type="button" role="menuitem">Delete account…</button>
+        </div>
+      </div>
     </div>
   </header>
+  <div class="membership-reminder" id="membershipReminder" hidden>
+    <span id="membershipTimer" aria-live="polite"></span>
+    <a href="subscription.html">Upgrade now</a>
+  </div>
+
+  <div class="modal-overlay" id="deleteAccountModal" hidden>
+    <form class="modal" id="deleteAccountForm" aria-labelledby="deleteAccountTitle">
+      <div class="modal-head">
+        <h3 id="deleteAccountTitle">Delete your account?</h3>
+        <button class="modal-close" id="deleteAccountClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="sub">This permanently deletes your lyrics, contracts, invoices, and shared data. Enter your password to confirm.</p>
+      <div class="field">
+        <label for="deleteAccountPassword">Current password</label>
+        <input id="deleteAccountPassword" type="password" autocomplete="current-password" required />
+      </div>
+      <div class="modal-actions">
+        <button class="btn subtle small" id="deleteAccountCancel" type="button">Cancel</button>
+        <button class="btn small danger" id="deleteAccountConfirm" type="submit">Delete account</button>
+      </div>
+      <div class="msg" id="deleteAccountMsg" role="alert" aria-live="polite"></div>
+    </form>
+  </div>
 
   <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-head">
         <button class="btn block" id="newBtn" type="button">+ New lyric</button>
         <input class="lyric-search" id="lyricSearch" type="search" placeholder="Search your lyrics…" autocomplete="off" />
+        <button class="ai-chip ai-smart-search" id="aiSmartSearchBtn" type="button" title="Search by meaning, not just exact words"><span class="ai-chip-icon">✦</span>Smart search</button>
+        <div class="msg" id="aiSearchMsg"></div>
         <div class="lyric-count" id="lyricCount"></div>
       </div>
       <ul class="lyric-list" id="lyricList"></ul>
@@ -65,6 +107,30 @@
           <span class="save-state" id="saveState"></span>
           <div class="editor-actions" id="editorActions">
             <button class="btn ghost small" id="shareBtn" type="button" hidden>Share</button>
+            <div class="ai-ask-anchor">
+              <button class="btn ghost small ai-ask-trigger" id="aiAskToggle" type="button" aria-haspopup="true" aria-expanded="false"><span class="ai-ask-trigger-dot"></span>Ask AI</button>
+              <div class="ai-ask-popover" id="aiAskPopover" hidden>
+                <div class="ai-ask-popover-head">
+                  <div class="ai-orb ai-orb-mini" id="aiPopoverOrb" aria-hidden="true"><span></span><span></span><span></span></div>
+                  <div class="ai-panel-title">
+                    <h4>Ask AI</h4>
+                    <span class="ai-status" id="aiPopoverStatus">Ready</span>
+                  </div>
+                  <button class="ai-ask-popover-close" id="aiAskPopoverClose" type="button" aria-label="Close">&times;</button>
+                </div>
+                <label class="ai-scope-label" for="aiPopoverScope">Ask about
+                  <select id="aiPopoverScope">
+                    <option value="lyric">The whole lyric</option>
+                  </select>
+                </label>
+                <div class="ai-ask-row">
+                  <input id="aiPopoverInput" placeholder="e.g. Translate this to French" maxlength="2000" />
+                  <button class="ai-send" id="aiPopoverSend" type="button" aria-label="Ask">➤</button>
+                </div>
+                <div class="msg" id="aiPopoverMsg"></div>
+                <div class="ai-results" id="aiPopoverResults" style="display:none"></div>
+              </div>
+            </div>
             <button class="btn ghost small" id="giftBtn" type="button" title="Send a collaborator a gift" hidden>Gift</button>
             <button class="btn danger small" id="deleteBtn" type="button">Delete</button>
           </div>
@@ -96,6 +162,56 @@
           <div class="rhythm-box" id="rhythmBox">
             <div class="empty-note" style="padding:6px">Start typing to see your line rhythm.</div>
           </div>
+        </div>
+
+        <div class="suggest-section ai-panel" id="aiSection">
+          <div class="ai-panel-glow" aria-hidden="true"></div>
+          <div class="ai-panel-head">
+            <div class="ai-orb" id="aiOrb" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="ai-panel-title">
+              <h4>AI Assistant</h4>
+              <span class="ai-status" id="aiStatus">Ready</span>
+            </div>
+          </div>
+          <p class="sub ai-panel-sub">Suggestions only — nothing is applied until you copy it in.</p>
+          <div class="ai-actions">
+            <button class="ai-chip" id="aiImproveBtn" type="button"><span class="ai-chip-icon">✎</span>Improve line</button>
+            <button class="ai-chip" id="aiRhymeBtn" type="button"><span class="ai-chip-icon">♫</span>Rhyme analysis</button>
+            <button class="ai-chip" id="aiIdeasBtn" type="button"><span class="ai-chip-icon">✦</span>Ideas</button>
+          </div>
+          <div class="ai-ask-row">
+            <input id="aiAskInput" placeholder="Ask about this song…" maxlength="2000" />
+            <button class="ai-send" id="aiAskBtn" type="button" aria-label="Ask">➤</button>
+          </div>
+          <button class="ai-more-toggle" id="aiMoreToggle" type="button" aria-expanded="false">More tools <span>▾</span></button>
+          <div class="ai-more" id="aiMore" hidden>
+            <div class="ai-actions">
+              <button class="ai-chip" id="aiTitleBtn" type="button"><span class="ai-chip-icon">#</span>Title ideas</button>
+              <button class="ai-chip" id="aiTagBtn" type="button"><span class="ai-chip-icon">◎</span>Genre &amp; mood</button>
+              <button class="ai-chip" id="aiStructureBtn" type="button"><span class="ai-chip-icon">▤</span>Structure</button>
+            </div>
+            <label class="ai-more-label">Translate a draft
+              <div class="ai-ask-row">
+                <select id="aiTranslateLang">
+                  <option>Spanish</option>
+                  <option>French</option>
+                  <option>Portuguese</option>
+                  <option>German</option>
+                  <option>Yoruba</option>
+                  <option>Japanese</option>
+                </select>
+                <button class="ai-send" id="aiTranslateBtn" type="button" aria-label="Translate">🌐</button>
+              </div>
+            </label>
+            <label class="ai-more-label">Rewrite the tone
+              <div class="ai-ask-row">
+                <input id="aiToneInput" placeholder="e.g. more melancholic" maxlength="200" />
+                <button class="ai-send" id="aiToneBtn" type="button" aria-label="Rewrite tone">➤</button>
+              </div>
+            </label>
+          </div>
+          <div class="msg" id="aiMsg"></div>
+          <div class="ai-results" id="aiResults" style="display:none"></div>
         </div>
       </aside>
     </section>
@@ -274,6 +390,10 @@
           <label class="gift-label">Recipient email
             <input type="email" id="invToEmail" placeholder="name@email.com" required />
           </label>
+          <label class="gift-label">CC email (optional)
+            <input type="email" id="invCcEmail" placeholder="manager@email.com" maxlength="254" />
+            <small>The manager will receive invoice emails and updates. The recipient can see this CC address.</small>
+          </label>
           <label class="gift-label">Recipient name (optional)
             <input type="text" id="invToName" placeholder="Jane Doe" maxlength="120" />
           </label>
@@ -387,6 +507,7 @@
   <script src="js/gifts.js"></script>
   <script src="js/invoice-pdf.js?v=20260917"></script>
   <script src="js/invoices.js"></script>
+  <script src="js/ai-assistant.js"></script>
   <script>
     // Mobile hamburger: collapse the header actions into a dropdown on small screens.
     (function () {

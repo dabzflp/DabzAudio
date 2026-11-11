@@ -6,9 +6,9 @@
  * fund-holder — DabzAudio never holds the money:
  *   - An artist links their Nigerian bank via a Paystack *subaccount*; Paystack
  *     settles their share straight to that bank.
- *   - Gifts / invoices paid in NGN use a split transaction: the artist's
- *     subaccount gets the money, the DabzAudio platform fee is taken as a flat
- *     `transaction_charge` kept in the platform's Paystack balance.
+ *   - Gifts / invoices paid in NGN use a split transaction to an artist's
+ *     subaccount. Gifts have no platform fee and assign Paystack processing
+ *     fees to the subaccount; invoices keep their existing configured fee.
  *
  * Fully additive & gated: every route is a no-op (503 / disabled) unless
  * PAYSTACK_SECRET_KEY is set, so the rest of the app is unaffected.
@@ -31,12 +31,15 @@ const FEE_BPS = Math.max(0, Math.min(10000, Number(process.env.PLATFORM_FEE_BPS 
 const MIN_GIFT_NGN = Math.max(1, Number(process.env.PAYSTACK_MIN_GIFT ?? 100));
 const MAX_GIFT_NGN = Math.max(MIN_GIFT_NGN, Number(process.env.PAYSTACK_MAX_GIFT ?? 5000000));
 
+function requireNigeria(req, res, next) {
+  if (req.user.countryCode !== "NG") {
+    return res.status(403).json({ error: "Paystack account and Naira payment features are available to Nigerian accounts only." });
+  }
+  next();
+}
+
 export function paystackEnabled() { return !!SECRET; }
 export function paystackPublicKey() { return PUBLIC; }
-
-function feeKoboFor(amountKobo) {
-  return Math.round((Number(amountKobo) || 0) * FEE_BPS / 10000);
-}
 
 // Thin Paystack REST helper. Throws a friendly Error on a non-2xx / status:false.
 async function pst(path, { method = "GET", body } = {}) {
@@ -70,7 +73,7 @@ export async function getPaystackAccountRow(userId) {
  * { reference, access_code, authorization_url } — access_code drives the on-page
  * inline popup, authorization_url is the hosted fallback.
  */
-export async function paystackInitTransaction({ email, amountKobo, subaccountCode, transactionChargeKobo, reference, metadata }) {
+export async function paystackInitTransaction({ email, amountKobo, subaccountCode, transactionChargeKobo, feeBearer = "account", reference, metadata, callbackUrl }) {
   const body = {
     email: email || "payer@dabzaudio.app",
     amount: Math.round(Number(amountKobo)),
@@ -78,14 +81,27 @@ export async function paystackInitTransaction({ email, amountKobo, subaccountCod
     reference,
     metadata: metadata || {}
   };
+  if (callbackUrl) body.callback_url = callbackUrl;
   if (subaccountCode) {
     body.subaccount = subaccountCode;
-    // Platform keeps this flat fee; the subaccount gets the rest. The platform
-    // (main account) bears Paystack's processing fee, mirroring Stripe.
+    // transaction_charge is a platform fee. feeBearer sets who pays Paystack's
+    // processor fee; invoices retain the account default.
     if (transactionChargeKobo != null) body.transaction_charge = Math.round(Number(transactionChargeKobo));
-    body.bearer = "account";
+    body.bearer = feeBearer === "subaccount" ? "subaccount" : "account";
   }
   return pst("/transaction/initialize", { method: "POST", body });
+}
+
+export async function paystackInitPlanTransaction({ email, planCode, reference, metadata, callbackUrl }) {
+  if (!planCode) throw new Error("Paystack subscription plan is not configured.");
+  return pst("/transaction/initialize", {
+    method: "POST",
+    body: { email, plan: planCode, reference, metadata: metadata || {}, callback_url: callbackUrl }
+  });
+}
+
+export async function paystackDisableSubscription(code, emailToken) {
+  return pst("/subscription/disable", { method: "POST", body: { code, token: emailToken } });
 }
 
 export async function paystackVerify(reference) {
@@ -125,10 +141,82 @@ export function paystackWebhookHandler(req, res) {
 }
 
 async function handlePaystackEvent(event) {
-  if (!event || event.event !== "charge.success") return;
+  if (!event) return;
   const data = event.data || {};
   const meta = data.metadata || {};
   const reference = data.reference;
+
+  if (event.event === "subscription.create") {
+    const email = data.customer?.email || data.customer?.customer_email;
+    const customerCode = data.customer?.customer_code || null;
+    const subscriptionCode = data.subscription_code || data.subscription?.subscription_code || null;
+    const emailToken = data.email_token || data.subscription?.email_token || null;
+    if (customerCode || email) {
+      await pool.query(
+        `UPDATE lb_subscriptions
+            SET paystack_customer_code = COALESCE($1, paystack_customer_code),
+                paystack_subscription_code = COALESCE($2, paystack_subscription_code),
+                paystack_email_token = COALESCE($3, paystack_email_token),
+                updated_at = NOW()
+          WHERE ($1::text IS NOT NULL AND paystack_customer_code = $1)
+             OR ($4::text IS NOT NULL AND user_id = (SELECT id FROM lb_users WHERE LOWER(email) = LOWER($4) LIMIT 1))`,
+        [customerCode, subscriptionCode, emailToken, email]
+      );
+    }
+    return;
+  }
+
+  if (event.event === "subscription.not_renew") {
+    const code = data.subscription_code || data.subscription?.subscription_code;
+    if (code) await pool.query("UPDATE lb_subscriptions SET cancel_at_period_end = TRUE, updated_at = NOW() WHERE paystack_subscription_code = $1", [code]);
+    return;
+  }
+  if (event.event === "subscription.disable") {
+    const code = data.subscription_code || data.subscription?.subscription_code;
+    if (code) await pool.query("UPDATE lb_subscriptions SET status = 'canceled', current_period_end = NOW(), cancel_at_period_end = FALSE, updated_at = NOW() WHERE paystack_subscription_code = $1", [code]);
+    return;
+  }
+  if (event.event === "invoice.payment_failed") {
+    const customerCode = data.customer?.customer_code;
+    if (customerCode) await pool.query("UPDATE lb_subscriptions SET status = 'past_due', updated_at = NOW() WHERE paystack_customer_code = $1 AND status = 'active'", [customerCode]);
+    return;
+  }
+  if (event.event !== "charge.success") return;
+
+  if (meta.creditReference) {
+    const { fulfilCreditOrder } = await import("./credits.js");
+    await fulfilCreditOrder(meta.creditReference);
+    return;
+  }
+
+  const subscriptionUserId = Number(meta.subscriptionUserId) || null;
+  const customerCode = data.customer?.customer_code || null;
+  const recurringCharge = !!subscriptionUserId || !!data.plan;
+  if (recurringCharge) {
+    const { rows: subscriptionRows } = await pool.query(
+      `SELECT user_id, plan FROM lb_subscriptions
+        WHERE ($1::bigint IS NOT NULL AND user_id = $1)
+           OR ($2::text IS NOT NULL AND paystack_customer_code = $2)
+        LIMIT 1`,
+      [subscriptionUserId, customerCode]
+    );
+    const sub = subscriptionRows[0];
+    if (sub) {
+    const plan = meta.subscriptionPlan || sub.plan;
+    const periodInterval = plan === "annual" ? "1 year" : "1 month";
+    await pool.query(
+      `UPDATE lb_subscriptions
+          SET status = 'active', plan = COALESCE($2, plan), currency = 'ngn', provider = 'paystack',
+              paystack_customer_code = COALESCE($3, paystack_customer_code),
+              paystack_reference = COALESCE($4, paystack_reference),
+              current_period_end = NOW() + $5::interval,
+              updated_at = NOW()
+        WHERE user_id = $1`,
+      [sub.user_id, plan, customerCode, reference || null, periodInterval]
+    );
+      return;
+    }
+  }
 
   if (meta.giftId) {
     const upd = await pool.query(
@@ -157,14 +245,14 @@ export function registerPaystackRoutes(app) {
       enabled: paystackEnabled(),
       publicKey: PUBLIC,
       currency: "ngn",
-      feeBps: FEE_BPS,
+      feeBps: 0,
       minAmount: MIN_GIFT_NGN,
       maxAmount: MAX_GIFT_NGN
     });
   });
 
   // The signed-in artist's NGN payout (subaccount) status.
-  app.get("/api/paystack/account", requireAuth, async (req, res) => {
+  app.get("/api/paystack/account", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.json({ enabled: false });
     try {
       const row = await getPaystackAccountRow(req.user.id);
@@ -190,7 +278,7 @@ export function registerPaystackRoutes(app) {
   // there's no held balance to "withdraw". This surfaces what has been received
   // (net of the DabzAudio fee) and where it settles, so Naira feels like real
   // receiving rather than "just added a bank".
-  app.get("/api/paystack/wallet", requireAuth, async (req, res) => {
+  app.get("/api/paystack/wallet", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.json({ enabled: false });
     try {
       const row = await getPaystackAccountRow(req.user.id);
@@ -246,7 +334,7 @@ export function registerPaystackRoutes(app) {
 
   // List Nigerian banks (for the account-setup dropdown). Cached in memory.
   let bankCache = { at: 0, banks: [] };
-  app.get("/api/paystack/banks", requireAuth, async (req, res) => {
+  app.get("/api/paystack/banks", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.status(503).json({ error: "Naira payouts aren't configured." });
     try {
       if (Date.now() - bankCache.at > 6 * 60 * 60 * 1000 || !bankCache.banks.length) {
@@ -264,7 +352,7 @@ export function registerPaystackRoutes(app) {
   });
 
   // Resolve a bank account number → account holder name (confirmation step).
-  app.post("/api/paystack/resolve", requireAuth, async (req, res) => {
+  app.post("/api/paystack/resolve", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.status(503).json({ error: "Naira payouts aren't configured." });
     try {
       const accountNumber = String((req.body && req.body.accountNumber) || "").trim();
@@ -279,7 +367,7 @@ export function registerPaystackRoutes(app) {
   });
 
   // Create / update the artist's Paystack subaccount so they can receive NGN.
-  app.post("/api/paystack/subaccount", requireAuth, async (req, res) => {
+  app.post("/api/paystack/subaccount", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.status(503).json({ error: "Naira payouts aren't configured." });
     try {
       const bankCode = String((req.body && req.body.bankCode) || "").trim();
@@ -336,7 +424,7 @@ export function registerPaystackRoutes(app) {
   });
 
   // Send a Naira gift → returns an access code for the on-page inline popup.
-  app.post("/api/gifts/paystack", requireAuth, async (req, res) => {
+  app.post("/api/gifts/paystack", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.status(503).json({ error: "Naira gifting isn't configured." });
     try {
       const toUserId = Number(req.body.toUserId);
@@ -355,7 +443,7 @@ export function registerPaystackRoutes(app) {
       }
 
       const amountKobo = Math.round(amount * 100);
-      const feeKobo = feeKoboFor(amountKobo);
+      const feeKobo = 0;
       const ins = await pool.query(
         `INSERT INTO lb_gifts (from_user_id, to_user_id, lyric_id, amount_cents, fee_cents, currency, message, status, provider)
          VALUES ($1,$2,$3,$4,$5,'ngn',$6,'pending','paystack') RETURNING id`,
@@ -368,6 +456,7 @@ export function registerPaystackRoutes(app) {
         amountKobo,
         subaccountCode: recipient.subaccount_code,
         transactionChargeKobo: feeKobo,
+        feeBearer: "subaccount",
         reference,
         metadata: { giftId: String(giftId) }
       });
@@ -389,7 +478,7 @@ export function registerPaystackRoutes(app) {
 
   // Confirm a Naira gift right after the inline popup succeeds (webhook remains
   // the source of truth, but this updates the UI instantly).
-  app.post("/api/gifts/paystack/verify", requireAuth, async (req, res) => {
+  app.post("/api/gifts/paystack/verify", requireAuth, requireNigeria, async (req, res) => {
     if (!paystackEnabled()) return res.status(503).json({ error: "Not available." });
     try {
       const reference = String((req.body && req.body.reference) || "");

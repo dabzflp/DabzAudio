@@ -6,6 +6,14 @@
   const form = document.getElementById("signupForm");
   const msg = document.getElementById("msg");
   const btn = document.getElementById("submitBtn");
+  const countrySelect = document.getElementById("countryCode");
+
+  window.LB.apiFetch("/api/countries").then(({ countries }) => {
+    countrySelect.replaceChildren(new Option("Select your country…", ""));
+    countries.forEach(({ code, name }) => countrySelect.add(new Option(name, code)));
+  }).catch(() => {
+    countrySelect.replaceChildren(new Option("Could not load countries. Refresh to retry.", ""));
+  });
 
   // If the user arrived from a collaboration invite, prefill their email and
   // carry the token through so the lyric is accepted right after signup.
@@ -31,8 +39,10 @@
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const password2 = document.getElementById("password2").value;
+    const countryCode = countrySelect.value;
 
     if (!email) return fail("Enter a valid email address.");
+    if (!countryCode) return fail("Select your country to continue.");
     if (password.length < 8) return fail("Password must be at least 8 characters.");
     if (password !== password2) return fail("Passwords do not match.");
 
@@ -43,7 +53,8 @@
       artistName: document.getElementById("artistName").value.trim(),
       genre: document.getElementById("genre").value,
       influences: document.getElementById("influences").value.trim(),
-      experience: document.getElementById("experience").value
+      experience: document.getElementById("experience").value,
+      countryCode
     };
 
     btn.disabled = true;

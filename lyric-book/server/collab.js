@@ -27,9 +27,11 @@ const MSG_AWARENESS = 1;
 
 const SAVE_DEBOUNCE_MS = 2000;
 const ROOM_GC_MS = 30_000;
+const SESSION_REVALIDATION_MS = 30_000;
 
 // lyricId -> Room
 const rooms = new Map();
+let collabIo = null;
 
 // --------------- Room lifecycle ---------------
 
@@ -198,6 +200,42 @@ export function revokeCollabAccess(lyricId, userId) {
   }
 }
 
+export function revokeUserSessions(userId) {
+  if (!collabIo) return;
+  for (const socket of collabIo.sockets.sockets.values()) {
+    if (String(socket.data.uid) === String(userId)) {
+      socket.emit("err", { code: "session_revoked" });
+      socket.disconnect(true);
+    }
+  }
+}
+
+function startSessionRevalidation(io) {
+  const timer = setInterval(async () => {
+    const sockets = Array.from(io.sockets.sockets.values());
+    const userIds = [...new Set(sockets.map((socket) => String(socket.data.uid)))];
+    if (!userIds.length) return;
+
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, auth_version FROM lb_users WHERE id = ANY($1::bigint[])",
+        [userIds]
+      );
+      const versions = new Map(rows.map((row) => [String(row.id), Number(row.auth_version || 0)]));
+      for (const socket of sockets) {
+        const currentVersion = versions.get(String(socket.data.uid));
+        if (currentVersion === undefined || currentVersion !== socket.data.authVersion) {
+          socket.emit("err", { code: "session_revoked" });
+          socket.disconnect(true);
+        }
+      }
+    } catch (err) {
+      console.error("[collab] session revalidation failed", err.message);
+    }
+  }, SESSION_REVALIDATION_MS);
+  timer.unref();
+}
+
 // --------------- Socket.io init ---------------
 
 export function initCollab(httpServer, isAllowedOrigin) {
@@ -210,15 +248,35 @@ export function initCollab(httpServer, isAllowedOrigin) {
     transports: ["websocket", "polling"],
     maxHttpBufferSize: 1e6
   });
+  collabIo = io;
+  startSessionRevalidation(io);
 
   // JWT auth middleware
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error("auth_required"));
     try {
       const payload = verifyToken(token);
+      const { rows } = await pool.query(
+        `SELECT u.billing_exempt, u.auth_version, s.status, s.trial_ends_at, s.current_period_end
+           FROM lb_users u LEFT JOIN lb_subscriptions s ON s.user_id = u.id
+          WHERE u.id = $1`,
+        [payload.uid]
+      );
+      const billing = rows[0];
+      if (!billing || Number(payload.av ?? 0) !== Number(billing.auth_version || 0)) {
+        return next(new Error("session_revoked"));
+      }
+      const now = Date.now();
+      const trialActive = billing?.status === "trialing" && billing.trial_ends_at && new Date(billing.trial_ends_at).getTime() > now;
+      const paidThrough = ["active", "past_due"].includes(billing?.status) &&
+        (!billing.current_period_end || new Date(billing.current_period_end).getTime() > now);
+      if (!billing || !(billing.billing_exempt || trialActive || paidThrough)) {
+        return next(new Error("subscription_required"));
+      }
       socket.data.uid = payload.uid;
       socket.data.email = payload.email;
+      socket.data.authVersion = Number(billing.auth_version || 0);
       next();
     } catch {
       return next(new Error("auth_invalid"));

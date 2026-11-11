@@ -10,6 +10,79 @@ CREATE TABLE IF NOT EXISTS lb_users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Existing accounts are grandfathered; signup explicitly sets this false.
+ALTER TABLE lb_users ADD COLUMN IF NOT EXISTS billing_exempt BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE lb_users ADD COLUMN IF NOT EXISTS country_code TEXT;
+ALTER TABLE lb_users ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS lb_rate_limits (
+  bucket_hash TEXT PRIMARY KEY,
+  window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  hit_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_lb_rate_limits_window ON lb_rate_limits(window_started_at);
+
+CREATE TABLE IF NOT EXISTS lb_user_mfa (
+  user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
+  secret_ciphertext BYTEA NOT NULL,
+  secret_iv BYTEA NOT NULL,
+  secret_tag BYTEA NOT NULL,
+  enabled_at TIMESTAMPTZ,
+  last_totp_step BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE lb_user_mfa ADD COLUMN IF NOT EXISTS last_totp_step BIGINT;
+
+CREATE TABLE IF NOT EXISTS lb_mfa_recovery_codes (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, code_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_lb_mfa_recovery_codes_user ON lb_mfa_recovery_codes(user_id) WHERE used_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS lb_login_fingerprints (
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  fingerprint_hash TEXT NOT NULL,
+  first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, fingerprint_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_lb_login_fingerprints_seen ON lb_login_fingerprints(user_id, last_seen_at);
+
+CREATE TABLE IF NOT EXISTS lb_subscriptions (
+  user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'trialing',
+  plan TEXT,
+  currency TEXT,
+  provider TEXT,
+  trial_started_at TIMESTAMPTZ,
+  trial_ends_at TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  stripe_checkout_session_id TEXT,
+  paystack_customer_code TEXT,
+  paystack_reference TEXT,
+  paystack_subscription_code TEXT,
+  paystack_email_token TEXT,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT lb_subscription_status CHECK (status IN ('trialing', 'pending', 'active', 'past_due', 'canceled', 'incomplete')),
+  CONSTRAINT lb_subscription_plan CHECK (plan IS NULL OR plan IN ('monthly', 'annual')),
+  CONSTRAINT lb_subscription_provider CHECK (provider IS NULL OR provider IN ('stripe', 'paystack'))
+);
+ALTER TABLE lb_subscriptions ADD COLUMN IF NOT EXISTS paystack_customer_code TEXT;
+ALTER TABLE lb_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_subscriptions_stripe_id
+  ON lb_subscriptions(stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lb_subscriptions_paystack_code
+  ON lb_subscriptions(paystack_subscription_code) WHERE paystack_subscription_code IS NOT NULL;
+
 -- One profile row per user (artist details captured at sign-up).
 CREATE TABLE IF NOT EXISTS lb_profiles (
   user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
@@ -63,6 +136,7 @@ CREATE TABLE IF NOT EXISTS lb_playback_tracks (
   duration_seconds INTEGER NOT NULL DEFAULT 0,
   track_number INTEGER NOT NULL DEFAULT 1,
   play_count BIGINT NOT NULL DEFAULT 0,
+  mix_settings JSONB NOT NULL DEFAULT '{"lowDb":0,"midDb":0,"highDb":0,"bypass":false}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE lb_playback_releases ADD COLUMN IF NOT EXISTS cover_public_id TEXT NOT NULL DEFAULT '';
@@ -70,8 +144,22 @@ ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_public_id TEXT NOT
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_data BYTEA NOT NULL DEFAULT decode('', 'hex');
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS audio_mime_type TEXT NOT NULL DEFAULT 'audio/mpeg';
 ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS play_count BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE lb_playback_tracks ADD COLUMN IF NOT EXISTS mix_settings JSONB NOT NULL DEFAULT '{"lowDb":0,"midDb":0,"highDb":0,"bypass":false}'::jsonb;
 CREATE INDEX IF NOT EXISTS idx_lb_playback_releases_user ON lb_playback_releases(user_id, position, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lb_playback_tracks_release ON lb_playback_tracks(release_id, track_number);
+
+-- AI Assistant audit log. Deliberately minimal: who asked, which lyric, which
+-- action, which provider, and when — never the request text or model reply,
+-- since the lyric itself already lives in lb_lyrics.
+CREATE TABLE IF NOT EXISTS lb_ai_requests (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  lyric_id BIGINT REFERENCES lb_lyrics(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'mock',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_ai_requests_user ON lb_ai_requests(user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS lb_lyrics (
   id BIGSERIAL PRIMARY KEY,
@@ -182,6 +270,7 @@ CREATE TABLE IF NOT EXISTS lb_invoices (
   from_user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
   to_user_id BIGINT REFERENCES lb_users(id) ON DELETE SET NULL,  -- set if the payer has an account
   to_email TEXT NOT NULL,
+  cc_email TEXT,
   to_name TEXT NOT NULL DEFAULT '',
   currency TEXT NOT NULL DEFAULT 'gbp',
   note TEXT NOT NULL DEFAULT '',
@@ -261,6 +350,7 @@ CREATE INDEX IF NOT EXISTS idx_lb_gifts_paystack_ref ON lb_gifts(paystack_refere
 
 ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'stripe';
 ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS paystack_reference TEXT;
+ALTER TABLE lb_invoices ADD COLUMN IF NOT EXISTS cc_email TEXT;
 CREATE INDEX IF NOT EXISTS idx_lb_invoices_paystack_ref ON lb_invoices(paystack_reference) WHERE paystack_reference IS NOT NULL;
 
 -- =============================== Music Contracts =============================
@@ -299,3 +389,106 @@ CREATE INDEX IF NOT EXISTS idx_lb_contract_signers_contract ON lb_contract_signe
 
 -- Add signature image storage to existing contract signer rows.
 ALTER TABLE lb_contract_signers ADD COLUMN IF NOT EXISTS signature_url TEXT;
+
+-- Transfer a file: temporary (7-day) large file transfers between creatives.
+CREATE TABLE IF NOT EXISTS lb_transfers (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  message TEXT NOT NULL DEFAULT '',
+  total_bytes BIGINT NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'uploading',
+  download_count INTEGER NOT NULL DEFAULT 0,
+  last_notified_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT lb_transfer_status CHECK (status IN ('uploading', 'ready'))
+);
+CREATE TABLE IF NOT EXISTS lb_transfer_files (
+  id BIGSERIAL PRIMARY KEY,
+  transfer_id BIGINT NOT NULL REFERENCES lb_transfers(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  size BIGINT NOT NULL,
+  mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+  storage_key TEXT NOT NULL DEFAULT '',
+  upload_id TEXT NOT NULL DEFAULT '',
+  completed BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE TABLE IF NOT EXISTS lb_transfer_recipients (
+  id BIGSERIAL PRIMARY KEY,
+  transfer_id BIGINT NOT NULL REFERENCES lb_transfers(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  notified_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_lb_transfers_user ON lb_transfers(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lb_transfers_expiry ON lb_transfers(expires_at);
+CREATE INDEX IF NOT EXISTS idx_lb_transfer_files_transfer ON lb_transfer_files(transfer_id);
+CREATE INDEX IF NOT EXISTS idx_lb_transfer_recipients_transfer ON lb_transfer_recipients(transfer_id);
+ALTER TABLE lb_transfers ADD COLUMN IF NOT EXISTS download_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE lb_transfers ADD COLUMN IF NOT EXISTS last_notified_at TIMESTAMPTZ;
+
+-- ---------------------------------------------------------------------
+-- Pro tier + AI credits (Drop Pilot, premium models)
+-- tier is separate from plan: plan = billing period (monthly/annual),
+-- tier = what the subscription unlocks (standard / pro).
+-- ---------------------------------------------------------------------
+ALTER TABLE lb_subscriptions ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'standard';
+DO $$ BEGIN
+  ALTER TABLE lb_subscriptions ADD CONSTRAINT lb_subscription_tier CHECK (tier IN ('standard', 'pro'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Current balances. monthly_credits is the Pro allowance for monthly_period
+-- (YYYY-MM) and does not roll over; purchased_credits never expire.
+CREATE TABLE IF NOT EXISTS lb_credits (
+  user_id BIGINT PRIMARY KEY REFERENCES lb_users(id) ON DELETE CASCADE,
+  monthly_credits INTEGER NOT NULL DEFAULT 0 CHECK (monthly_credits >= 0),
+  monthly_period TEXT NOT NULL DEFAULT '',
+  purchased_credits INTEGER NOT NULL DEFAULT 0 CHECK (purchased_credits >= 0),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit trail of every credit movement (positive = added, negative = spent).
+CREATE TABLE IF NOT EXISTS lb_credit_ledger (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('allowance', 'topup', 'spend', 'refund', 'adjust')),
+  amount INTEGER NOT NULL,
+  bucket TEXT NOT NULL DEFAULT 'monthly' CHECK (bucket IN ('monthly', 'purchased')),
+  ref TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_credit_ledger_user ON lb_credit_ledger(user_id, created_at DESC);
+
+-- One row per credit pack purchase; the unique reference makes fulfilment idempotent.
+CREATE TABLE IF NOT EXISTS lb_credit_orders (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  pack TEXT NOT NULL,
+  credits INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  provider TEXT NOT NULL CHECK (provider IN ('stripe', 'paystack')),
+  reference TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_lb_credit_orders_user ON lb_credit_orders(user_id, created_at DESC);
+
+-- Measured model usage, so credit prices can be tuned against real cost.
+-- Stores token counts and estimated cost only — never prompts or replies.
+CREATE TABLE IF NOT EXISTS lb_ai_usage (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
+  source TEXT NOT NULL,
+  action TEXT NOT NULL,
+  model_tier TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  credits INTEGER NOT NULL DEFAULT 0,
+  est_cost_micro_usd INTEGER NOT NULL DEFAULT 0,
+  ok BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lb_ai_usage_user_day ON lb_ai_usage(user_id, action, created_at DESC);

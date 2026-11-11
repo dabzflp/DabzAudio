@@ -1,0 +1,1448 @@
+{
+  "version": 4,
+  "app_title": "DropPilot Production SaaS Plan",
+  "nav": {
+    "placement": "none",
+    "items": []
+  },
+  "pages": [
+    {
+      "id": "page-1e0bac83",
+      "name": "Create account",
+      "route": "/signup",
+      "item_ref": {
+        "index": 0,
+        "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+      },
+      "blocks": [
+        {
+          "id": "signup-brand",
+          "type": "text",
+          "label": "DropPilot wordmark",
+          "hint": "Circular play-wave icon with restrained waveform accent",
+          "x": 0,
+          "y": 0,
+          "w": 5,
+          "h": 2,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "signup-form",
+          "type": "form",
+          "label": "Create your account",
+          "hint": "Name, email, password, confirmation, validation, terms, submit and sign-in link",
+          "x": 5,
+          "y": 0,
+          "w": 7,
+          "h": 8,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-fefe4730",
+      "name": "Sign in",
+      "route": "/signin",
+      "item_ref": {
+        "index": 0,
+        "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+      },
+      "blocks": [
+        {
+          "id": "signin-brand",
+          "type": "text",
+          "label": "DropPilot wordmark",
+          "hint": "Compact premium music-industry identity",
+          "x": 0,
+          "y": 0,
+          "w": 5,
+          "h": 2,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "signin-form",
+          "type": "form",
+          "label": "Welcome back",
+          "hint": "Email, password, submit, forgot-password and create-account links",
+          "x": 5,
+          "y": 0,
+          "w": 7,
+          "h": 7,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-34e4ad10",
+      "name": "Forgot password",
+      "route": "/forgot-password",
+      "item_ref": {
+        "index": 0,
+        "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+      },
+      "blocks": [
+        {
+          "id": "forgot-brand",
+          "type": "text",
+          "label": "DropPilot wordmark",
+          "hint": "Compact identity and reassurance copy",
+          "x": 0,
+          "y": 0,
+          "w": 5,
+          "h": 2,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "forgot-form",
+          "type": "form",
+          "label": "Reset password",
+          "hint": "Email request and secure reset state with non-enumerating feedback",
+          "x": 5,
+          "y": 0,
+          "w": 7,
+          "h": 6,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-ca549f5c",
+      "name": "Artist onboarding",
+      "route": "/onboarding",
+      "item_ref": {
+        "index": 0,
+        "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+      },
+      "blocks": [
+        {
+          "id": "onboarding-progress",
+          "type": "text",
+          "label": "Profile setup progress",
+          "hint": "Short step indicator with optional-field guidance",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "onboarding-form",
+          "type": "form",
+          "label": "Tell us about your artistry",
+          "hint": "Professional name, genre, stage, social platform, campaign goal and optional image",
+          "x": 0,
+          "y": 1,
+          "w": 8,
+          "h": 8,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "onboarding-preview",
+          "type": "card",
+          "label": "Artist profile preview",
+          "hint": "Live profile card with skip and continue guidance",
+          "x": 8,
+          "y": 1,
+          "w": 4,
+          "h": 8,
+          "item_ref": {
+            "index": 0,
+            "text": "Set up persistent PostgreSQL-backed data for users, artist profiles, subscriptions, releases, campaigns, campaign items, pitches, EPKs, analytics, and notifications; deliver secure email/password authentication, password recovery, sign-out, and onboarding in a premium charcoal, off-white, electric-purple, and coral music-industry design system."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-5127ee7c",
+      "name": "Landing page",
+      "route": "/",
+      "item_ref": {
+        "index": 1,
+        "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+      },
+      "blocks": [
+        {
+          "id": "landing-nav",
+          "type": "nav",
+          "label": "Public navigation",
+          "hint": "Logo, Features, How It Works, Pricing, Sign In and Plan My Release",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-hero",
+          "type": "hero",
+          "label": "Turn one song into 21 days of content",
+          "hint": "Supplied copy, two calls to action and sparse waveform motif",
+          "x": 0,
+          "y": 1,
+          "w": 6,
+          "h": 7,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-preview",
+          "type": "card_grid",
+          "label": "Campaign dashboard preview",
+          "hint": "Release countdown, progress and concrete content cards",
+          "x": 6,
+          "y": 1,
+          "w": 6,
+          "h": 7,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-steps",
+          "type": "text",
+          "label": "How it works",
+          "hint": "Upload, release planning and daily campaign steps",
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 4,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-features",
+          "type": "card_grid",
+          "label": "Release campaign toolkit",
+          "hint": "Eight requested feature cards with music-specific examples",
+          "x": 0,
+          "y": 12,
+          "w": 12,
+          "h": 8,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-pricing",
+          "type": "text",
+          "label": "Pricing plans",
+          "hint": "Monthly and annual toggle with Free, Artist, Pro and Manager tiers",
+          "x": 0,
+          "y": 20,
+          "w": 12,
+          "h": 8,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-faq",
+          "type": "text",
+          "label": "Frequently asked questions",
+          "hint": "Ownership, formats, cancellation and non-distribution clarification",
+          "x": 0,
+          "y": 28,
+          "w": 8,
+          "h": 6,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "landing-footer",
+          "type": "footer",
+          "label": "DropPilot footer",
+          "hint": "Product links, legal links and MVP distribution disclaimer",
+          "x": 0,
+          "y": 34,
+          "w": 12,
+          "h": 3,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-2bddbdad",
+      "name": "Overview",
+      "route": "/dashboard",
+      "item_ref": {
+        "index": 1,
+        "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+      },
+      "blocks": [
+        {
+          "id": "dashboard-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Collapsible desktop links for all eight authenticated destinations",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-topbar",
+          "type": "drawer",
+          "label": "Search, notifications and profile",
+          "hint": "Responsive desktop top bar and mobile drawer controls",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-header",
+          "type": "header",
+          "label": "Artist welcome and quick action",
+          "hint": "Personalised greeting, current plan and create-campaign action",
+          "x": 2,
+          "y": 1,
+          "w": 10,
+          "h": 2,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-release",
+          "type": "card",
+          "label": "Active release",
+          "hint": "Artwork, countdown, completion and plan-limit state",
+          "x": 2,
+          "y": 3,
+          "w": 6,
+          "h": 5,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-tasks",
+          "type": "list",
+          "label": "Today’s promotional tasks",
+          "hint": "Actionable database-driven tasks and empty state",
+          "x": 8,
+          "y": 3,
+          "w": 4,
+          "h": 5,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-upcoming",
+          "type": "list",
+          "label": "Upcoming content",
+          "hint": "Scheduled platform content with dates and status",
+          "x": 2,
+          "y": 8,
+          "w": 5,
+          "h": 5,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-recent",
+          "type": "list",
+          "label": "Recent releases",
+          "hint": "Recent campaigns and empty-state demo loader",
+          "x": 7,
+          "y": 8,
+          "w": 5,
+          "h": 5,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "dashboard-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Thumb-friendly primary destinations and More drawer",
+          "x": 0,
+          "y": 13,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-b597cd1b",
+      "name": "New campaign",
+      "route": "/campaigns/new",
+      "item_ref": {
+        "index": 1,
+        "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+      },
+      "blocks": [
+        {
+          "id": "wizard-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Current destination highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "wizard-topbar",
+          "type": "text",
+          "label": "Campaign wizard top bar",
+          "hint": "Exit, saved status and profile controls",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "wizard-progress",
+          "type": "text",
+          "label": "Five-step campaign progress",
+          "hint": "Release, uploads, objectives, context and review",
+          "x": 2,
+          "y": 1,
+          "w": 10,
+          "h": 2,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "wizard-form",
+          "type": "form",
+          "label": "Campaign step workspace",
+          "hint": "Responsive validated fields, uploads, multiple choices and back/next controls",
+          "x": 2,
+          "y": 3,
+          "w": 7,
+          "h": 10,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "wizard-summary",
+          "type": "text",
+          "label": "Live release summary",
+          "hint": "Artwork, entered metadata, selected goals and resource context",
+          "x": 9,
+          "y": 3,
+          "w": 3,
+          "h": 10,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "wizard-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 13,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-f10ed124",
+      "name": "Campaign generation",
+      "route": "/campaigns/generating",
+      "item_ref": {
+        "index": 1,
+        "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+      },
+      "blocks": [
+        {
+          "id": "generation-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Campaign creation remains selected",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "generation-progress",
+          "type": "text",
+          "label": "Building your 21-day campaign",
+          "hint": "Believable staged progress without claiming audio analysis",
+          "x": 2,
+          "y": 0,
+          "w": 7,
+          "h": 7,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "generation-release",
+          "type": "text",
+          "label": "Release context",
+          "hint": "Song, artist, goals and methodology disclosure",
+          "x": 9,
+          "y": 0,
+          "w": 3,
+          "h": 7,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-3859ea37",
+      "name": "Campaign detail",
+      "route": "/campaigns/[campaign_id]",
+      "item_ref": {
+        "index": 1,
+        "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+      },
+      "blocks": [
+        {
+          "id": "campaign-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "My Releases highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-topbar",
+          "type": "text",
+          "label": "Campaign controls",
+          "hint": "Search, notifications, profile and export",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-hero",
+          "type": "hero",
+          "label": "Release campaign header",
+          "hint": "Artwork, title, artist, date, countdown, goal and progress",
+          "x": 2,
+          "y": 1,
+          "w": 10,
+          "h": 4,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-tabs",
+          "type": "tabs",
+          "label": "Campaign workspace tabs",
+          "hint": "Overview, Calendar, Content Ideas, Pitches and Assets",
+          "x": 2,
+          "y": 5,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-filters",
+          "type": "form",
+          "label": "Campaign filters",
+          "hint": "Phase, platform and status controls",
+          "x": 2,
+          "y": 6,
+          "w": 10,
+          "h": 2,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-items",
+          "type": "text",
+          "label": "21-day campaign items",
+          "hint": "Detailed day cards with status and open/edit actions",
+          "x": 2,
+          "y": 8,
+          "w": 6,
+          "h": 10,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-editor",
+          "type": "text",
+          "label": "Campaign item editor",
+          "hint": "Editable hook, concept, script, lyric, caption, CTA, hashtags, timing and schedule",
+          "x": 8,
+          "y": 8,
+          "w": 4,
+          "h": 10,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "campaign-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 18,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 1,
+            "text": "Build the public conversion experience and authenticated core: responsive landing/pricing/FAQ, adaptive application navigation, database-driven overview dashboard, complete five-step upload campaign wizard, template-based 21-day CampaignGenerator service, staged generation flow, ownership enforcement, demo-campaign loading, and polished campaign detail/edit/filter/status/delete/print workflows."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-bd189dc9",
+      "name": "Content calendar",
+      "route": "/calendar",
+      "item_ref": {
+        "index": 2,
+        "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+      },
+      "blocks": [
+        {
+          "id": "calendar-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Content Calendar highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-topbar",
+          "type": "calendar",
+          "label": "Calendar top bar",
+          "hint": "Search, notifications and profile",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-header",
+          "type": "header",
+          "label": "Content calendar",
+          "hint": "Month navigation and add/open actions",
+          "x": 2,
+          "y": 1,
+          "w": 6,
+          "h": 2,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-views",
+          "type": "list",
+          "label": "Month, week and list views",
+          "hint": "Responsive view control",
+          "x": 8,
+          "y": 1,
+          "w": 4,
+          "h": 2,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-filters",
+          "type": "form",
+          "label": "Release, platform and status filters",
+          "hint": "Clearable campaign task filters",
+          "x": 2,
+          "y": 3,
+          "w": 10,
+          "h": 2,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-grid",
+          "type": "calendar",
+          "label": "Campaign schedule",
+          "hint": "Platform-labelled items with content type, song, date and status",
+          "x": 2,
+          "y": 5,
+          "w": 10,
+          "h": 10,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "calendar-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 15,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-e55a160c",
+      "name": "Pitch generator",
+      "route": "/campaigns/[campaign_id]/pitches",
+      "item_ref": {
+        "index": 2,
+        "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+      },
+      "blocks": [
+        {
+          "id": "pitches-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "My Releases highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "pitches-topbar",
+          "type": "text",
+          "label": "Pitch workspace top bar",
+          "hint": "Campaign context and profile actions",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "pitches-list",
+          "type": "list",
+          "label": "Pitch draft types",
+          "hint": "Spotify, radio, blog, curator, biography and announcement",
+          "x": 2,
+          "y": 1,
+          "w": 3,
+          "h": 10,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "pitches-editor",
+          "type": "editor",
+          "label": "Editable pitch draft",
+          "hint": "Text editor, factuality note, character count, copy and save actions",
+          "x": 5,
+          "y": 1,
+          "w": 7,
+          "h": 10,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "pitches-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 12,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-8157a561",
+      "name": "EPK builder",
+      "route": "/epk",
+      "item_ref": {
+        "index": 2,
+        "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+      },
+      "blocks": [
+        {
+          "id": "epk-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "EPK Builder highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "epk-topbar",
+          "type": "text",
+          "label": "EPK actions",
+          "hint": "Draft status, save and public-link controls",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "epk-editor",
+          "type": "form",
+          "label": "EPK editor",
+          "hint": "Artist details, media, release, links, highlights and contact fields",
+          "x": 2,
+          "y": 1,
+          "w": 5,
+          "h": 12,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "epk-preview",
+          "type": "text",
+          "label": "Live EPK preview",
+          "hint": "Polished public-facing press kit composition",
+          "x": 7,
+          "y": 1,
+          "w": 5,
+          "h": 12,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "epk-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 13,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-69cedb37",
+      "name": "Public EPK",
+      "route": "/epk/[slug]",
+      "item_ref": {
+        "index": 2,
+        "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+      },
+      "blocks": [
+        {
+          "id": "public-epk-hero",
+          "type": "hero",
+          "label": "Artist press kit",
+          "hint": "Artist image, identity, genre, location and current release",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 7,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "public-epk-story",
+          "type": "text",
+          "label": "Biography and highlights",
+          "hint": "Saved factual biography and career highlights",
+          "x": 0,
+          "y": 7,
+          "w": 7,
+          "h": 7,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "public-epk-links",
+          "type": "text",
+          "label": "Listen, follow and contact",
+          "hint": "Streaming, social and contact links",
+          "x": 7,
+          "y": 7,
+          "w": 5,
+          "h": 7,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "public-epk-footer",
+          "type": "footer",
+          "label": "Powered by DropPilot",
+          "hint": "Read-only public footer",
+          "x": 0,
+          "y": 14,
+          "w": 12,
+          "h": 2,
+          "item_ref": {
+            "index": 2,
+            "text": "Build campaign workspaces for monthly/weekly/list content planning, editable and copyable pitch drafts, and a saveable EPK editor with live preview plus unique public read-only EPK pages, all backed by the user’s records and with useful empty, validation, loading, and mobile states."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-feb6ae84",
+      "name": "Analytics",
+      "route": "/analytics",
+      "item_ref": {
+        "index": 3,
+        "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+      },
+      "blocks": [
+        {
+          "id": "analytics-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Analytics highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-topbar",
+          "type": "text",
+          "label": "Analytics top bar",
+          "hint": "Campaign selector, search and profile",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-metrics",
+          "type": "kpi",
+          "label": "Campaign performance summary",
+          "hint": "Completed tasks, rate, posts, views, engagement and streams",
+          "x": 2,
+          "y": 1,
+          "w": 10,
+          "h": 4,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-platform",
+          "type": "chart_bar",
+          "label": "Performance by platform",
+          "hint": "Visible bars based only on manually entered results",
+          "x": 2,
+          "y": 5,
+          "w": 5,
+          "h": 7,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-format",
+          "type": "chart_bar",
+          "label": "Performance by content format",
+          "hint": "Visible bars with manual-data disclosure",
+          "x": 7,
+          "y": 5,
+          "w": 5,
+          "h": 7,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-form",
+          "type": "form",
+          "label": "Enter campaign results",
+          "hint": "Views, engagement, posts and before/after streams",
+          "x": 0,
+          "y": 12,
+          "w": 6,
+          "h": 6,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "analytics-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 18,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-68b5ce57",
+      "name": "Subscription",
+      "route": "/subscription",
+      "item_ref": {
+        "index": 3,
+        "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+      },
+      "blocks": [
+        {
+          "id": "subscription-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Subscription highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-topbar",
+          "type": "text",
+          "label": "Billing top bar",
+          "hint": "Profile and support controls",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-summary",
+          "type": "text",
+          "label": "Current plan and usage",
+          "hint": "Features, usage, renewal or trial and demo-billing disclosure",
+          "x": 2,
+          "y": 1,
+          "w": 10,
+          "h": 5,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-plans",
+          "type": "text",
+          "label": "Upgrade or downgrade",
+          "hint": "Plan comparison with monthly and annual controls",
+          "x": 2,
+          "y": 6,
+          "w": 10,
+          "h": 8,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-history",
+          "type": "list",
+          "label": "Billing history",
+          "hint": "Clearly labelled placeholder or configured Stripe history",
+          "x": 0,
+          "y": 14,
+          "w": 6,
+          "h": 5,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-actions",
+          "type": "form",
+          "label": "Subscription controls",
+          "hint": "Checkout, downgrade and confirmed cancellation",
+          "x": 6,
+          "y": 14,
+          "w": 4,
+          "h": 5,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "subscription-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 19,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    },
+    {
+      "id": "page-73ec4ad8",
+      "name": "Settings",
+      "route": "/settings",
+      "item_ref": {
+        "index": 3,
+        "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+      },
+      "blocks": [
+        {
+          "id": "settings-sidebar",
+          "type": "sidebar",
+          "label": "Application navigation",
+          "hint": "Settings highlighted",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 12,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "settings-topbar",
+          "type": "form",
+          "label": "Settings top bar",
+          "hint": "Search, notifications and profile",
+          "x": 2,
+          "y": 0,
+          "w": 10,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "settings-tabs",
+          "type": "tabs",
+          "label": "Settings sections",
+          "hint": "Profile, artist preferences, password, notifications and billing",
+          "x": 2,
+          "y": 1,
+          "w": 3,
+          "h": 11,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "settings-form",
+          "type": "form",
+          "label": "Settings workspace",
+          "hint": "Validated editable settings with save feedback",
+          "x": 5,
+          "y": 1,
+          "w": 7,
+          "h": 9,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "settings-danger",
+          "type": "text",
+          "label": "Danger zone",
+          "hint": "Confirmed account deletion with clear consequences",
+          "x": 5,
+          "y": 10,
+          "w": 7,
+          "h": 3,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        },
+        {
+          "id": "settings-mobile-nav",
+          "type": "nav",
+          "label": "Mobile navigation",
+          "hint": "Compact authenticated navigation",
+          "x": 0,
+          "y": 13,
+          "w": 12,
+          "h": 1,
+          "item_ref": {
+            "index": 3,
+            "text": "Build the manually sourced analytics experience, Stripe-ready subscription and demo-billing experience, notifications/search/profile controls, and complete settings for profile, preferences, password, notifications, billing, and confirmed account deletion; verify responsive behavior and access isolation across the completed application."
+          },
+          "type_source": "palette"
+        }
+      ],
+      "deleted_ids": []
+    }
+  ],
+  "attached_to_plan": false
+}

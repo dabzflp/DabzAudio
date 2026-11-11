@@ -26,13 +26,13 @@
     try {
       const contracts = await window.LB.apiFetch("/api/contracts");
       if (!contracts.length) {
-        els.savedContractsList.innerHTML = '<li class="sub">No saved contracts yet.</li>';
+        els.savedContractsList.innerHTML = '<li class="sub">No saved Split Sheets yet.</li>';
         return;
       }
       els.savedContractsList.innerHTML = contracts.map((contract) => {
         const complete = !!contract.completed_at;
         const signerCount = (contract.signers || []).length;
-        return `<li class="saved-contract-row"><span><b>${esc(contract.song_title || "Untitled contract")}</b><small>${complete ? "Completed" : "Awaiting signatures"} · ${signerCount} signer${signerCount === 1 ? "" : "s"}</small></span>${complete ? `<button class="btn small contract-download" type="button" data-id="${contract.id}">Download PDF</button>` : ""}</li>`;
+        return `<li class="saved-contract-row"><span><b>${esc(contract.song_title || "Untitled Split Sheet")}</b><small>${complete ? "Completed" : "Awaiting signatures"} · ${signerCount} contributor${signerCount === 1 ? "" : "s"}</small></span>${complete ? `<button class="btn small contract-download" type="button" data-id="${contract.id}">Download PDF</button>` : ""}</li>`;
       }).join("");
       els.savedContractsList.querySelectorAll(".contract-download").forEach((button) => {
         button.addEventListener("click", async () => {
@@ -45,7 +45,7 @@
         });
       });
     } catch (err) {
-      els.savedContractsList.innerHTML = `<li class="sub">${esc(err.message || "Could not load saved contracts.")}</li>`;
+      els.savedContractsList.innerHTML = `<li class="sub">${esc(err.message || "Could not load saved Split Sheets.")}</li>`;
     }
   }
 
@@ -145,62 +145,26 @@
       )
       .join("\n");
 
-    const text = `UK MUSIC RIGHTS AGREEMENT TEMPLATE
+    const text = `SONG CONTRIBUTION & OWNERSHIP SPLIT SHEET
 
-Song: ${esc(c.song_title)}
-Primary artist: ${esc(c.artist_name)}
+  Song: ${esc(c.song_title)}
+  Primary artist: ${esc(c.artist_name)}
+  Effective date: ${date}
 
-1. PARTIES AND CAPACITY
-This agreement is entered into on ${date} between the undersigned parties in connection with the musical work described below.
+  SONG / CONTRIBUTION DETAILS
+  ${esc(c.description)}
+  Territory: ${esc(c.territory)}
+  Governing law / jurisdiction: ${esc(c.governing_law)}
 
-2. DESCRIPTION OF THE MUSICAL WORK
-${esc(c.description)}
+  CONTRIBUTORS AND OWNERSHIP PERCENTAGES
+  ${signerText}
 
-3. TERRITORY AND LAW
-Territory: ${esc(c.territory)}
-Governing law / jurisdiction: ${esc(c.governing_law)}
+  Master share total: ${masterTotal.toFixed(2)}%
+  Publishing share total: ${pubTotal.toFixed(2)}%
 
-4. OWNERSHIP AND REVENUE SPLITS
-The parties agree the following ownership of the master sound recording and the underlying musical composition, subject to rights that cannot legally be assigned:
-
-${signerText}
-
-Master shares total: ${masterTotal.toFixed(2)}%
-Publishing shares total: ${pubTotal.toFixed(2)}%
-
-5. GRANT OF RIGHTS AND USE
-Each party grants the rights reasonably required to create, reproduce, distribute, communicate to the public, perform, synchronise, promote and exploit the work and recordings within the Territory, subject to the splits above. Any exclusive grant, deal, advance, fee, royalty or recoupment term must be agreed in writing.
-
-6. CREDITS AND MORAL RIGHTS
-The parties will use reasonable endeavours to provide accurate songwriter, producer, performer and production credits. To the extent permitted by the Copyright, Designs and Patents Act 1988, each party consents to reasonable editing, adaptation and exploitation and waives or agrees not to assert moral rights only to the extent permitted by law.
-
-7. ACCOUNTING AND PAYMENT
-Unless a written schedule states otherwise, this agreement records ownership percentages only and does not create a promise to pay an advance, fee or royalty. Each party is responsible for registering and collecting its own income and keeping accurate records.
-
-8. WARRANTIES AND INDEMNITY
-Each party warrants that, to the best of its knowledge, it has authority to enter this agreement and its contribution does not knowingly infringe another person’s rights. A party that breaches this warranty is responsible for losses directly caused by that breach, subject to applicable law.
-
-9. CONFIDENTIALITY
-The parties will keep non-public commercial terms and unreleased materials confidential, except where disclosure is required by law or to a professional adviser, collection society, insurer, funder or distributor bound to keep the information confidential.
-
-10. TERM AND TERMINATION
-This agreement starts on the effective date and continues for the life of the rights granted unless the parties agree otherwise in writing. A material breach not remedied within a reasonable written notice period may be grounds for termination, without affecting accrued rights and obligations.
-
-11. GOVERNING LAW AND DISPUTES
-This agreement is governed by the jurisdiction stated above. The parties will first try in good faith to resolve disputes through discussion or mediation before court proceedings, unless an urgent legal remedy is required.
-
-12. SIGNING AND COUNTERPARTS
-This agreement becomes binding on the parties once all listed signers have signed an electronic or physical counterpart. A fully signed copy will be distributed to all parties after the last signer has signed.
-
-13. GENERAL
-This agreement and written schedules contain the parties’ understanding concerning the musical work. Amendments must be in writing and signed by all affected parties. If a provision is unenforceable, the remaining provisions continue to apply.
-
-14. SIGNATURES AND PARTY DETAILS
-Each signer’s full name, email, role, ownership shares, signature status and signing date form part of this agreement.
-
-This is a UK-oriented contract template generated by DabzAudio, not legal advice. The parties should obtain advice from a qualified UK music solicitor before signing or relying on it.
-`;
-    return `<h3 style="margin-top:0">Contract preview</h3><pre style="white-space:pre-wrap;word-break:break-word;font-family:inherit">${text.replace(/\n/g, "<br>")}</pre>`;
+  This Split Sheet records the contributors and ownership percentages entered by the parties. It does not by itself transfer copyright or grant exploitation rights, and does not replace any separate rights, publishing, recording or royalty agreement. Obtain independent music-law advice where needed.
+  `;
+    return `<h3 style="margin-top:0">Split Sheet preview</h3><pre style="white-space:pre-wrap;word-break:break-word;font-family:inherit">${text.replace(/\n/g, "<br>")}</pre>`;
   }
 
   function setMsg(msg, ok) {
@@ -272,13 +236,13 @@ This is a UK-oriented contract template generated by DabzAudio, not legal advice
         body: JSON.stringify(body)
       });
       savedContractId = data.contract.id;
-      setMsg("Contract saved.", true);
+      setMsg("Split Sheet saved.", true);
       els.previewBox.innerHTML = renderContract(data);
       els.previewBox.hidden = false;
       els.sendBox.hidden = false;
       loadSavedContracts();
     } catch (err) {
-      setMsg(err.message || "Could not save contract.");
+      setMsg(err.message || "Could not save Split Sheet.");
     }
   });
 

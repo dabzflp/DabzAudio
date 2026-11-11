@@ -17,8 +17,16 @@
 
   const els = {
     who: document.getElementById("who"),
+    countryFlag: document.getElementById("countryFlag"),
     logoutBtn: document.getElementById("logoutBtn"),
     deleteAccountBtn: document.getElementById("deleteAccountBtn"),
+    deleteAccountModal: document.getElementById("deleteAccountModal"),
+    deleteAccountForm: document.getElementById("deleteAccountForm"),
+    deleteAccountPassword: document.getElementById("deleteAccountPassword"),
+    deleteAccountClose: document.getElementById("deleteAccountClose"),
+    deleteAccountCancel: document.getElementById("deleteAccountCancel"),
+    deleteAccountConfirm: document.getElementById("deleteAccountConfirm"),
+    deleteAccountMsg: document.getElementById("deleteAccountMsg"),
     avatarBtn: document.getElementById("avatarBtn"),
     avatarImg: document.getElementById("avatarImg"),
     avatarInput: document.getElementById("avatarInput"),
@@ -59,6 +67,7 @@
 
   let lyrics = [];
   let listFilter = "";
+  let aiSearchIds = null; // set by the Smart search AI feature; null = off
   let currentId = null;
   let saveTimer = null;
   let dirty = false;
@@ -87,9 +96,15 @@
   async function init() {
     try {
       const me = await window.LB.apiFetch("/api/auth/me");
+      if (!me.user.countryCode) {
+        location.replace("country.html?returnTo=app.html");
+        return;
+      }
       const name = (me.profile && (me.profile.artistName || me.profile.displayName)) || me.user.email;
       els.who.textContent = name;
+      renderCountryFlag(me.user.countryCode);
       renderAvatar(me.profile && me.profile.avatarUrl, name);
+      loadMembershipStatus();
     } catch {
       window.LB.clearToken();
       location.replace("login.html");
@@ -103,6 +118,58 @@
     else setEditorEnabled(false);
     wire();
     loadInvites();
+  }
+
+  function renderCountryFlag(countryCode) {
+    const code = String(countryCode || "").trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(code)) {
+      els.countryFlag.hidden = true;
+      return;
+    }
+
+    const name = typeof Intl.DisplayNames === "function"
+      ? new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code
+      : code;
+    els.countryFlag.textContent = Array.from(code, (letter) =>
+      String.fromCodePoint(127397 + letter.charCodeAt(0))
+    ).join("");
+    els.countryFlag.title = name;
+    els.countryFlag.setAttribute("aria-label", `Country: ${name}`);
+    els.countryFlag.hidden = false;
+  }
+
+  async function loadMembershipStatus() {
+    const badge = document.getElementById("membershipTimer");
+    const reminder = document.getElementById("membershipReminder");
+    const link = document.getElementById("membershipBtn");
+    if (!badge || !reminder || !link) return;
+    try {
+      const membership = await window.LB.apiFetch("/api/subscription");
+      const daysLeft = membership.trialEndsAt
+        ? Math.max(0, Math.ceil((new Date(membership.trialEndsAt).getTime() - Date.now()) / 86400000))
+        : 0;
+      if (membership.billingExempt || membership.status === "grandfathered") {
+        reminder.hidden = true;
+        link.title = "Grandfathered Lyric Book access";
+      } else if (membership.status === "trialing" && daysLeft > 0) {
+        badge.textContent = `Free trial · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
+        reminder.hidden = false;
+        link.title = `${daysLeft} days left in your free trial. View plans or upgrade now.`;
+      } else if (membership.status === "active") {
+        reminder.hidden = true;
+        link.title = `${membership.plan === "annual" ? "Annual" : "Monthly"} plan active. Manage your membership.`;
+      } else if (membership.status === "past_due") {
+        badge.textContent = "Membership payment needs attention";
+        reminder.hidden = false;
+        link.title = "Update your membership payment";
+      } else {
+        badge.textContent = "Your free trial has ended";
+        reminder.hidden = false;
+        link.title = "Choose a Lyric Book plan to restore access";
+      }
+    } catch {
+      reminder.hidden = true;
+    }
   }
 
   // If the user arrived from an emailed accept link, accept it now.
@@ -122,7 +189,23 @@
 
   function wire() {
     els.logoutBtn.addEventListener("click", logout);
-    els.deleteAccountBtn.addEventListener("click", deleteAccount);
+    const acctMenu = document.getElementById("acctMenu");
+    const acctBtn = document.getElementById("acctMenuBtn");
+    const acctPop = document.getElementById("acctPop");
+    const setAcctMenu = (open) => {
+      acctPop.hidden = !open;
+      acctBtn.setAttribute("aria-expanded", String(open));
+    };
+    acctBtn.addEventListener("click", (event) => { event.stopPropagation(); setAcctMenu(acctPop.hidden); });
+    document.addEventListener("click", (event) => { if (!acctMenu.contains(event.target)) setAcctMenu(false); }, true);
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") setAcctMenu(false); });
+    els.deleteAccountBtn.addEventListener("click", () => { setAcctMenu(false); deleteAccount(); });
+    els.deleteAccountForm.addEventListener("submit", confirmDeleteAccount);
+    els.deleteAccountClose.addEventListener("click", closeDeleteAccount);
+    els.deleteAccountCancel.addEventListener("click", closeDeleteAccount);
+    els.deleteAccountModal.addEventListener("click", (event) => {
+      if (event.target === els.deleteAccountModal) closeDeleteAccount();
+    });
     els.avatarBtn.addEventListener("click", () => els.avatarInput.click());
     els.avatarInput.addEventListener("change", onAvatarPicked);
     els.newBtn.addEventListener("click", newLyric);
@@ -133,6 +216,12 @@
         renderList();
       });
     }
+    // Smart search (AI Assistant) overrides the plain filter with a ranked
+    // id list; typing manually (above) already clears it back to null.
+    document.addEventListener("lb-search-results", (e) => {
+      aiSearchIds = (e.detail && e.detail.ids) || null;
+      renderList();
+    });
     els.deleteBtn.addEventListener("click", deleteCurrent);
     els.title.addEventListener("input", onEdit);
     els.body.addEventListener("input", function () {
@@ -196,15 +285,21 @@
       els.list.appendChild(li);
       return;
     }
-    const q = listFilter.trim().toLowerCase();
-    const shown = q
-      ? lyrics.filter((ly) => (ly.title || "Untitled").toLowerCase().includes(q))
-      : lyrics;
+    let shown;
+    if (aiSearchIds) {
+      const byId = new Map(lyrics.map((ly) => [ly.id, ly]));
+      shown = aiSearchIds.map((id) => byId.get(id)).filter(Boolean);
+    } else {
+      const q = listFilter.trim().toLowerCase();
+      shown = q
+        ? lyrics.filter((ly) => (ly.title || "Untitled").toLowerCase().includes(q))
+        : lyrics;
+    }
     renderCount(shown.length);
     if (!shown.length) {
       const li = document.createElement("li");
       li.className = "empty-note";
-      li.textContent = "No lyrics match “" + listFilter.trim() + "”.";
+      li.textContent = aiSearchIds ? "No matching lyrics found." : "No lyrics match “" + listFilter.trim() + "”.";
       els.list.appendChild(li);
       return;
     }
@@ -325,7 +420,7 @@
     if (!currentId) return;
     const ly = lyrics.find((l) => l.id === currentId);
     const name = (ly && ly.title) || "this lyric";
-    if (!confirm(`Delete “${name}”? This cannot be undone.`)) return;
+    if (!(await dabzConfirm(`“${name}” will be permanently deleted. This cannot be undone.`, { title: "Delete lyric?", okText: "Delete" }))) return;
     const id = currentId;
     try {
       await window.LB.apiFetch("/api/lyrics/" + id, { method: "DELETE" });
@@ -486,19 +581,45 @@
     location.replace("login.html");
   }
 
-  async function deleteAccount() {
-    const confirmed = confirm(
-      "This will permanently delete your DabzAudio Lyric Book account, all your lyrics, contracts, invoices and shared data. This action cannot be undone.\n\nAre you sure?"
-    );
-    if (!confirmed) return;
-    flushSave();
-    closeCollab();
-    try {
-      await window.LB.apiFetch("/api/me", { method: "DELETE" });
-    } catch (err) {
-      alert(err.message || "Could not delete your account.");
+  function deleteAccount() {
+    els.deleteAccountPassword.value = "";
+    els.deleteAccountMsg.textContent = "";
+    els.deleteAccountMsg.className = "msg";
+    els.deleteAccountModal.hidden = false;
+    els.deleteAccountPassword.focus();
+  }
+
+  function closeDeleteAccount() {
+    els.deleteAccountModal.hidden = true;
+    els.deleteAccountPassword.value = "";
+    els.deleteAccountMsg.textContent = "";
+    els.deleteAccountMsg.className = "msg";
+  }
+
+  async function confirmDeleteAccount(event) {
+    event.preventDefault();
+    const password = els.deleteAccountPassword.value;
+    if (!password) {
+      els.deleteAccountMsg.textContent = "Enter your current password to continue.";
+      els.deleteAccountMsg.className = "msg err";
       return;
     }
+    els.deleteAccountConfirm.disabled = true;
+    els.deleteAccountMsg.textContent = "Verifying password…";
+    els.deleteAccountMsg.className = "msg";
+    flushSave();
+    try {
+      await window.LB.apiFetch("/api/me", {
+        method: "DELETE",
+        body: JSON.stringify({ password })
+      });
+    } catch (err) {
+      els.deleteAccountMsg.textContent = err.message || "Could not delete your account.";
+      els.deleteAccountMsg.className = "msg err";
+      els.deleteAccountConfirm.disabled = false;
+      return;
+    }
+    closeCollab();
     window.LB.clearToken();
     localStorage.removeItem("lb_pending_invite");
     location.replace("login.html");
@@ -517,12 +638,14 @@
   }
 
   function initials(name) {
-    const s = String(name || "").trim();
+    let s = String(name || "").trim();
     if (!s) return "DA";
+    if (s.includes("@")) s = s.split("@")[0].replace(/[._-]+/g, " ").trim() || s;
     const parts = s.split(/\s+/);
-    const a = parts[0][0] || "";
-    const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
-    return (a + b).toUpperCase() || s.slice(0, 2).toUpperCase();
+    // First letter of the first name and first letter of the last name.
+    const first = Array.from(parts[0])[0] || "";
+    const last = parts.length > 1 ? Array.from(parts[parts.length - 1])[0] : "";
+    return (first + last).toUpperCase() || "DA";
   }
 
   function onAvatarPicked(e) {
@@ -747,7 +870,7 @@
   }
 
   async function removeCollaborator(collabId, name) {
-    if (!confirm(`Remove ${name}'s access to this lyric?`)) return;
+    if (!(await dabzConfirm(`${name} will no longer be able to view or edit this lyric.`, { title: "Remove collaborator?", okText: "Remove" }))) return;
     try {
       await window.LB.apiFetch("/api/lyrics/" + currentId + "/share/" + collabId, {
         method: "DELETE"

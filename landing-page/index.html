@@ -5,12 +5,10 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <!-- Critical inline styles: paint brand colors immediately so links never
-       flash the browser-default blue before the external CSS loads. -->
+  <!-- Paint the base colour immediately to avoid a flash before the CSS loads -->
   <style>
-    html,body{background-color:#111111;color:#ffffff}
-    a{color:#ff7a00;text-decoration:none}
-    .hero .icon-box h3 a{color:rgba(255,255,255,0.8)}
+    html{background-color:#07070a}
+    html[data-theme="light"]{background-color:#fafaf8}
   </style>
 
   <!-- SEO Meta Tags -->
@@ -19,7 +17,6 @@
   <meta name="keywords" content="audio tools, music production, key finder, bpm analyzer, reverb calculator, delay calculator, DJ tools, producer tools, DabzAudio Dabz Flp" />
   <meta name="robots" content="index, follow" />
   <meta name="google-adsense-account" content="ca-pub-5406859319354472">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5406859319354472" crossorigin="anonymous"></script>
 
   <!-- Open Graph Meta Tags -->
   <meta property="og:title" content="DabzAudio | Next-Gen Audio Tools for Musicians, Producers, DJs" />
@@ -41,271 +38,194 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Vendor CSS Files -->
-  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="assets/vendor/aos/aos.css" rel="stylesheet">
-  <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-  <link href="assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
 
   <!-- Theme must run before CSS so the correct data-theme is set before paint -->
   <script src="assets/js/theme.js"></script>
 
-  <!-- Main CSS File -->
-  <link href="assets/css/main.css" rel="stylesheet">
-
-  <!-- Liquid Glass theme + Ask Dabz assistant -->
-  <link href="assets/css/liquid-glass.css" rel="stylesheet">
+  <link href="assets/css/landing.css" rel="stylesheet">
   <link href="assets/css/agent.css" rel="stylesheet">
-  <link href="assets/css/theme.css" rel="stylesheet">
-
 </head>
 
-<body class="index-page">
+<body class="lp index-page">
 
-  <header id="header" class="header d-flex align-items-center fixed-top">
-    <div class="container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
+  <div class="lp-cursor" aria-hidden="true"></div>
 
-      <a href="index.html" class="logo d-flex align-items-center me-auto me-lg-0">
-        <!-- Uncomment the line below if you also wish to use an image logo -->
-        <!-- <img src="assets/img/logo.png" alt=""> -->
-        <h1 class="sitename">DA</h1>
-        <span>.</span>
-      </a>
-
-      <nav id="navmenu" class="navmenu">
-        <ul>
-          <li><a href="#contact">Feedback</a></li>
-          <li><a href="/community-hub/">Community Hub</a></li>
-          <li><button type="button" class="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode"><i class="bi bi-moon" aria-hidden="true"></i></button></li>
-        </ul>
-      </nav>
-
-      <i class="mobile-nav-toggle d-xl-none bi bi-list" aria-label="Open navigation menu"></i>
-
-      <!-- <a class="btn-getstarted" href="index.html#about">Get Started</a> -->
-
+  <nav class="lp-nav" aria-label="Main">
+    <a href="index.html" class="lp-logo" aria-label="DabzAudio home">D&Lambda;<span>.</span></a>
+    <div class="lp-links">
+      <a href="#products">Products</a>
+      <a href="#lyric-book">Lyric Book</a>
+      <a href="/community-hub/">Community Hub</a>
+      <a href="#contact">Feedback</a>
+      <button type="button" class="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode"><i class="bi bi-moon" aria-hidden="true"></i></button>
+      <a href="lyric-book/index.html" class="lp-pill">Open Lyric Book</a>
     </div>
-  </header>
+  </nav>
 
-  <main class="main">
+  <main>
 
-    <!-- Hero Section -->
-    <section id="hero" class="hero section dark-background">
-    
-      <img src="assets/img/dabzaudiobck.png" alt="" data-aos="fade-in">
-
-      <div class="container">
-   
-        <div class="row justify-content-center text-center" data-aos="fade-up" data-aos-delay="100">
-          <div class="col-xl-8 col-lg-10">
-            <h2>Next Gen Audio<span>.</span></h2>
-            <p class="hero-tagline">Browser-based tools for musicians, producers &amp; DJs, analyze key &amp; BPM, sync your FX, and write lyrics together in real time, send and receive money (Gift Me) from other creatives.</p>
-          </div>
+    <!-- Hero -->
+    <section id="hero" class="lp-hero">
+      <canvas id="lpWave" aria-hidden="true"></canvas>
+      <div class="lp-wrap">
+        <div class="lp-eyebrow"><i></i> Browser-based tools for creatives</div>
+        <h1>Next gen <span class="lp-grad">audio.</span></h1>
+        <p>Browser-based tools for musicians, producers &amp; DJs. Analyze key &amp; BPM, sync your FX, and write lyrics together in real time. Send and receive money (Gift Me) from other creatives.</p>
+        <div class="lp-cta">
+          <a class="lp-btn primary" href="lyric-book/index.html">Open Lyric Book <i class="bi bi-arrow-right"></i></a>
+          <a class="lp-btn" href="#products">Explore the tools</a>
         </div>
-
-        <div class="row gy-4 mt-5 justify-content-center" data-aos="fade-up" data-aos-delay="200">
-          <div class="col-xl-2 col-md-4" data-aos="fade-up" data-aos-delay="300">
-            <div class="icon-box">
-              <i class="bi bi-binoculars"></i>
-              <h3><a href="key-bpm-tool/index.html">Key and Bpm Analysis</a></h3>
-            </div>
-          </div>
-          <div class="col-xl-2 col-md-4" data-aos="fade-up" data-aos-delay="400">
-            <div class="icon-box">
-              <i class="bi bi-bullseye"></i>
-              <h3><a href="reverb-delay-calculator/index.html">Reverb and Delay Analysis</a></h3>
-            </div>
-          </div>
-         <div class="col-xl-2 col-md-4" data-aos="fade-up" data-aos-delay="500">
-          <div class="icon-box">
-              <i class="bi bi-people"></i>
-              <h3><a href="https://www.beatstars.com/dabzflp" target="_blank" rel="noopener">Studio Creative Asset</a></h3>
-            <!-- <div class="icon-box">
-              <i class="bi bi-people"></i>
-              <h3><a href="https://dabzflp.com/community-hub" target="_blank" rel="noopener">Community Hub</a></h3> -->
-            
-            </div>
-          </div>
-          <div class="col-xl-2 col-md-4" data-aos="fade-up" data-aos-delay="600">
-            <div class="icon-box">
-              <i class="bi bi-journal-text"></i>
-              <h3><a href="lyric-book/index.html">Lyric Book</a></h3>
-            </div>
-          </div>
-          <!-- 
-          
-          
-          <div class="col-xl-2 col-md-4" data-aos="fade-up" data-aos-delay="700">
-            <div class="icon-box">
-              <i class="bi bi-gem"></i>
-              <h3><a href="">Nemos Enimade</a></h3>
-            </div>
-          </div>
-        </div>
-
-      </div> -->
-
-    </section><!-- /Hero Section -->
-
-    <!-- About Section -->
-    <section id="about" class="about section">
-
-      <div class="container" data-aos="fade-up" data-aos-delay="100">
-
-        <div class="row gy-4">
-          <div class="mobo-size">
-            <!-- <img src="assets/img/productpic.png" class="img-fluid" alt=""> -->
-             <video style=" width: 100%; max-width: 600px; height: auto; opacity: 80%; display: block; margin: 0 auto;" autoplay muted loop playsinline id="bg-video">
-             <source src="assets/vid/vid1.mp4" type="video/mp4">
-             </video>
-          </div>
-          <!-- <div class="col-lg-6 order-2 order-lg-1 content">
-            <h3>Next Gen Audio</h3>
-          </div> -->
-        </div>
-
       </div>
+      <div class="lp-scroll-hint" aria-hidden="true"></div>
+    </section>
 
-    </section><!-- /About Section -->
+    <!-- Marquee -->
+    <div class="lp-marquee" aria-hidden="true">
+      <div class="lp-marquee-track">
+        <span>Key &amp; BPM analysis</span><span>Reverb &amp; delay sync</span><span>Real-time lyric collab</span><span>Transfer up to 10 GB</span><span>Drop Pilot (Pro)</span><span>Split sheets</span><span>Gift Me</span><span>Invoices</span><span>AI lyric assistant</span>
+        <span>Key &amp; BPM analysis</span><span>Reverb &amp; delay sync</span><span>Real-time lyric collab</span><span>Transfer up to 10 GB</span><span>Drop Pilot (Pro)</span><span>Split sheets</span><span>Gift Me</span><span>Invoices</span><span>AI lyric assistant</span>
+      </div>
+    </div>
 
-    
-
-      <!-- Services Section -->
-
-    
-
-    <!-- Stats Section -->
-   <!-- /Team Section -->
-
-    <!-- Feedback Section -->
-    <section id="contact" class="contact section">
-
-      <!-- Section Title -->
-      <div class="container section-title" data-aos="fade-up">
-        <h2>Feedback</h2>
-        <p style="color: #ffffff;">We'd love to hear from you</p>
-      </div><!-- End Section Title -->
-
-      <div class="container" data-aos="fade-up" data-aos-delay="100">
-
-        <div class="mb-4" data-aos="fade-up" data-aos-delay="200">
-          <iframe style="border:0; width: 100%; height: 270px;" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2373.654234269109!2d-0.12775!3d51.5073509!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487604b900d26973%3A0x4291f3172409ea92!2sLondon%2C%20UK!5e0!3m2!1sen!2suk!4v1676961268712" frameborder="0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-        </div><!-- End Google Maps -->
-
-        <div class="row gy-4">
-
-          <div class="col-lg-4">
-            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="300">
-              <i class="bi bi-geo-alt flex-shrink-0"></i>
-              <div>
-                <h3>Address</h3>
-                <p>United Kingdom</p>
-              </div>
-            </div><!-- End Info Item -->
-
-            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="400">
-              <i class="bi bi-telephone flex-shrink-0"></i>
-              <div>
-                <h3>Call Us</h3>
-                <p>+447307252848</p>
-              </div>
-            </div><!-- End Info Item -->
-
-            <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="500">
-              <i class="bi bi-envelope flex-shrink-0"></i>
-              <div>
-                <h3>Email Us</h3>
-                <p>dabzaudio@dabzflp.com</p>
-              </div>
-            </div><!-- End Info Item -->
-
-          </div>
-
-          <div class="col-lg-8">
-            <form action="https://formspree.io/f/mqedkegp" method="POST" class="" data-aos="fade-up" data-aos-delay="200">
-              <div class="row gy-4">
-
-                <div class="col-md-6">
-                  <input type="text" name="name" class="form-control" placeholder="Your Name" required="">
-                </div>
-
-                <div class="col-md-6 ">
-                  <input type="email" class="form-control" name="email" placeholder="Your Email" required="">
-                </div>
-
-                <div class="col-md-12">
-                  <input type="text" class="form-control" name="subject" placeholder="Subject" required="">
-                </div>
-
-                <div class="col-md-12">
-                  <textarea class="form-control" name="message" rows="6" placeholder="Your Feedback" required=""></textarea>
-                </div>
-
-                <div class="col-md-12 text-center">
-                  <button type="submit">Send Feedback</button>
-                </div>
-
-              </div>
-            </form>
-          </div><!-- End Feedback Form -->
-
+    <!-- Products -->
+    <section id="products" class="lp-section">
+      <div class="lp-wrap">
+        <div class="lp-head lp-reveal">
+          <div class="lp-kicker">The toolkit</div>
+          <h2>Everything a creative needs. In the browser.</h2>
+          <p>No downloads. No setup. Open a tool and get to work.</p>
         </div>
 
+        <div class="lp-bento">
+          <a class="lp-card c-lg lp-reveal" href="lyric-book/index.html">
+            <div class="ico"><i class="bi bi-journal-text"></i></div>
+            <h3>Lyric Book</h3>
+            <p>Write lyrics together in real time, with rhyme help, an AI assistant, playback, file transfer, split sheets, invoices and Gift Me, all in one studio. Add Pro for Drop Pilot, your release campaign planner.</p>
+            <span class="more">Open Lyric Book <i class="bi bi-arrow-right"></i></span>
+          </a>
+          <a class="lp-card c-md lp-reveal" style="--d:.08s" href="key-bpm-tool/index.html">
+            <div class="ico"><i class="bi bi-binoculars"></i></div>
+            <h3>Key and BPM Analysis</h3>
+            <p>Drop a track, get its key and tempo.</p>
+            <span class="more">Analyze a track <i class="bi bi-arrow-right"></i></span>
+          </a>
+          <a class="lp-card c-half lp-reveal" href="reverb-delay-calculator/index.html">
+            <div class="ico"><i class="bi bi-bullseye"></i></div>
+            <h3>Reverb and Delay Analysis</h3>
+            <p>Sync your FX to the tempo of your song.</p>
+            <span class="more">Open calculator <i class="bi bi-arrow-right"></i></span>
+          </a>
+          <a class="lp-card c-half lp-reveal" style="--d:.08s" href="https://www.beatstars.com/dabzflp" target="_blank" rel="noopener">
+            <div class="ico"><i class="bi bi-people"></i></div>
+            <h3>Studio Creative Asset</h3>
+            <p>Beats and creative assets from the DabzAudio studio.</p>
+            <span class="more">Browse on BeatStars <i class="bi bi-arrow-up-right"></i></span>
+          </a>
+        </div>
       </div>
+    </section>
 
-    </section><!-- /Feedback Section -->
+    <!-- Showcase -->
+    <section class="lp-section lp-showcase" aria-label="Showcase">
+      <div class="lp-wrap">
+        <div class="lp-frame">
+          <video autoplay muted loop playsinline id="bg-video">
+            <source src="assets/vid/vid1.mp4" type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lyric Book features -->
+    <section id="lyric-book" class="lp-section">
+      <div class="lp-wrap">
+        <div class="lp-head lp-reveal">
+          <div class="lp-kicker">Lyric Book</div>
+          <h2>One studio for the whole creative workflow.</h2>
+          <p>From the first line to getting paid, everything stays in sync across your products.</p>
+        </div>
+        <div class="lp-features">
+          <div class="lp-feature lp-reveal"><i class="bi bi-people"></i><h4>Real-time collaboration</h4><p>Write with other creatives live, in the same lyric.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.06s"><i class="bi bi-stars"></i><h4>AI assistant</h4><p>Improve lines, analyze rhymes, translate and find ideas. Suggestions only, nothing is applied for you.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.12s"><i class="bi bi-play-circle"></i><h4>Playback</h4><p>Share releases and tracks with a built-in player and track EQ.</p></div>
+          <div class="lp-feature lp-reveal"><i class="bi bi-send"></i><h4>Transfer a file</h4><p>Send any file, folder, zip or stems up to 10 GB by email or link. Transfers clear after 7 days.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.06s"><i class="bi bi-rocket-takeoff"></i><h4>Drop Pilot <em class="lp-pro">PRO</em></h4><p>Plan a 21-day release campaign with pitches, a content calendar and a press kit. Needs the Pro upgrade ($8.99/month), which also includes monthly AI credits.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.06s"><i class="bi bi-file-earmark-text"></i><h4>Split Sheet</h4><p>Create and sign split sheets with collaborators.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.12s"><i class="bi bi-gift"></i><h4>Gift Me</h4><p>Send and receive money from other creatives.</p></div>
+          <div class="lp-feature lp-reveal"><i class="bi bi-receipt"></i><h4>Invoices</h4><p>Bill anyone by email and get paid by card or offline payment.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.06s"><i class="bi bi-music-note-list"></i><h4>Rhymes &amp; rhythm</h4><p>Real rhymes and syllable counts per line to help your flow.</p></div>
+          <div class="lp-feature lp-reveal" style="--d:.12s"><i class="bi bi-circle-half"></i><h4>Light &amp; dark</h4><p>Switch themes any time; every product follows.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Community -->
+    <section class="lp-section" style="padding-top:0">
+      <div class="lp-wrap">
+        <div class="lp-cta-band lp-reveal">
+          <h2>Join the community.</h2>
+          <p>Meet other creatives, share your work and grow together in the DabzAudio Community Hub.</p>
+          <a class="lp-btn primary" href="/community-hub/">Visit the Community Hub <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feedback -->
+    <section id="contact" class="lp-section" style="padding-top:0">
+      <div class="lp-wrap">
+        <div class="lp-head lp-reveal">
+          <div class="lp-kicker">Feedback</div>
+          <h2>We'd love to hear from you.</h2>
+        </div>
+        <div class="lp-contact">
+          <div class="lp-info lp-reveal">
+            <div class="lp-info-item"><i class="bi bi-geo-alt"></i><div><h5>Address</h5><p>United Kingdom</p></div></div>
+            <div class="lp-info-item"><i class="bi bi-telephone"></i><div><h5>Call Us</h5><p>+447307252848</p></div></div>
+            <div class="lp-info-item"><i class="bi bi-envelope"></i><div><h5>Email Us</h5><p>dabzaudio@dabzflp.com</p></div></div>
+          </div>
+          <form class="lp-form lp-reveal" style="--d:.08s" action="https://formspree.io/f/mqedkegp" method="POST">
+            <div class="row2">
+              <input type="text" name="name" placeholder="Your Name" required>
+              <input type="email" name="email" placeholder="Your Email" required>
+            </div>
+            <input type="text" name="subject" placeholder="Subject" required>
+            <textarea name="message" rows="6" placeholder="Your Feedback" required></textarea>
+            <button type="submit" class="lp-btn primary">Send Feedback</button>
+          </form>
+        </div>
+      </div>
+    </section>
 
   </main>
 
-  <footer id="footer" class="footer dark-background" style="background-image: url('assets/img/dabzaudiobck.png'); background-size: cover; background-position: center; position: relative;">
-    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7);"></div>
-
-    <div class="footer-top" style="position: relative; z-index: 1;">
-      <div class="container">
-        <div class="row gy-4">
-          <div class="col-lg-4 col-md-12 footer-newsletter">
-            <h4>Newsletter</h4>
-            <p>Subscribe to our newsletter and receive the latest news about our products and services!</p>
-            <form action="https://formspree.io/f/mqedkegp" method="POST" class="">
-              <div class="newsletter-form"><input type="email" name="email" required=""><input type="submit" value="Subscribe"></div>
-              <!-- <div class="loading">Loading</div>
-              <div class="error-message"></div>
-              <div class="sent-message">Your subscription has been confirmed. Thank you!</div> -->
-            </form>
-          </div>
+  <footer class="lp-footer">
+    <div class="lp-wrap">
+      <div class="lp-foot-grid">
+        <div>
+          <h4>Newsletter</h4>
+          <p>Subscribe to our newsletter and receive the latest news about our products and services!</p>
+          <form class="lp-news" action="https://formspree.io/f/mqedkegp" method="POST">
+            <input type="email" name="email" placeholder="Your email" aria-label="Email" required>
+            <button type="submit" class="lp-btn primary">Subscribe</button>
+          </form>
+        </div>
+        <div class="lp-foot-links">
+          <a href="lyric-book/index.html">Lyric Book</a>
+          <a href="key-bpm-tool/index.html">Key and BPM Analysis</a>
+          <a href="reverb-delay-calculator/index.html">Reverb and Delay Analysis</a>
+          <a href="/community-hub/">Community Hub</a>
+          <a href="privacy.html">Privacy &amp; Cookies</a>
+          <a href="#" data-cookie-settings>Cookie settings</a>
         </div>
       </div>
+      <div class="lp-copy">© <strong>DabzAudio</strong> 2026</div>
     </div>
-
-    <div class="copyright">
-      <div class="container text-center">
-        <p style="color: #ffffff;">© <strong class="px-1 sitename" style="color: #ffffff;">DabzAudio</strong> <span style="color: #ffffff;">2026</span></p>
-      </div>
-    </div>
-
   </footer>
 
-  <!-- Scroll Top -->
-  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
-
-  <!-- Preloader -->
-  <div id="preloader"></div>
-
-  <!-- Vendor JS Files -->
-  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/vendor/php-email-form/validate.js"></script>
-  <script src="assets/vendor/aos/aos.js"></script>
-  <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
-  <script src="assets/vendor/glightbox/js/glightbox.min.js"></script>
-  <script src="assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
-  <script src="assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-  <script src="assets/vendor/purecounter/purecounter_vanilla.js"></script>
-
-  <!-- Main JS File -->
-  <script src="assets/js/main.js"></script>
+  <script src="assets/js/landing.js"></script>
 
   <!-- Ask Dabz assistant -->
   <script src="assets/js/agent.js"></script>
@@ -313,5 +233,4 @@
   <!-- Cookie consent -->
   <script src="assets/js/cookie-consent.js"></script>
 </body>
-
 </html>

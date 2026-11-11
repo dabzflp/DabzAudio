@@ -25,6 +25,7 @@
     formClose: $("invoiceFormClose"),
     form: $("invoiceForm"),
     toEmail: $("invToEmail"),
+    ccEmail: $("invCcEmail"),
     toName: $("invToName"),
     currency: $("invCurrency"),
     dueDate: $("invDueDate"),
@@ -188,6 +189,7 @@
     editingId = inv ? inv.id : null;
     els.formTitle.textContent = inv ? "Edit draft " + inv.number : "New invoice";
     els.toEmail.value = inv ? inv.toEmail : "";
+    els.ccEmail.value = inv ? inv.ccEmail || "" : "";
     els.toName.value = inv ? inv.toName || "" : "";
     els.currency.value = (inv && inv.currency) || meta.defaultCurrency;
     els.dueDate.value = (inv && inv.dueDate) || "";
@@ -272,6 +274,7 @@
   function buildPayload() {
     return {
       toEmail: els.toEmail.value.trim(),
+      ccEmail: els.ccEmail.value.trim(),
       toName: els.toName.value.trim(),
       currency: els.currency.value,
       dueDate: els.dueDate.value || null,
@@ -348,7 +351,8 @@
 
     els.viewBody.innerHTML =
       `<div class="inv-view-head">
-         <div><div class="inv-sub">Billed to</div><div>${esc(inv.toName || "")} ${esc(inv.toEmail)}</div></div>
+        <div><div class="inv-sub">Billed to</div><div>${esc(inv.toName || "")} ${esc(inv.toEmail)}</div>
+        ${inv.ccEmail ? `<div class="inv-sub">CC: ${esc(inv.ccEmail)}</div>` : ""}</div>
          ${statusPill(inv)}
        </div>
        <div class="inv-view-items">${itemsHtml}</div>

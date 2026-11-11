@@ -10,12 +10,19 @@
     "migrate": "node migrate.js"
   },
   "dependencies": {
+    "@langchain/anthropic": "^1.5.11",
+    "@langchain/core": "^1.2.12",
+    "@langchain/google-genai": "^2.3.2",
+    "@langchain/ollama": "^1.0.0",
+    "@langchain/openai": "^1.5.13",
+    "archiver": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "i18n-iso-countries": "^7.14.0",
     "jsonwebtoken": "^9.0.2",
     "lib0": "^0.2.117",
     "multer": "^2.0.2",
@@ -24,6 +31,7 @@
     "socket.io": "^4.8.3",
     "stripe": "^16.12.0",
     "y-protocols": "^1.0.7",
-    "yjs": "^13.6.31"
+    "yjs": "^13.6.31",
+    "zod": "^4.6.5"
   }
 }

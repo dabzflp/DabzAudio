@@ -30,6 +30,7 @@ import {
   paystackVerify,
   getPaystackAccountRow
 } from "./paystack.js";
+import { paymentProviderForCountry } from "./country-routing.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 const stripe = SECRET ? new Stripe(SECRET) : null;
@@ -89,14 +90,24 @@ function feeCentsFor(totalCents) {
 
 // Parse + validate the invoice payload shared by create and update. Amounts come
 // from the client in major units (e.g. 12.50) and are converted to minor units.
-function parseInvoiceBody(body) {
+function parseInvoiceBody(body, countryCode) {
   const toEmail = String(body.toEmail || "").trim().toLowerCase();
   if (!EMAIL_RE.test(toEmail)) return { error: "Enter a valid email address for the recipient." };
+  const ccEmail = String(body.ccEmail || "").trim().toLowerCase();
+  if (ccEmail && (ccEmail.length > 254 || !EMAIL_RE.test(ccEmail))) {
+    return { error: "Enter a valid CC email address or leave it blank." };
+  }
+  if (ccEmail && ccEmail === toEmail) return { error: "The CC email must be different from the recipient." };
 
   const toName = String(body.toName || "").trim().slice(0, 120);
-  const currency = CURRENCIES.includes(String(body.currency || "").toLowerCase())
-    ? String(body.currency).toLowerCase()
-    : DEFAULT_CURRENCY;
+  const paymentProvider = paymentProviderForCountry(countryCode);
+  const allowedCurrencies = paymentProvider === "paystack" ? ["ngn"] : CURRENCIES.filter((currency) => currency !== "ngn");
+  const defaultCurrency = paymentProvider === "paystack" ? "ngn" : DEFAULT_CURRENCY;
+  const requestedCurrency = String(body.currency || defaultCurrency).toLowerCase();
+  if (!allowedCurrencies.includes(requestedCurrency)) {
+    return { error: paymentProvider === "paystack" ? "Nigerian accounts create Naira invoices through Paystack." : "NGN invoices are available to Nigerian accounts only." };
+  }
+  const currency = requestedCurrency;
   const note = String(body.note || "").slice(0, 2000);
 
   let taxMode = String(body.taxMode || "none").toLowerCase();
@@ -129,7 +140,7 @@ function parseInvoiceBody(body) {
   const totals = computeTotals(items, taxMode, taxRateBps);
   if (totals.total <= 0) return { error: "The invoice total must be greater than zero." };
 
-  return { toEmail, toName, currency, note, taxMode, taxRateBps, taxLabel, dueDate, items, totals };
+  return { toEmail, ccEmail: ccEmail || null, toName, currency, note, taxMode, taxRateBps, taxLabel, dueDate, items, totals };
 }
 
 function newToken() {
@@ -171,6 +182,7 @@ function mapInvoice(r, extra = {}) {
     id: Number(r.id),
     number: invoiceNumber(r.id),
     toEmail: r.to_email,
+    ccEmail: r.cc_email || "",
     toName: r.to_name || "",
     currency: r.currency,
     note: r.note || "",
@@ -243,6 +255,7 @@ export async function honorInvoiceOnline({ invoiceId, provider = "stripe", payme
   try {
     const sender = await senderContact(inv.from_user_id);
     await sendInvoiceHonoredEmail(sender.email, {
+      cc: inv.cc_email,
       senderName: sender.name,
       number: invoiceNumber(inv.id),
       payer: inv.to_name || inv.to_email,
@@ -263,6 +276,7 @@ async function sendPayerReceipt(inv) {
     if (!inv || !inv.to_email || !inv.public_token) return;
     const sender = await displayNameForUser(inv.from_user_id);
     await sendInvoiceReceiptEmail(inv.to_email, {
+      cc: inv.cc_email,
       number: invoiceNumber(inv.id),
       fromName: sender.name,
       amount: formatMoney(inv.total_cents, inv.currency),
@@ -295,8 +309,9 @@ function formatMoney(cents, currency) {
 export function registerInvoiceRoutes(app) {
   // Meta for the invoice UI (safe values only).
   app.get("/api/invoices/meta", requireAuth, async (req, res) => {
+    const paymentProvider = paymentProviderForCountry(req.user.countryCode);
     let payoutsEnabled = false;
-    if (stripe) {
+    if (stripe && paymentProvider === "stripe") {
       try {
         const { rows } = await pool.query(
           "SELECT payouts_enabled FROM lb_stripe_accounts WHERE user_id = $1",
@@ -306,22 +321,23 @@ export function registerInvoiceRoutes(app) {
       } catch { /* ignore */ }
     }
     let ngnPayEnabled = false;
-    if (paystackEnabled()) {
+    if (paystackEnabled() && paymentProvider === "paystack") {
       try {
         const pa = await getPaystackAccountRow(req.user.id);
         ngnPayEnabled = !!(pa && pa.active);
       } catch { /* ignore */ }
     }
     res.json({
-      onlinePayEnabled: !!stripe,
+      onlinePayEnabled: !!stripe && paymentProvider === "stripe",
       payoutsEnabled,
       feeBps: FEE_BPS,
-      defaultCurrency: DEFAULT_CURRENCY,
-      currencies: CURRENCIES,
+      paymentProvider,
+      defaultCurrency: paymentProvider === "paystack" ? "ngn" : DEFAULT_CURRENCY,
+      currencies: paymentProvider === "paystack" ? ["ngn"] : CURRENCIES.filter((currency) => currency !== "ngn"),
       embedded: EMBEDDED,
       publishableKey: PUBLISHABLE_KEY,
       // Paystack (Naira) rail for the sender.
-      paystackEnabled: paystackEnabled(),
+      paystackEnabled: paymentProvider === "paystack" && paystackEnabled(),
       ngnPayEnabled
     });
   });
@@ -379,7 +395,7 @@ export function registerInvoiceRoutes(app) {
 
   // Create an invoice (draft, or send immediately with { send: true }).
   app.post("/api/invoices", requireAuth, async (req, res) => {
-    const parsed = parseInvoiceBody(req.body || {});
+    const parsed = parseInvoiceBody(req.body || {}, req.user.countryCode);
     if (parsed.error) return res.status(400).json({ error: parsed.error });
     if (parsed.toEmail === String(req.user.email).toLowerCase()) {
       return res.status(400).json({ error: "You can't invoice your own account." });
@@ -394,12 +410,12 @@ export function registerInvoiceRoutes(app) {
       const status = send ? "sent" : "draft";
       const ins = await client.query(
         `INSERT INTO lb_invoices
-           (from_user_id, to_user_id, to_email, to_name, currency, note, tax_mode, tax_rate_bps, tax_label,
+           (from_user_id, to_user_id, to_email, cc_email, to_name, currency, note, tax_mode, tax_rate_bps, tax_label,
             subtotal_cents, tax_cents, total_cents, status, public_token, due_date, sent_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, CASE WHEN $13='sent' THEN NOW() ELSE NULL END)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, CASE WHEN $14='sent' THEN NOW() ELSE NULL END)
          RETURNING *`,
         [
-          req.user.id, toUserId, parsed.toEmail, parsed.toName, parsed.currency, parsed.note,
+          req.user.id, toUserId, parsed.toEmail, parsed.ccEmail, parsed.toName, parsed.currency, parsed.note,
           parsed.taxMode, parsed.taxRateBps, parsed.taxLabel,
           parsed.totals.subtotal, parsed.totals.tax, parsed.totals.total,
           status, token, parsed.dueDate
@@ -422,7 +438,7 @@ export function registerInvoiceRoutes(app) {
 
   // Update a draft (only drafts are editable).
   app.put("/api/invoices/:id", requireAuth, async (req, res) => {
-    const parsed = parseInvoiceBody(req.body || {});
+    const parsed = parseInvoiceBody(req.body || {}, req.user.countryCode);
     if (parsed.error) return res.status(400).json({ error: parsed.error });
     const client = await pool.connect();
     try {
@@ -440,11 +456,11 @@ export function registerInvoiceRoutes(app) {
       const toUserId = payer.rows[0] ? payer.rows[0].id : null;
       const upd = await client.query(
         `UPDATE lb_invoices SET
-           to_user_id=$2, to_email=$3, to_name=$4, currency=$5, note=$6, tax_mode=$7, tax_rate_bps=$8,
-           tax_label=$9, subtotal_cents=$10, tax_cents=$11, total_cents=$12, due_date=$13, updated_at=NOW()
+           to_user_id=$2, to_email=$3, cc_email=$4, to_name=$5, currency=$6, note=$7, tax_mode=$8, tax_rate_bps=$9,
+           tax_label=$10, subtotal_cents=$11, tax_cents=$12, total_cents=$13, due_date=$14, updated_at=NOW()
          WHERE id=$1 RETURNING *`,
         [
-          cur.rows[0].id, toUserId, parsed.toEmail, parsed.toName, parsed.currency, parsed.note,
+          cur.rows[0].id, toUserId, parsed.toEmail, parsed.ccEmail, parsed.toName, parsed.currency, parsed.note,
           parsed.taxMode, parsed.taxRateBps, parsed.taxLabel,
           parsed.totals.subtotal, parsed.totals.tax, parsed.totals.total, parsed.dueDate
         ]
@@ -641,6 +657,9 @@ export function registerInvoiceRoutes(app) {
       const { rows } = await pool.query("SELECT * FROM lb_invoices WHERE public_token=$1", [String(req.params.token)]);
       if (!rows.length) return res.status(404).json({ error: "This invoice link is invalid." });
       const inv = rows[0];
+      if (String(inv.currency).toLowerCase() === "ngn") {
+        return res.status(400).json({ error: "Naira invoices must be paid through Paystack." });
+      }
       if (inv.status === "honored") return res.status(400).json({ error: "This invoice has already been paid." });
       if (inv.status === "cancelled") return res.status(400).json({ error: "This invoice was cancelled." });
 
@@ -803,6 +822,7 @@ export function registerInvoiceRoutes(app) {
       try {
         const sender = await senderContact(inv.from_user_id);
         await sendInvoiceProofEmail(sender.email, {
+          cc: inv.cc_email,
           senderName: sender.name,
           number: invoiceNumber(inv.id),
           payer: inv.to_name || inv.to_email,
@@ -826,6 +846,7 @@ async function emailInvoice(req, inv, hasAccount) {
     const sender = await displayNameForUser(inv.from_user_id, req.user.email);
     const viewUrl = `${appBase()}/invoice.html?token=${inv.public_token}`;
     const r = await sendInvoiceEmail(inv.to_email, {
+      cc: inv.cc_email,
       senderName: sender.name,
       number: invoiceNumber(inv.id),
       amount: formatMoney(inv.total_cents, inv.currency),

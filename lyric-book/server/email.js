@@ -99,8 +99,15 @@ function ctaButton(url, label) {
   <p style="color:#6f6f6f;font-size:12px;word-break:break-all">If the button doesn't work, paste this link into your browser:<br>${url}</p>`;
 }
 
+function emailCc(to, cc) {
+  const address = String(cc || "").trim();
+  return address && address.toLowerCase() !== String(to || "").trim().toLowerCase()
+    ? { cc: address }
+    : {};
+}
+
 // An invoice sent to the recipient (registered or not).
-export async function sendInvoiceEmail(to, { senderName, number, amount, note, dueDate, viewUrl, hasAccount }) {
+export async function sendInvoiceEmail(to, { cc, senderName, number, amount, note, dueDate, viewUrl, hasAccount }) {
   const safeSender = (senderName || "A DabzAudio artist").toString();
   const subject = `${safeSender} sent you an invoice (${number}) — ${amount}`;
   const due = dueDate ? `<p style="color:#9b9b9b;line-height:1.5">Due by <b style="color:#fff">${dueDate}</b>.</p>` : "";
@@ -120,7 +127,7 @@ export async function sendInvoiceEmail(to, { senderName, number, amount, note, d
     console.log(`[email disabled] Invoice ${number} for ${to}: ${viewUrl}`);
     return { sent: false };
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await resend.emails.send({ from: FROM, to, ...emailCc(to, cc), subject, html });
   return { sent: true };
 }
 
@@ -150,7 +157,7 @@ export async function sendGiftReceivedEmail(to, { fromName, amount, net, message
 
 // Send the payer a receipt once their invoice is honored, with a PDF download
 // link (works even if they don't have a DabzAudio account).
-export async function sendInvoiceReceiptEmail(to, { number, fromName, amount, downloadUrl, hasAccount }) {
+export async function sendInvoiceReceiptEmail(to, { cc, number, fromName, amount, downloadUrl, hasAccount }) {
   if (!to) return { sent: false };
   const safeSender = (fromName || "A DabzAudio artist").toString();
   const subject = `Receipt for invoice ${number} — ${amount}`;
@@ -167,12 +174,12 @@ export async function sendInvoiceReceiptEmail(to, { number, fromName, amount, do
     console.log(`[email disabled] Invoice receipt ${number} for ${to}: ${downloadUrl}`);
     return { sent: false };
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await resend.emails.send({ from: FROM, to, ...emailCc(to, cc), subject, html });
   return { sent: true };
 }
 
 // Notify the sender their invoice was honored (paid online).
-export async function sendInvoiceHonoredEmail(to, { senderName, number, payer, amount, method }) {
+export async function sendInvoiceHonoredEmail(to, { cc, senderName, number, payer, amount, method }) {
   if (!to) return { sent: false };
   const subject = `Invoice ${number} was paid — ${amount}`;
   const html = shell(`
@@ -183,12 +190,12 @@ export async function sendInvoiceHonoredEmail(to, { senderName, number, payer, a
     console.log(`[email disabled] Invoice honored ${number} for ${to}`);
     return { sent: false };
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await resend.emails.send({ from: FROM, to, ...emailCc(to, cc), subject, html });
   return { sent: true };
 }
 
 // Notify the sender that the recipient uploaded proof of payment (needs review).
-export async function sendInvoiceProofEmail(to, { senderName, number, payer, amount, openUrl }) {
+export async function sendInvoiceProofEmail(to, { cc, senderName, number, payer, amount, openUrl }) {
   if (!to) return { sent: false };
   const subject = `Proof of payment uploaded for invoice ${number}`;
   const html = shell(`
@@ -200,7 +207,7 @@ export async function sendInvoiceProofEmail(to, { senderName, number, payer, amo
     console.log(`[email disabled] Invoice proof ${number} for ${to}: ${openUrl}`);
     return { sent: false };
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await resend.emails.send({ from: FROM, to, ...emailCc(to, cc), subject, html });
   return { sent: true };
 }
 
@@ -217,12 +224,12 @@ export async function sendContractInvite(to, { songTitle, artistName, signUrl })
   if (!to) return { sent: false };
   const song = escHtml(songTitle || "a song");
   const artist = escHtml(artistName || "A DabzAudio artist");
-  const subject = `Sign the music contract for "${song}"`;
+  const subject = `Sign the Split Sheet for "${song}"`;
   const html = shell(`
-    <h2 style="color:#fff;margin:0 0 12px">Music contract ready for signature</h2>
-    <p style="color:#9b9b9b;line-height:1.5">${artist} sent you a music contract for <b style="color:#fff">${song}</b>.</p>
-    <p style="color:#9b9b9b;line-height:1.5">Click the button below to review and sign it. Once all listed signers have signed, everyone will receive a completed copy.</p>
-    ${ctaButton(signUrl, "Review & sign contract")}`);
+    <h2 style="color:#fff;margin:0 0 12px">Split Sheet ready for signature</h2>
+    <p style="color:#9b9b9b;line-height:1.5">${artist} sent you a Split Sheet for <b style="color:#fff">${song}</b>, recording the contributors and ownership percentages.</p>
+    <p style="color:#9b9b9b;line-height:1.5">Review and sign it below. Once all listed contributors have signed, everyone will receive a completed copy.</p>
+    ${ctaButton(signUrl, "Review & sign Split Sheet")}`);
   if (!resend) {
     console.log(`[email disabled] Contract invite for ${to}: ${signUrl}`);
     return { sent: false };
@@ -235,14 +242,68 @@ export async function sendContractCompleted(to, { songTitle, artistName, contrac
   if (!to) return { sent: false };
   const song = escHtml(songTitle || "a song");
   const artist = escHtml(artistName || "A DabzAudio artist");
-  const subject = `Music contract signed for "${song}"`;
+  const subject = `Split Sheet signed for "${song}"`;
   const html = shell(`
     <h2 style="color:#fff;margin:0 0 12px">All signers have signed</h2>
-    <p style="color:#9b9b9b;line-height:1.5">The music contract for <b style="color:#fff">${song}</b> by ${artist} is now fully signed. Here is the completed agreement:</p>
+    <p style="color:#9b9b9b;line-height:1.5">The Split Sheet for <b style="color:#fff">${song}</b> by ${artist} is now fully signed. Here is the completed contributor and ownership record:</p>
     <div style="background:#0f0f0f;border:1px solid #272727;border-radius:10px;padding:16px;margin-top:14px;font-size:13px;line-height:1.6;color:#eaeaea">${contractHtml}</div>
     ${downloadUrl ? `<p style="margin-top:18px">${ctaButton(downloadUrl, "Download completed PDF")}</p>` : ""}`);
   if (!resend) {
     console.log(`[email disabled] Contract completed for ${to}: ${song}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+export async function sendNewLoginAlert(to, { ip, userAgent, happenedAt }) {
+  const subject = "New sign-in to your DabzAudio Lyric Book";
+  const html = shell(`
+    <h2 style="color:#fff;margin:0 0 12px">New sign-in detected</h2>
+    <p style="color:#9b9b9b;line-height:1.5">A sign-in to your Lyric Book account was detected from a new device or network.</p>
+    <p style="color:#9b9b9b;line-height:1.7"><b style="color:#fff">Time:</b> ${escapeHtml(happenedAt)}<br>
+    <b style="color:#fff">IP address:</b> ${escapeHtml(ip)}<br>
+    <b style="color:#fff">Browser:</b> ${escapeHtml(userAgent)}</p>
+    <p style="color:#9b9b9b;line-height:1.5">If this wasn't you, reset your password and review your account security.</p>`);
+  if (!resend) {
+    console.log(`[email disabled] New sign-in alert for ${to}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+// A file transfer sent to a creative (registered or not).
+export async function sendTransferEmail(to, { senderName, message, fileCount, totalLabel, expiresLabel, downloadUrl }) {
+  const name = escapeHtml(senderName || "A DabzAudio creative");
+  const subject = `${senderName || "A DabzAudio creative"} sent you ${fileCount === 1 ? "a file" : fileCount + " files"}`;
+  const note = message ? `<p style="color:#eaeaea;line-height:1.5;border-left:3px solid #ff7a00;padding-left:12px">${escapeHtml(message)}</p>` : "";
+  const html = shell(`
+      <h2 style="color:#fff;margin:0 0 12px">You've received a transfer</h2>
+      <p style="color:#9b9b9b;line-height:1.5">${name} sent you ${fileCount} ${fileCount === 1 ? "file" : "files"} (${escapeHtml(totalLabel)}) with DabzAudio Transfer a file. No account needed to download. The download link expires on ${escapeHtml(expiresLabel)}, seven days after the transfer is ready.</p>
+      ${note}
+      ${ctaButton(downloadUrl, "Download files")}`);
+  if (!resend) {
+    console.log(`[email disabled] Transfer for ${to}: ${downloadUrl}`);
+    return { sent: false };
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+  return { sent: true };
+}
+
+// Tells the sender their transfer was downloaded.
+export async function sendTransferDownloaded(to, { fileName, count, manageUrl }) {
+  const subject = "Your transfer was downloaded";
+  const html = shell(`
+      <h2 style="color:#fff;margin:0 0 12px">Your transfer was downloaded</h2>
+      <p style="color:#9b9b9b;line-height:1.5">“${escapeHtml(fileName)}” was just downloaded. This transfer has now been downloaded ${count} ${count === 1 ? "time" : "times"}.</p>
+      ${ctaButton(manageUrl, "View my transfers")}`);
+  if (!resend) {
+    console.log(`[email disabled] Transfer download notice for ${to}: ${fileName}`);
     return { sent: false };
   }
   await resend.emails.send({ from: FROM, to, subject, html });

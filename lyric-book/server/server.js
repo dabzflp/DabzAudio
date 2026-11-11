@@ -7,10 +7,12 @@
  * Env vars (Railway Variables):
  *  - DATABASE_URL        Postgres connection string
  *  - JWT_SECRET          long random string for signing sessions
- *  - RESEND_API_KEY      (optional) enables password-reset emails
+ *  - RESEND_API_KEY      (optional) enables password-reset and sign-in alert emails
  *  - EMAIL_FROM          (optional) verified sender, e.g. "DabzAudio <no-reply@dabzaudio.com>"
  *  - APP_BASE_URL        (optional) public URL of the frontend, used in reset links
- *  - CORS_ORIGIN         (optional) comma-separated allowed origins for cross-origin use
+ *  - CORS_ORIGIN         comma-separated exact HTTPS frontend origins; required in production
+ *  - TRUST_PROXY_HOPS    (optional) trusted proxy count; defaults to 1 in production
+ *  - MFA_ENCRYPTION_KEY  (optional until MFA enrollment; 32 random bytes as 64 hex chars)
  *  - NODE_ENV=production  enables SSL + secure cookies
  */
 import express from "express";
@@ -29,15 +31,24 @@ import http from "http";
 import { pool, connectWithRetry } from "./db.js";
 import { signToken, requireAuth, cookieOptions, COOKIE_NAME } from "./auth.js";
 import { sendPasswordReset, sendShareInvite, emailEnabled } from "./email.js";
+import { isMfaEncryptionConfigured, recordSuccessfulLogin, signMfaChallenge } from "./auth-security.js";
+import { accountHasMfa, registerMfaRoutes } from "./mfa-routes.js";
 import { getLyricAccess, displayNameForUser } from "./access.js";
-import { initCollab, revokeCollabAccess } from "./collab.js";
+import { initCollab, revokeCollabAccess, revokeUserSessions } from "./collab.js";
 import { registerPaymentRoutes, stripeWebhookHandler } from "./payments.js";
 import { registerInvoiceRoutes } from "./invoices.js";
 import { registerPaystackRoutes, paystackWebhookHandler } from "./paystack.js";
+import { registerSubscriptionRoutes, isProUser } from "./subscriptions.js";
+import { registerCreditRoutes } from "./credits.js";
+import { registerDropPilotRoutes } from "./droppilot.js";
 import { registerContractRoutes } from "./contracts.js";
+import { registerAIRoutes } from "./ai.js";
 import { registerPlaybackRoutes } from "./playback.js";
-import { rateLimit } from "./rate-limit.js";
+import { registerTransferRoutes } from "./transfers.js";
+import { rateLimit, sharedRateLimit } from "./rate-limit.js";
 import { ensureUniqueUsername, validateUsername } from "./username.js";
+import { listCountries, normalizeCountryCode } from "./country-routing.js";
+import { createCorsOriginPolicy } from "./cors-policy.js";
 
 dotenv.config();
 
@@ -56,21 +67,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-const corsOrigins = (process.env.CORS_ORIGIN || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-// Allow the configured origins, plus Netlify deploy previews
-// (deploy-preview-*--<site>.netlify.app) so PR previews can call the API.
-export function isAllowedOrigin(origin) {
-  if (!origin) return true; // non-browser clients (curl, server-to-server)
-  if (!corsOrigins.length) return true;
-  if (corsOrigins.includes(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+--dabzaudio\.netlify\.app$/i.test(origin)) return true;
-  return false;
+const trustProxyHops = process.env.TRUST_PROXY_HOPS === undefined
+  ? (process.env.NODE_ENV === "production" ? 1 : 0)
+  : Number(process.env.TRUST_PROXY_HOPS);
+if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0) {
+  throw new Error("TRUST_PROXY_HOPS must be a non-negative integer.");
 }
+app.set("trust proxy", trustProxyHops);
+
+export const isAllowedOrigin = createCorsOriginPolicy({
+  nodeEnv: process.env.NODE_ENV,
+  configuredOrigins: process.env.CORS_ORIGIN
+});
 app.use(
   cors({
     origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
@@ -86,6 +94,7 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), pay
 // Allow base64 image payloads for avatar uploads (default 100kb is too small).
 app.use(express.json({ limit: "8mb" }));
 app.use(cookieParser());
+registerMfaRoutes(app);
 
 // Gift Me (Stripe Connect) routes — additive; no-op if STRIPE_SECRET_KEY unset.
 registerPaymentRoutes(app);
@@ -97,17 +106,40 @@ registerInvoiceRoutes(app);
 // Paystack (Naira) routes — additive; no-op if PAYSTACK_SECRET_KEY unset.
 registerPaystackRoutes(app);
 
+// Lyric Book membership billing; separate from Stripe Connect artist payouts.
+registerSubscriptionRoutes(app);
+
+// Pro tier: AI credits and the Drop Pilot bridge.
+registerCreditRoutes(app, { isProUser });
+registerDropPilotRoutes(app, { isProUser });
+
 // Music contracts — create/store contracts and signers.
 registerContractRoutes(app);
+
+// AI Assistant — additive; defaults to mock mode (no external calls) unless
+// The server selects Groq in production and Ollama for local testing.
+registerAIRoutes(app);
 
 // Playback routes are additive and use their own lb_playback_* tables.
 registerPlaybackRoutes(app);
 
+// Transfer a file — temporary (7-day) large file transfers; own lb_transfer* tables.
+registerTransferRoutes(app);
+
 // Self-delete account (irreversible). Deletes the user row; cascades to
 // profiles, lyrics, collaborations, contracts, invoices, reset tokens, etc.
-app.delete("/api/me", requireAuth, async (req, res) => {
+app.delete("/api/me", requireAuth, rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }), async (req, res) => {
   const userId = req.user.id;
   try {
+    const password = req.body?.password;
+    if (typeof password !== "string" || !password) {
+      return res.status(400).json({ error: "Enter your current password to delete this account." });
+    }
+    const account = await pool.query("SELECT password_hash FROM lb_users WHERE id = $1", [userId]);
+    if (!account.rows.length) return res.status(404).json({ error: "Account not found." });
+    const passwordMatches = await bcrypt.compare(password, account.rows[0].password_hash);
+    if (!passwordMatches) return res.status(403).json({ error: "That password doesn't match this account." });
+
     const result = await pool.query("DELETE FROM lb_users WHERE id = $1", [userId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Account not found." });
@@ -190,9 +222,16 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, email: emailEnabled(), time: new Date().toISOString() });
 });
 
+app.get("/api/countries", (req, res) => {
+  res.json({ countries: listCountries() });
+});
+
 /* ----------------------------- AUTH ----------------------------- */
 
-app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
+app.post("/api/auth/signup", sharedRateLimit({
+  max: 10,
+  key: (req) => `auth:signup:ip:${req.ip || "unknown"}`
+}), async (req, res) => {
   try {
     const {
       email,
@@ -201,7 +240,8 @@ app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
       artistName = "",
       genre = "",
       influences = "",
-      experience = ""
+      experience = "",
+      countryCode = ""
     } = req.body || {};
 
     if (!email || !EMAIL_RE.test(email)) {
@@ -210,6 +250,8 @@ app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
     if (!password || String(password).length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters." });
     }
+    const normalizedCountry = normalizeCountryCode(countryCode);
+    if (!normalizedCountry) return res.status(400).json({ error: "Select a valid country." });
 
     const exists = await pool.query("SELECT id FROM lb_users WHERE email = $1", [
       email.toLowerCase()
@@ -224,10 +266,15 @@ app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
     try {
       await client.query("BEGIN");
       const u = await client.query(
-        "INSERT INTO lb_users (email, password_hash) VALUES ($1, $2) RETURNING id, email",
-        [email.toLowerCase(), password_hash]
+        "INSERT INTO lb_users (email, password_hash, billing_exempt, country_code) VALUES ($1, $2, FALSE, $3) RETURNING id, email, country_code, auth_version",
+        [email.toLowerCase(), password_hash, normalizedCountry]
       );
       user = u.rows[0];
+      await client.query(
+        `INSERT INTO lb_subscriptions (user_id, status, trial_started_at, trial_ends_at)
+         VALUES ($1, 'trialing', NOW(), NOW() + INTERVAL '30 days')`,
+        [user.id]
+      );
       const username = await ensureUniqueUsername(
         client,
         String(email).split("@")[0] || artistName || displayName
@@ -250,20 +297,32 @@ app.post("/api/auth/signup", rateLimit({ max: 10 }), async (req, res) => {
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, cookieOptions());
     res.status(201).json({ token, user: { id: user.id, email: user.email } });
+    recordSuccessfulLogin(req, user, false)
+      .catch((err) => console.error("Signup device tracking failed:", err.message));
   } catch (err) {
     console.error("signup error", err);
     res.status(500).json({ error: "Could not create account." });
   }
 });
 
-app.post("/api/auth/login", rateLimit({ max: 10 }), async (req, res) => {
+app.post("/api/auth/login", sharedRateLimit({
+  max: 10,
+  key: (req) => `auth:login:ip:${req.ip || "unknown"}`
+}), sharedRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  key: (req) => {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    return email ? `auth:login:email:${email}` : null;
+  }
+}), async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
     const { rows } = await pool.query(
-      "SELECT id, email, password_hash FROM lb_users WHERE email = $1",
+      "SELECT id, email, password_hash, auth_version FROM lb_users WHERE email = $1",
       [String(email).toLowerCase()]
     );
     const user = rows[0];
@@ -272,11 +331,20 @@ app.post("/api/auth/login", rateLimit({ max: 10 }), async (req, res) => {
     const ok = await bcrypt.compare(String(password), user.password_hash);
     if (!ok) return res.status(401).json({ error: "Invalid email or password." });
 
+    if (await accountHasMfa(user.id)) {
+      if (!isMfaEncryptionConfigured()) {
+        return res.status(503).json({ error: "Authenticator verification is temporarily unavailable. Contact support." });
+      }
+      return res.json({ mfaRequired: true, challengeToken: signMfaChallenge(user) });
+    }
+
     await linkPendingInvites(user.id, user.email);
 
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, cookieOptions());
     res.json({ token, user: { id: user.id, email: user.email } });
+    recordSuccessfulLogin(req, user, true)
+      .catch((err) => console.error("New-login tracking failed:", err.message));
   } catch (err) {
     console.error("login error", err);
     res.status(500).json({ error: "Could not sign in." });
@@ -292,7 +360,7 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
     await linkPendingInvites(req.user.id, req.user.email);
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url, p.username, p.username_updated_at
+      `SELECT u.id, u.email, u.country_code, p.display_name, p.artist_name, p.genre, p.influences, p.experience, p.avatar_url, p.username, p.username_updated_at
        FROM lb_users u LEFT JOIN lb_profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
       [req.user.id]
@@ -300,12 +368,28 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
     const row = rows[0];
     if (!row) return res.status(404).json({ error: "User not found." });
     res.json({
-      user: { id: row.id, email: row.email },
+      user: { id: row.id, email: row.email, countryCode: row.country_code || null },
       profile: sanitizeProfile(row)
     });
   } catch (err) {
     console.error("me error", err);
     res.status(500).json({ error: "Could not load profile." });
+  }
+});
+
+app.put("/api/profile/country", requireAuth, async (req, res) => {
+  const countryCode = normalizeCountryCode(req.body?.countryCode);
+  if (!countryCode) return res.status(400).json({ error: "Select a valid country." });
+  try {
+    const result = await pool.query(
+      "UPDATE lb_users SET country_code = $2 WHERE id = $1 AND country_code IS NULL RETURNING country_code",
+      [req.user.id, countryCode]
+    );
+    if (!result.rowCount) return res.status(409).json({ error: "Country is already set for this account." });
+    res.json({ countryCode: result.rows[0].country_code });
+  } catch (err) {
+    console.error("Set account country error:", err);
+    res.status(500).json({ error: "Could not save your country." });
   }
 });
 
@@ -429,7 +513,17 @@ app.post("/api/profile/avatar", requireAuth, async (req, res) => {
 
 /* ------------------------ PASSWORD RESET ------------------------ */
 
-app.post("/api/auth/forgot", rateLimit({ max: 5 }), async (req, res) => {
+app.post("/api/auth/forgot", sharedRateLimit({
+  max: 5,
+  key: (req) => `auth:forgot:ip:${req.ip || "unknown"}`
+}), sharedRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  key: (req) => {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    return email ? `auth:forgot:email:${email}` : null;
+  }
+}), async (req, res) => {
   // Always respond the same way so we never reveal which emails exist.
   const generic = {
     ok: true,
@@ -463,7 +557,16 @@ app.post("/api/auth/forgot", rateLimit({ max: 5 }), async (req, res) => {
   }
 });
 
-app.post("/api/auth/reset", async (req, res) => {
+app.post("/api/auth/reset", sharedRateLimit({
+  max: 10,
+  key: (req) => `auth:reset:ip:${req.ip || "unknown"}`
+}), sharedRateLimit({
+  max: 5,
+  key: (req) => {
+    const token = String(req.body?.token || "");
+    return token ? `auth:reset:token:${crypto.createHash("sha256").update(token).digest("hex")}` : null;
+  }
+}), async (req, res) => {
   try {
     const { token, password } = req.body || {};
     if (!token || !password || String(password).length < 8) {
@@ -478,16 +581,29 @@ app.post("/api/auth/reset", async (req, res) => {
     );
     const tok = rows[0];
     if (!tok) return res.status(400).json({ error: "This reset link is invalid or has expired." });
-
     const password_hash = await bcrypt.hash(String(password), 10);
     const client = await pool.connect();
+    let resetUserId;
     try {
       await client.query("BEGIN");
-      await client.query("UPDATE lb_users SET password_hash = $1 WHERE id = $2", [
+      const consumed = await client.query(
+        `UPDATE lb_reset_tokens SET used_at=NOW()
+         WHERE id=$1 AND used_at IS NULL AND expires_at > NOW()
+         RETURNING user_id`,
+        [tok.id]
+      );
+      if (!consumed.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "This reset link is invalid or has expired." });
+      }
+      resetUserId = consumed.rows[0].user_id;
+      await client.query("UPDATE lb_users SET password_hash = $1, auth_version = auth_version + 1 WHERE id = $2", [
         password_hash,
-        tok.user_id
+        resetUserId
       ]);
-      await client.query("UPDATE lb_reset_tokens SET used_at = NOW() WHERE id = $1", [tok.id]);
+      await client.query("UPDATE lb_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL", [
+        resetUserId
+      ]);
       await client.query("COMMIT");
     } catch (e) {
       await client.query("ROLLBACK");
@@ -495,6 +611,7 @@ app.post("/api/auth/reset", async (req, res) => {
     } finally {
       client.release();
     }
+    revokeUserSessions(resetUserId);
     res.json({ ok: true, message: "Password updated. You can now sign in." });
   } catch (err) {
     console.error("reset error", err);

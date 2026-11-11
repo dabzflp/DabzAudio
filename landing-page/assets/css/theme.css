@@ -32,6 +32,12 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* The hidden attribute must always win over component display rules
+   (.btn, .release-edit, .release-share ... set display: flex/inline-flex). */
+body.dabz-lite [hidden] {
+  display: none !important;
+}
+
 /* Shared product controls: keep button geometry consistent across tools.
    The Live Key control intentionally keeps its pill shape. */
 body.dabz-lite .btn,
@@ -301,10 +307,13 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .hamburger span {
   background: #333333;
 }
 
-html[data-theme="light"] body.dabz-lite:not([data-product]) .header-actions {
-  background: #f2f2f2;
-  border-color: #d0d0d0;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+/* The boxed look is only for the mobile dropdown; on desktop the buttons sit directly on the header. */
+@media (max-width: 860px) {
+  html[data-theme="light"] body.dabz-lite:not([data-product]) .header-actions {
+    background: #f2f2f2;
+    border-color: #d0d0d0;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+  }
 }
 
 html[data-theme="light"] body.dabz-lite:not([data-product]) .header-actions .who,
@@ -394,6 +403,79 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .rhythm-box {
 
 html[data-theme="light"] body.dabz-lite:not([data-product]) .suggest-input input::placeholder {
   color: #777777;
+}
+
+/* AI Assistant panel + editor-bar "Ask AI" popover — both hardcode a dark,
+   glowing card look on purpose (it's meant to feel distinct), but still need
+   a readable variant when the rest of the app switches to light mode. */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-panel,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-panel::after,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-ask-popover {
+  background: var(--card-bg);
+  border-color: #e0c2a0;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-panel-title h4,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-suggestion p {
+  color: var(--default-color);
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-panel-sub,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-suggestion small,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-notes {
+  color: #555555;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-chip {
+  background: #fff3e6;
+  border-color: #f0c896;
+  color: #8a4a00;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-chip:hover {
+  background: #ffe4c2;
+  color: #5c3000;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-ask-row input,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-suggestion,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-notes {
+  background: #ffffff;
+  color: var(--default-color);
+  border-color: #e0c2a0;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-ask-row input::placeholder {
+  color: #777777;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-more-toggle {
+  color: #a35a00;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-more-label {
+  color: #555555;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .ai-more-label select {
+  background: #ffffff;
+  color: var(--default-color);
+  border-color: #e0c2a0;
+}
+
+html[data-theme="light"] body.dabz-lite .membership-panel {
+  background: #ffffff;
+  color: var(--default-color);
+  border-color: #e0c2a0;
+}
+html[data-theme="light"] body.dabz-lite .membership-panel h1,
+html[data-theme="light"] body.dabz-lite .membership-status,
+html[data-theme="light"] body.dabz-lite .billing-price {
+  color: var(--default-color);
+}
+html[data-theme="light"] body.dabz-lite .membership-status,
+html[data-theme="light"] body.dabz-lite .billing-period label {
+  background: #fff7ef;
+  border-color: #e0c2a0;
+}
+html[data-theme="light"] body.dabz-lite .billing-row select,
+html[data-theme="light"] body.dabz-lite .billing-period label {
+  color: var(--default-color);
+}
+html[data-theme="light"] body.dabz-lite .billing-row select {
+  background: #ffffff;
+  border-color: #d0d0d0;
 }
 
 html[data-theme="light"] body.dabz-lite:not([data-product]) .chip {
@@ -634,4 +716,268 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label input::p
 html[data-theme="light"] body.dabz-lite:not([data-product]) .gift-label textarea::placeholder,
 html[data-theme="light"] body.dabz-lite:not([data-product]) .handle-input::placeholder {
   color: #777777;
+}
+
+/* ======================================================================
+   Lyric Book light-mode polish: header, banner, Playback, Transfer, Plan.
+   The brand orange (#ff7a00) is too faint for text on white, so text uses
+   a deeper tone while fills keep the brand colour.
+   ====================================================================== */
+html[data-theme="light"] {
+  --orange-text: #b04f00;
+  --danger: #c62828;
+  --ok: #1b7f43;
+  --muted: #555555;
+}
+
+/* Header avatar / initials and trial banner */
+html[data-theme="light"] body.dabz-lite .logo-circle,
+html[data-theme="light"] body.dabz-lite .logo-initials {
+  color: var(--orange-text);
+}
+html[data-theme="light"] body.dabz-lite .logo-circle {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+html[data-theme="light"] body.dabz-lite .membership-reminder {
+  background: #fff3e6;
+  border-bottom-color: rgba(255, 122, 0, 0.35);
+  color: #222;
+}
+html[data-theme="light"] body.dabz-lite .membership-reminder a,
+html[data-theme="light"] body.dabz-lite .back-link,
+html[data-theme="light"] body.dabz-lite .rhythm-line b,
+html[data-theme="light"] body.dabz-lite .chip .syl,
+html[data-theme="light"] body.dabz-lite .track-number,
+html[data-theme="light"] body.dabz-lite .ai-status,
+html[data-theme="light"] body.dabz-lite .release-type,
+html[data-theme="light"] body.dabz-lite .billing-save,
+html[data-theme="light"] body.dabz-lite .plan-option b,
+html[data-theme="light"] body.dabz-lite .membership-steps > div > span {
+  color: var(--orange-text);
+}
+
+/* Primary buttons: a slightly deeper orange so white text stays readable */
+html[data-theme="light"] body.dabz-lite .btn {
+  background: #d95f00;
+  border-color: #d95f00;
+  color: #fff;
+}
+html[data-theme="light"] body.dabz-lite .btn:hover {
+  background: #bf5300;
+  border-color: #bf5300;
+  color: #fff;
+}
+html[data-theme="light"] body.dabz-lite .btn:disabled {
+  opacity: 0.55;
+}
+
+/* Page chrome for Playback / Transfer / Plan */
+html[data-theme="light"] body.dabz-lite .public-playback-nav {
+  background: rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] body.dabz-lite .public-playback-brand b,
+html[data-theme="light"] body.dabz-lite .playback-hero h1,
+html[data-theme="light"] body.dabz-lite .shared-release h1,
+html[data-theme="light"] body.dabz-lite .release-title,
+html[data-theme="light"] body.dabz-lite .membership-panel h1,
+html[data-theme="light"] body.dabz-lite .tx-card h1,
+html[data-theme="light"] body.dabz-lite .tx-card h2,
+html[data-theme="light"] body.dabz-lite .tx-history h2,
+html[data-theme="light"] body.dabz-lite .tx-drop strong,
+html[data-theme="light"] body.dabz-lite .billing-price,
+html[data-theme="light"] body.dabz-lite .plan-option strong,
+html[data-theme="light"] body.dabz-lite .plan-includes,
+html[data-theme="light"] body.dabz-lite .plan-includes strong,
+html[data-theme="light"] body.dabz-lite .membership-steps strong,
+html[data-theme="light"] body.dabz-lite .membership-status,
+html[data-theme="light"] body.dabz-lite .shared-artist,
+html[data-theme="light"] body.dabz-lite .shared-track b,
+html[data-theme="light"] body.dabz-lite .track-meta b,
+html[data-theme="light"] body.dabz-lite .track-mix-heading,
+html[data-theme="light"] body.dabz-lite .track-mix-bands output,
+html[data-theme="light"] body.dabz-lite .tx-file-name,
+html[data-theme="light"] body.dabz-lite .tx-item-main b,
+html[data-theme="light"] body.dabz-lite .tx-note,
+html[data-theme="light"] body.dabz-lite .tx-chip {
+  color: #111;
+}
+html[data-theme="light"] body.dabz-lite .optional,
+html[data-theme="light"] body.dabz-lite .cover-note,
+html[data-theme="light"] body.dabz-lite .track-note,
+html[data-theme="light"] body.dabz-lite .player-time {
+  color: #555;
+}
+html[data-theme="light"] body.dabz-lite .drag-handle {
+  color: #888;
+}
+
+/* Cards */
+html[data-theme="light"] body.dabz-lite .playback-create,
+html[data-theme="light"] body.dabz-lite .release-card,
+html[data-theme="light"] body.dabz-lite .shared-release,
+html[data-theme="light"] body.dabz-lite .membership-panel,
+html[data-theme="light"] body.dabz-lite .tx-card {
+  background: #fff;
+  border-color: #d4d4d4;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
+}
+html[data-theme="light"] body.dabz-lite .release-art {
+  background: linear-gradient(135deg, #f7e6d6, #ececec);
+  border-color: rgba(255, 122, 0, 0.35);
+}
+html[data-theme="light"] body.dabz-lite .shared-cover-empty {
+  background: #f7e6d6;
+  color: var(--orange-text);
+}
+html[data-theme="light"] body.dabz-lite .release-art-mark {
+  color: var(--orange-text);
+}
+html[data-theme="light"] body.dabz-lite .track-mix-panel {
+  background: #fff7ef;
+  border-color: rgba(255, 122, 0, 0.35);
+}
+html[data-theme="light"] body.dabz-lite .playback-empty {
+  border-color: rgba(255, 122, 0, 0.5);
+}
+
+/* Form fields */
+html[data-theme="light"] body.dabz-lite .playback-form input,
+html[data-theme="light"] body.dabz-lite .playback-form select,
+html[data-theme="light"] body.dabz-lite .playback-form textarea,
+html[data-theme="light"] body.dabz-lite .release-edit input,
+html[data-theme="light"] body.dabz-lite .release-edit textarea,
+html[data-theme="light"] body.dabz-lite .track-title,
+html[data-theme="light"] body.dabz-lite .release-share input,
+html[data-theme="light"] body.dabz-lite .billing-row select,
+html[data-theme="light"] body.dabz-lite .tx-field textarea,
+html[data-theme="light"] body.dabz-lite .tx-chips,
+html[data-theme="light"] body.dabz-lite .tx-bar {
+  background: #f6f6f6;
+  border-color: #c8c8c8;
+  color: #111;
+}
+html[data-theme="light"] body.dabz-lite .tx-chips input {
+  background: transparent;
+  color: #111;
+}
+html[data-theme="light"] body.dabz-lite .billing-period label {
+  background: #f6f6f6;
+  border-color: #c8c8c8;
+  color: #222;
+}
+html[data-theme="light"] body.dabz-lite .plan-option:has(input:checked) {
+  background: #fff1e2;
+  border-color: var(--orange);
+}
+html[data-theme="light"] body.dabz-lite .tx-chip {
+  background: #fff1e2;
+}
+
+/* Small controls and hover states that used bright orange text */
+html[data-theme="light"] body.dabz-lite .track-edit:hover,
+html[data-theme="light"] body.dabz-lite .track-mix-toggle:hover,
+html[data-theme="light"] body.dabz-lite .track-mix-toggle[aria-expanded="true"],
+html[data-theme="light"] body.dabz-lite .track-mix-reset:hover,
+html[data-theme="light"] body.dabz-lite .track-mix-bypass.active,
+html[data-theme="light"] body.dabz-lite .track-replace:hover,
+html[data-theme="light"] body.dabz-lite .repeat-track:hover,
+html[data-theme="light"] body.dabz-lite .repeat-track.active {
+  color: var(--orange-text);
+}
+html[data-theme="light"] body.dabz-lite .track-edit,
+html[data-theme="light"] body.dabz-lite .track-mix-toggle,
+html[data-theme="light"] body.dabz-lite .track-mix-reset,
+html[data-theme="light"] body.dabz-lite .track-mix-bypass,
+html[data-theme="light"] body.dabz-lite .track-replace,
+html[data-theme="light"] body.dabz-lite .repeat-track {
+  border-color: #c8c8c8;
+}
+
+/* Custom audio player */
+html[data-theme="light"] body.dabz-lite .custom-player {
+  background: #f3f3f3;
+  border-color: rgba(255, 122, 0, 0.4);
+}
+html[data-theme="light"] body.dabz-lite .player-play,
+html[data-theme="light"] body.dabz-lite .player-mute {
+  color: var(--orange-text);
+}
+html[data-theme="light"] body.dabz-lite .player-play:hover,
+html[data-theme="light"] body.dabz-lite .player-mute:hover {
+  background: var(--orange);
+  color: #fff;
+}
+html[data-theme="light"] body.dabz-lite .player-seek {
+  background: linear-gradient(to right, var(--orange) 0 var(--played, 0%), #cfcfcf var(--played, 0%) 100%);
+}
+html[data-theme="light"] body.dabz-lite .player-volume {
+  background: linear-gradient(to right, var(--orange) 0 100%, #cfcfcf 100%);
+}
+html[data-theme="light"] body.dabz-lite .player-seek::-webkit-slider-thumb,
+html[data-theme="light"] body.dabz-lite .player-volume::-webkit-slider-thumb {
+  border-color: #fff;
+}
+html[data-theme="light"] body.dabz-lite .player-seek::-moz-range-thumb,
+html[data-theme="light"] body.dabz-lite .player-volume::-moz-range-thumb {
+  border-color: #fff;
+}
+
+/* Links and brand labels that were bright orange on white */
+html[data-theme="light"] body.dabz-lite .public-playback-brand span,
+html[data-theme="light"] body.dabz-lite .auth-card a:not(.btn),
+html[data-theme="light"] body.dabz-lite .membership-panel a:not(.btn),
+html[data-theme="light"] body.dabz-lite .tx-card a:not(.btn) {
+  color: var(--orange-text);
+}
+
+/* "DA." wordmark: the white-to-orange gradient disappears on the white
+   Lyric Book header, so run it dark-to-orange in light mode. */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .dabz-brand .sitename {
+  background: linear-gradient(120deg, #111111 0%, #ff7a00 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .dabz-brand .dot {
+  color: #e86d00;
+}
+
+/* Smaller leftovers: AI scope select, invoice tab counts, @handle prefix */
+html[data-theme="light"] body.dabz-lite .ai-scope-label select {
+  background: #fff;
+  color: #111;
+  border-color: #c8c8c8;
+}
+html[data-theme="light"] body.dabz-lite .inv-tab-count {
+  color: #333;
+}
+html[data-theme="light"] body.dabz-lite .handle-at {
+  color: var(--orange-text);
+}
+
+/* Account menu (Delete account lives here, away from Log out) */
+html[data-theme="light"] body.dabz-lite:not([data-product]) .acct-pop {
+  background: #ffffff;
+  border-color: #d9d9de;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .acct-note { color: #6b6b73; }
+html[data-theme="light"] body.dabz-lite:not([data-product]) .acct-item.danger { color: #c62828; }
+html[data-theme="light"] body.dabz-lite:not([data-product]) .acct-item.danger:hover,
+html[data-theme="light"] body.dabz-lite:not([data-product]) .acct-item.danger:focus-visible { background: rgba(198, 40, 40, 0.09); }
+
+/* Header theme toggle on product pages */
+.theme-toggle--header {
+  width: 38px; height: 38px; padding: 0; flex: 0 0 auto; margin-left: 12px;
+  border-radius: 50%; color: var(--default-color, inherit);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+.theme-toggle--header:hover { background: rgba(255, 255, 255, 0.13); }
+.theme-toggle--header:focus-visible { outline: 2px solid #ff7a00; outline-offset: 2px; }
+html[data-theme="light"] .theme-toggle--header { color: #111; border-color: rgba(0, 0, 0, 0.16); background: rgba(0, 0, 0, 0.04); }
+html[data-theme="light"] .theme-toggle--header:hover { background: rgba(0, 0, 0, 0.09); }
+@media (max-width: 860px) {
+  .site-header > .hamburger { margin-left: auto; }
+  .site-header > .hamburger + .header-actions + .theme-toggle--header { margin-left: 8px; }
 }

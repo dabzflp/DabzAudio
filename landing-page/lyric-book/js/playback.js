@@ -63,7 +63,7 @@
     } catch {
       input.focus();
       input.select();
-      window.prompt("Copy this Playback link", text);
+      dabzPrompt("Press Ctrl/Cmd+C to copy this link.", text, { title: "Playback link", okText: "Done" });
     }
   }
 
@@ -170,7 +170,7 @@
       } catch (err) { releaseEditMsg.textContent = err.message; releaseEditMsg.className = "msg err release-edit-msg"; }
     });
     deleteRelease.addEventListener("click", async () => {
-      if (!confirm("Delete this release and its tracks? This cannot be undone.")) return;
+      if (!(await dabzConfirm("This release and all its tracks will be permanently deleted. This cannot be undone.", { title: "Delete release?", okText: "Delete" }))) return;
       try {
         await window.LB.apiFetch("/api/playback/releases/" + release.id, { method: "DELETE" });
         releases = releases.filter((entry) => entry.id !== release.id);
@@ -226,7 +226,7 @@
       item.className = "track-row";
       item.draggable = true;
       item.dataset.id = track.id;
-      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small><span class="replace-status" aria-live="polite"></span></div><button class="track-edit" type="button" title="Rename track">Edit</button><label class="track-replace">Replace audio<input class="replace-audio-input" type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/mp4,audio/aac,audio/x-m4a" hidden /></label><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button>';
+      item.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="track-number"></span><div class="track-meta"><b></b><small></small><span class="replace-status" aria-live="polite"></span></div><button class="track-edit" type="button" title="Rename track">Edit</button><button class="track-mix-toggle" type="button" aria-expanded="false">Mix</button><label class="track-replace">Replace audio<input class="replace-audio-input" type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/mp4,audio/aac,audio/x-m4a" hidden /></label><div class="track-controls"><audio controls preload="none"></audio><button class="repeat-track" type="button" aria-pressed="false">Repeat</button></div><button class="track-delete" type="button" title="Delete track" aria-label="Delete track">&times;</button><section class="track-mix-panel" hidden><div class="track-mix-heading"><strong>Track EQ</strong><button class="track-mix-bypass" type="button" aria-pressed="false">Bypass</button></div><div class="track-mix-bands"><label>Low <output>0 dB</output><input class="mix-low" type="range" min="-12" max="12" step="0.5" value="0" /></label><label>Mid <output>0 dB</output><input class="mix-mid" type="range" min="-12" max="12" step="0.5" value="0" /></label><label>High <output>0 dB</output><input class="mix-high" type="range" min="-12" max="12" step="0.5" value="0" /></label></div><div class="track-mix-footer"><button class="track-mix-reset" type="button">Reset</button><button class="btn small track-mix-save" type="button">Save mix</button><span class="track-mix-status" aria-live="polite"></span></div></section>';
       item.querySelector(".track-number").textContent = track.trackNumber;
       item.querySelector("b").textContent = track.title;
       const trackInfo = item.querySelector("small");
@@ -236,7 +236,74 @@
       const replaceStatus = item.querySelector(".replace-status");
       trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
       audio.src = track.audioUrl;
-      window.LBPlaybackPlayer.mount(audio);
+      const player = window.LBPlaybackPlayer.mount(audio, { mixSettings: track.mixSettings });
+      const mixToggle = item.querySelector(".track-mix-toggle");
+      const mixPanel = item.querySelector(".track-mix-panel");
+      const mixBypass = item.querySelector(".track-mix-bypass");
+      const mixStatus = item.querySelector(".track-mix-status");
+      const mixSave = item.querySelector(".track-mix-save");
+      const mixControls = {
+        lowDb: item.querySelector(".mix-low"),
+        midDb: item.querySelector(".mix-mid"),
+        highDb: item.querySelector(".mix-high")
+      };
+      let mixSettings = { lowDb: 0, midDb: 0, highDb: 0, bypass: false, ...(track.mixSettings || {}) };
+      function renderMixControls() {
+        Object.entries(mixControls).forEach(([key, input]) => {
+          input.value = mixSettings[key];
+          input.previousElementSibling.textContent = `${mixSettings[key]} dB`;
+        });
+        mixBypass.setAttribute("aria-pressed", String(mixSettings.bypass));
+        mixBypass.classList.toggle("active", mixSettings.bypass);
+      }
+      function previewMix(unsaved = true) {
+        player.mixer.setMixSettings(mixSettings);
+        renderMixControls();
+        if (unsaved) mixStatus.textContent = "Preview · not saved";
+      }
+      if (!player.mixer.supported) {
+        mixToggle.disabled = true;
+        mixToggle.title = "Web Audio EQ is not supported in this browser";
+      }
+      mixToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        mixPanel.hidden = !mixPanel.hidden;
+        mixToggle.setAttribute("aria-expanded", String(!mixPanel.hidden));
+        if (!mixPanel.hidden) renderMixControls();
+      });
+      Object.entries(mixControls).forEach(([key, input]) => {
+        input.addEventListener("input", () => {
+          mixSettings[key] = Number(input.value);
+          previewMix();
+        });
+      });
+      mixBypass.addEventListener("click", () => {
+        mixSettings.bypass = !mixSettings.bypass;
+        previewMix();
+      });
+      item.querySelector(".track-mix-reset").addEventListener("click", () => {
+        mixSettings = { lowDb: 0, midDb: 0, highDb: 0, bypass: false };
+        previewMix();
+      });
+      mixSave.addEventListener("click", async () => {
+        mixSave.disabled = true;
+        mixStatus.textContent = "Saving…";
+        try {
+          const data = await window.LB.apiFetch(`/api/playback/releases/${release.id}/tracks/${track.id}/mix`, {
+            method: "PUT",
+            body: JSON.stringify({ mixSettings })
+          });
+          track.mixSettings = data.track.mixSettings;
+          mixSettings = { ...track.mixSettings };
+          previewMix(false);
+          mixStatus.textContent = "Saved · shared listeners hear this mix";
+        } catch (err) {
+          mixStatus.textContent = err.message || "Could not save mix.";
+        } finally {
+          mixSave.disabled = false;
+        }
+      });
+      renderMixControls();
       repeat.addEventListener("click", () => {
         audio.loop = !audio.loop;
         repeat.classList.toggle("active", audio.loop);
@@ -263,7 +330,7 @@
       });
       item.querySelector(".track-edit").addEventListener("click", async (event) => {
         event.stopPropagation();
-        const title = window.prompt("Track name", track.title);
+        const title = await dabzPrompt("Track name", track.title, { title: "Rename track" });
         if (title == null || !title.trim() || title.trim() === track.title) return;
         try {
           const data = await window.LB.apiFetch("/api/playback/releases/" + release.id + "/tracks/" + track.id, {
@@ -275,7 +342,7 @@
       });
       item.querySelector(".track-delete").addEventListener("click", async (event) => {
         event.stopPropagation();
-        if (!confirm('Delete "' + track.title + '" from this release?')) return;
+        if (!(await dabzConfirm('"' + track.title + '" will be removed from this release.', { title: "Delete track?", okText: "Delete" }))) return;
         try {
           await window.LB.apiFetch("/api/playback/releases/" + release.id + "/tracks/" + track.id, { method: "DELETE" });
           release.tracks = release.tracks.filter((entry) => entry.id !== track.id);
@@ -283,16 +350,32 @@
           render();
         } catch (err) { setMessage(err.message, true); }
       });
-      item.addEventListener("dragstart", () => item.classList.add("dragging"));
+      item.addEventListener("pointerdown", (event) => {
+        item.draggable = !event.target.closest(".track-mix-panel, .track-controls, input, button, audio, label");
+      });
+      item.addEventListener("pointerup", () => { item.draggable = true; });
+      item.addEventListener("pointercancel", () => { item.draggable = true; });
+      item.addEventListener("dragstart", (event) => {
+        if (!item.draggable) { event.preventDefault(); return; }
+        item.classList.add("dragging");
+      });
       item.addEventListener("dragend", async () => {
         item.classList.remove("dragging");
+        const previousOrder = release.tracks.map((entry) => entry.id);
         const ids = [...trackList.children].map((row) => Number(row.dataset.id));
         release.tracks.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
         release.tracks.forEach((entry, index) => { entry.trackNumber = index + 1; });
         [...trackList.children].forEach((row, index) => { row.querySelector(".track-number").textContent = index + 1; });
         try {
           await window.LB.apiFetch("/api/playback/releases/" + release.id + "/tracks/order", { method: "PUT", body: JSON.stringify({ trackIds: ids }) });
-        } catch (err) { setMessage(err.message, true); }
+        } catch (err) {
+          // Save failed - revert the visual order so the sender never sees an
+          // arrangement that the receiver's link won't actually show.
+          release.tracks.sort((a, b) => previousOrder.indexOf(a.id) - previousOrder.indexOf(b.id));
+          release.tracks.forEach((entry, index) => { entry.trackNumber = index + 1; });
+          render();
+          setMessage(err.message || "Could not save the new track order.", true);
+        }
       });
       item.addEventListener("dragover", (event) => {
         event.preventDefault();

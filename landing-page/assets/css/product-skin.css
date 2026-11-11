@@ -1,0 +1,546 @@
+/* =====================================================================
+   DabzAudio — product skin
+   Brings the landing-page look (deep near-black base, orange glow, glass
+   cards, Inter type, pill buttons, floating glass header) to every product:
+   Key & BPM, Reverb & Delay and all Lyric Book pages.
+   Loaded LAST on each product page, after its own CSS and theme.css.
+   Dark rules are scoped to html:not([data-theme="light"]); light mode keeps
+   theme.css and only gets the shared typography and soft glow.
+   ===================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --ps-bg: #07070a;
+  --ps-bg-2: #0d0d12;
+  --ps-card: rgba(255, 255, 255, 0.04);
+  --ps-card-hover: rgba(255, 255, 255, 0.07);
+  --ps-border: rgba(255, 255, 255, 0.1);
+  --ps-glow: rgba(255, 122, 0, 0.18);
+  --ps-text: #f5f5f7;
+  --ps-muted: #a1a1aa;
+  --ps-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.dabz-lite {
+  font-family: "Inter", "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+body.dabz-lite h1,
+body.dabz-lite h2,
+body.dabz-lite h3 { letter-spacing: -0.02em; }
+
+/* ---------- Light mode: same glow, soft warm base ---------- */
+html[data-theme="light"] body.dabz-lite::before {
+  background:
+    radial-gradient(60% 45% at 50% -5%, rgba(255, 122, 0, 0.10), transparent 70%),
+    radial-gradient(40% 35% at 90% 85%, rgba(255, 122, 0, 0.06), transparent 70%);
+}
+
+/* =====================================================================
+   DARK MODE
+   ===================================================================== */
+html:not([data-theme="light"]) { background-color: var(--ps-bg); }
+
+html:not([data-theme="light"]) body.dabz-lite {
+  background: transparent;
+  color: var(--ps-text);
+}
+
+/* Orange glow behind everything, like the hero */
+html:not([data-theme="light"]) body.dabz-lite::before {
+  background:
+    radial-gradient(70% 50% at 50% -8%, rgba(255, 122, 0, 0.22), transparent 70%),
+    radial-gradient(45% 40% at 95% 30%, rgba(255, 140, 40, 0.09), transparent 70%),
+    radial-gradient(50% 45% at 0% 100%, rgba(255, 122, 0, 0.12), transparent 70%);
+}
+
+/* ---------- Headers: floating glass ---------- */
+html:not([data-theme="light"]) body.dabz-lite[data-product] .site-header {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+  padding: 10px 22px;
+  background: rgba(14, 14, 18, 0.6);
+  border: 1px solid var(--ps-border);
+  border-radius: 999px;
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+}
+html:not([data-theme="light"]) body.dabz-lite:not([data-product]) .site-header {
+  background: rgba(10, 10, 14, 0.62);
+  border-bottom: 1px solid var(--ps-border);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+}
+html:not([data-theme="light"]) body.dabz-lite .site-footer,
+html:not([data-theme="light"]) body.dabz-lite .footer {
+  background: transparent;
+  border-top: 1px solid var(--ps-border);
+  border-radius: 0;
+  color: var(--ps-muted);
+}
+
+/* ---------- Cards / panels: glass ---------- */
+html:not([data-theme="light"]) body.dabz-lite .uploader,
+html:not([data-theme="light"]) body.dabz-lite .results .card,
+html:not([data-theme="light"]) body.dabz-lite .info,
+html:not([data-theme="light"]) body.dabz-lite .auth-card,
+html:not([data-theme="light"]) body.dabz-lite .sidebar,
+html:not([data-theme="light"]) body.dabz-lite .suggest,
+html:not([data-theme="light"]) body.dabz-lite .modal,
+html:not([data-theme="light"]) body.dabz-lite .rhythm-box,
+html:not([data-theme="light"]) body.dabz-lite .ai-suggestion,
+html:not([data-theme="light"]) body.dabz-lite .gift-breakdown,
+html:not([data-theme="light"]) body.dabz-lite .gift-results,
+html:not([data-theme="light"]) body.dabz-lite .handle-card,
+html:not([data-theme="light"]) body.dabz-lite .wallet-card,
+html:not([data-theme="light"]) body.dabz-lite .payout-card,
+html:not([data-theme="light"]) body.dabz-lite .playback-create,
+html:not([data-theme="light"]) body.dabz-lite .release-card,
+html:not([data-theme="light"]) body.dabz-lite .shared-release,
+html:not([data-theme="light"]) body.dabz-lite .membership-panel,
+html:not([data-theme="light"]) body.dabz-lite .tx-card {
+  background: var(--ps-card);
+  border: 1px solid var(--ps-border);
+  border-radius: 22px;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+html:not([data-theme="light"]) body.dabz-lite .modal {
+  background: rgba(16, 16, 20, 0.88);
+  border-radius: 26px;
+}
+html:not([data-theme="light"]) body.dabz-lite .results .card,
+html:not([data-theme="light"]) body.dabz-lite .release-card {
+  transition: transform 0.4s var(--ps-ease), border-color 0.3s, background 0.3s;
+}
+html:not([data-theme="light"]) body.dabz-lite .results .card:hover,
+html:not([data-theme="light"]) body.dabz-lite .release-card:hover {
+  transform: translateY(-3px);
+  background: var(--ps-card-hover);
+  border-color: rgba(255, 122, 0, 0.45);
+  box-shadow: 0 30px 80px -30px var(--ps-glow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Big readout numbers (BPM / Key): orange gradient like the hero word */
+html:not([data-theme="light"]) body.dabz-lite .big {
+  background: linear-gradient(100deg, #ffffff 0%, #ff7a00 70%, #ffb36b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+
+/* ---------- Form fields ---------- */
+html:not([data-theme="light"]) body.dabz-lite input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html:not([data-theme="light"]) body.dabz-lite textarea,
+html:not([data-theme="light"]) body.dabz-lite select,
+html:not([data-theme="light"]) body.dabz-lite .body-input,
+html:not([data-theme="light"]) body.dabz-lite .lyric-search,
+html:not([data-theme="light"]) body.dabz-lite .tx-chips,
+html:not([data-theme="light"]) body.dabz-lite .tx-bar,
+html:not([data-theme="light"]) body.dabz-lite .track-title,
+html:not([data-theme="light"]) body.dabz-lite .billing-period label {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ps-border);
+  border-radius: 12px;
+  color: var(--ps-text);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+html:not([data-theme="light"]) body.dabz-lite .bpm-section input { border-radius: 14px; }
+html:not([data-theme="light"]) body.dabz-lite input:focus,
+html:not([data-theme="light"]) body.dabz-lite textarea:focus,
+html:not([data-theme="light"]) body.dabz-lite select:focus {
+  outline: none;
+  border-color: #ff7a00;
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+}
+html:not([data-theme="light"]) body.dabz-lite ::placeholder { color: #7d7d88; }
+html:not([data-theme="light"]) body.dabz-lite select option { background: #14141a; color: #f5f5f7; }
+
+/* File picker button */
+html:not([data-theme="light"]) body.dabz-lite input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ps-border);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ps-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+html:not([data-theme="light"]) body.dabz-lite input[type="file"]::file-selector-button:hover {
+  background: rgba(255, 122, 0, 0.15);
+  border-color: rgba(255, 122, 0, 0.5);
+}
+
+/* ---------- Buttons: pills ---------- */
+html:not([data-theme="light"]) body.dabz-lite button,
+html:not([data-theme="light"]) body.dabz-lite .btn {
+  border-radius: 999px;
+  font-family: inherit;
+  transition: transform 0.25s var(--ps-ease), box-shadow 0.25s, background 0.2s, border-color 0.2s;
+}
+html:not([data-theme="light"]) body.dabz-lite .btn:not(.small):not(.subtle):not(.ghost),
+html:not([data-theme="light"]) body.dabz-lite #uploadBtn,
+html:not([data-theme="light"]) body.dabz-lite .bpm-section button {
+  background: #ff7a00;
+  color: #111;
+  font-weight: 700;
+  border: 1px solid transparent;
+  padding: 11px 22px;
+}
+html:not([data-theme="light"]) body.dabz-lite .btn:not(.small):not(.subtle):not(.ghost):hover,
+html:not([data-theme="light"]) body.dabz-lite #uploadBtn:hover,
+html:not([data-theme="light"]) body.dabz-lite .bpm-section button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(255, 122, 0, 0.3);
+  background: #ff8a1f;
+}
+html:not([data-theme="light"]) body.dabz-lite .btn.subtle,
+html:not([data-theme="light"]) body.dabz-lite .btn.ghost,
+html:not([data-theme="light"]) body.dabz-lite .btn.small,
+html:not([data-theme="light"]) body.dabz-lite .live-key-btn,
+html:not([data-theme="light"]) body.dabz-lite .download-report-btn {
+  background: var(--ps-card);
+  color: var(--ps-text);
+  border: 1px solid var(--ps-border);
+}
+html:not([data-theme="light"]) body.dabz-lite .btn.subtle:hover,
+html:not([data-theme="light"]) body.dabz-lite .btn.ghost:hover,
+html:not([data-theme="light"]) body.dabz-lite .btn.small:hover,
+html:not([data-theme="light"]) body.dabz-lite .live-key-btn:hover,
+html:not([data-theme="light"]) body.dabz-lite .download-report-btn:hover {
+  background: var(--ps-card-hover);
+  border-color: rgba(255, 122, 0, 0.5);
+  transform: translateY(-1px);
+}
+html:not([data-theme="light"]) body.dabz-lite .live-key-btn.is-listening {
+  background: #ff7a00;
+  color: #111;
+}
+
+/* ---------- Tables (Reverb & Delay) ---------- */
+html:not([data-theme="light"]) body.dabz-lite .results table {
+  background: var(--ps-card);
+  border: 1px solid var(--ps-border);
+  border-radius: 20px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+html:not([data-theme="light"]) body.dabz-lite .results th {
+  background: rgba(255, 122, 0, 0.12);
+  color: #ffc58f;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+html:not([data-theme="light"]) body.dabz-lite .results th,
+html:not([data-theme="light"]) body.dabz-lite .results td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+html:not([data-theme="light"]) body.dabz-lite .results tr:last-child td { border-bottom: 0; }
+html:not([data-theme="light"]) body.dabz-lite .results tbody tr { transition: background 0.2s; }
+html:not([data-theme="light"]) body.dabz-lite .results tbody tr:hover { background: rgba(255, 122, 0, 0.06); }
+
+/* ---------- Lyric Book specifics ---------- */
+html:not([data-theme="light"]) body.dabz-lite .lyric-item,
+html:not([data-theme="light"]) body.dabz-lite .lyric-list li {
+  border-radius: 14px;
+}
+html:not([data-theme="light"]) body.dabz-lite .modal-overlay,
+html:not([data-theme="light"]) body.dabz-lite .modal-backdrop {
+  background: rgba(4, 4, 7, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html:not([data-theme="light"]) body.dabz-lite .auth-card { padding: 34px; }
+
+/* Thin, quiet scrollbars */
+html:not([data-theme="light"]) body.dabz-lite * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.dabz-lite .results .card,
+  body.dabz-lite .release-card,
+  body.dabz-lite button,
+  body.dabz-lite .btn { transition: none !important; }
+}
+
+/* Keep the Ask Dabz launcher a circle, matching the home page */
+html body.dabz-lite .dz-agent button.dz-agent-launcher { border-radius: 50%; padding: 0; width: 64px; }
+html body.dabz-lite .dz-agent button.dz-agent-launcher:hover { transform: scale(1.08); }
+
+/* Tool buttons: pill shape (beats the shared 10px geometry rule in theme.css) */
+html body.dabz-lite[data-product] button:not(.dz-agent-launcher):not(.dz-agent-close) { border-radius: 999px; }
+
+/* =====================================================================
+   LIGHT MODE — same structure as dark, home-page light palette
+   (warm paper base, white glass cards, soft shadows, orange accent)
+   ===================================================================== */
+html[data-theme="light"] { background-color: #fafaf8; }
+html[data-theme="light"] body.dabz-lite {
+  background: transparent;
+  color: #111114;
+  --background-color: #fafaf8;
+  --bg: #fafaf8;
+}
+html[data-theme="light"] body.dabz-lite::before {
+  background:
+    radial-gradient(70% 50% at 50% -8%, rgba(255, 122, 0, 0.14), transparent 70%),
+    radial-gradient(45% 40% at 95% 30%, rgba(255, 140, 40, 0.07), transparent 70%),
+    radial-gradient(50% 45% at 0% 100%, rgba(255, 122, 0, 0.08), transparent 70%);
+}
+
+/* Headers */
+html[data-theme="light"] body.dabz-lite[data-product] .site-header {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+  padding: 10px 22px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+}
+html[data-theme="light"] body.dabz-lite:not([data-product]) .site-header {
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+}
+html[data-theme="light"] body.dabz-lite .site-footer,
+html[data-theme="light"] body.dabz-lite .footer {
+  background: transparent;
+  border-top: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 0;
+  color: #55555e;
+}
+
+/* Cards / panels */
+html[data-theme="light"] body.dabz-lite .uploader,
+html[data-theme="light"] body.dabz-lite .results .card,
+html[data-theme="light"] body.dabz-lite .info,
+html[data-theme="light"] body.dabz-lite .auth-card,
+html[data-theme="light"] body.dabz-lite .sidebar,
+html[data-theme="light"] body.dabz-lite .suggest,
+html[data-theme="light"] body.dabz-lite .modal,
+html[data-theme="light"] body.dabz-lite .rhythm-box,
+html[data-theme="light"] body.dabz-lite .ai-suggestion,
+html[data-theme="light"] body.dabz-lite .gift-breakdown,
+html[data-theme="light"] body.dabz-lite .gift-results,
+html[data-theme="light"] body.dabz-lite .handle-card,
+html[data-theme="light"] body.dabz-lite .wallet-card,
+html[data-theme="light"] body.dabz-lite .payout-card,
+html[data-theme="light"] body.dabz-lite .playback-create,
+html[data-theme="light"] body.dabz-lite .release-card,
+html[data-theme="light"] body.dabz-lite .shared-release,
+html[data-theme="light"] body.dabz-lite .membership-panel,
+html[data-theme="light"] body.dabz-lite .tx-card {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px -34px rgba(20, 20, 30, 0.28), inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+html[data-theme="light"] body.dabz-lite .modal {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 26px;
+}
+html[data-theme="light"] body.dabz-lite .results .card,
+html[data-theme="light"] body.dabz-lite .release-card {
+  transition: transform 0.4s var(--ps-ease), border-color 0.3s, background 0.3s;
+}
+html[data-theme="light"] body.dabz-lite .results .card:hover,
+html[data-theme="light"] body.dabz-lite .release-card:hover {
+  transform: translateY(-3px);
+  background: #fff;
+  border-color: rgba(232, 109, 0, 0.45);
+  box-shadow: 0 30px 70px -30px rgba(232, 109, 0, 0.35), inset 0 1px 0 #fff;
+}
+html[data-theme="light"] body.dabz-lite .big {
+  background: linear-gradient(100deg, #111114 0%, #e86d00 70%, #ff9a3c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+
+/* Form fields */
+html[data-theme="light"] body.dabz-lite input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html[data-theme="light"] body.dabz-lite textarea,
+html[data-theme="light"] body.dabz-lite select,
+html[data-theme="light"] body.dabz-lite .body-input,
+html[data-theme="light"] body.dabz-lite .lyric-search,
+html[data-theme="light"] body.dabz-lite .tx-chips,
+html[data-theme="light"] body.dabz-lite .tx-bar,
+html[data-theme="light"] body.dabz-lite .track-title,
+html[data-theme="light"] body.dabz-lite .billing-period label {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  color: #111114;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+html[data-theme="light"] body.dabz-lite .bpm-section input { border-radius: 14px; }
+html[data-theme="light"] body.dabz-lite input:focus,
+html[data-theme="light"] body.dabz-lite textarea:focus,
+html[data-theme="light"] body.dabz-lite select:focus {
+  outline: none;
+  border-color: #e86d00;
+  box-shadow: 0 0 0 3px rgba(232, 109, 0, 0.18);
+  background: #fff;
+}
+html[data-theme="light"] body.dabz-lite ::placeholder { color: #8a8a93; }
+html[data-theme="light"] body.dabz-lite select option { background: #fff; color: #111114; }
+html[data-theme="light"] body.dabz-lite input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #111114;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+html[data-theme="light"] body.dabz-lite input[type="file"]::file-selector-button:hover {
+  background: rgba(232, 109, 0, 0.1);
+  border-color: rgba(232, 109, 0, 0.5);
+}
+
+/* Buttons */
+html[data-theme="light"] body.dabz-lite button,
+html[data-theme="light"] body.dabz-lite .btn {
+  border-radius: 999px;
+  font-family: inherit;
+  transition: transform 0.25s var(--ps-ease), box-shadow 0.25s, background 0.2s, border-color 0.2s;
+}
+html[data-theme="light"] body.dabz-lite .btn:not(.small):not(.subtle):not(.ghost),
+html[data-theme="light"] body.dabz-lite #uploadBtn,
+html[data-theme="light"] body.dabz-lite .bpm-section button {
+  background: #d95f00;
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid transparent;
+  padding: 11px 22px;
+}
+html[data-theme="light"] body.dabz-lite .btn:not(.small):not(.subtle):not(.ghost):hover,
+html[data-theme="light"] body.dabz-lite #uploadBtn:hover,
+html[data-theme="light"] body.dabz-lite .bpm-section button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(217, 95, 0, 0.3);
+  background: #e86d00;
+}
+html[data-theme="light"] body.dabz-lite .btn.subtle,
+html[data-theme="light"] body.dabz-lite .btn.ghost,
+html[data-theme="light"] body.dabz-lite .btn.small,
+html[data-theme="light"] body.dabz-lite .live-key-btn,
+html[data-theme="light"] body.dabz-lite .download-report-btn {
+  background: rgba(255, 255, 255, 0.85);
+  color: #111114;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+html[data-theme="light"] body.dabz-lite .btn.subtle:hover,
+html[data-theme="light"] body.dabz-lite .btn.ghost:hover,
+html[data-theme="light"] body.dabz-lite .btn.small:hover,
+html[data-theme="light"] body.dabz-lite .live-key-btn:hover,
+html[data-theme="light"] body.dabz-lite .download-report-btn:hover {
+  background: #fff;
+  border-color: rgba(232, 109, 0, 0.5);
+  transform: translateY(-1px);
+}
+html[data-theme="light"] body.dabz-lite .live-key-btn.is-listening {
+  background: #d95f00;
+  color: #fff;
+}
+
+/* Tables (Reverb & Delay) */
+html[data-theme="light"] body.dabz-lite .results table {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 20px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -34px rgba(20, 20, 30, 0.25);
+}
+html[data-theme="light"] body.dabz-lite .results th {
+  background: rgba(232, 109, 0, 0.1);
+  color: #9a4500;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+html[data-theme="light"] body.dabz-lite .results th,
+html[data-theme="light"] body.dabz-lite .results td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  color: #111114;
+}
+html[data-theme="light"] body.dabz-lite .results tr:last-child td { border-bottom: 0; }
+html[data-theme="light"] body.dabz-lite .results tbody tr { transition: background 0.2s; }
+html[data-theme="light"] body.dabz-lite .results tbody tr:hover { background: rgba(232, 109, 0, 0.06); }
+
+/* Lyric Book specifics */
+html[data-theme="light"] body.dabz-lite .lyric-item,
+html[data-theme="light"] body.dabz-lite .lyric-list li { border-radius: 14px; }
+html[data-theme="light"] body.dabz-lite .modal-overlay,
+html[data-theme="light"] body.dabz-lite .modal-backdrop {
+  background: rgba(240, 238, 232, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="light"] body.dabz-lite .auth-card { padding: 34px; }
+html[data-theme="light"] body.dabz-lite * { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.22) transparent; }
+
+/* Light: logo readable on every product page; result wrappers stay transparent
+   so only the glass cards/tables show */
+html[data-theme="light"] body.dabz-lite .dabz-brand .sitename {
+  background: linear-gradient(120deg, #111111 0%, #ff7a00 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+html[data-theme="light"] body.dabz-lite .dabz-brand .dot { color: #e86d00; }
+html[data-theme="light"] body.dabz-lite[data-product] .results,
+html[data-theme="light"] body.dabz-lite[data-product="reverb"] .results {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+html[data-theme="light"] body.dabz-lite[data-product] .footer,
+html[data-theme="light"] body.dabz-lite[data-product] .footer p,
+html[data-theme="light"] body.dabz-lite[data-product] .site-footer,
+html[data-theme="light"] body.dabz-lite[data-product] .site-footer p { color: #55555e; }
+html[data-theme="light"] body.dabz-lite[data-product="reverb"] .results table { background: rgba(255, 255, 255, 0.8); }
+html[data-theme="light"] body.dabz-lite[data-product="reverb"] .results th { background: rgba(232, 109, 0, 0.1); }
+html[data-theme="light"] body.dabz-lite[data-product="reverb"] .results td { background: transparent; }
+
+/* Transfer: chip-input inner field has no second border; bar stays a pill */
+html body.dabz-lite .tx-chips input {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+html body.dabz-lite .tx-bar { border-radius: 999px; }
+html[data-theme="light"] body.dabz-lite .tx-field textarea { background: rgba(255, 255, 255, 0.9); color: #111114; }
+html[data-theme="light"] body.dabz-lite .tx-bar { background: rgba(0, 0, 0, 0.06); }
+
+/* Pro plan + credit packs (Plan page) */
+.pro-panel { margin-top: 20px; }
+.pro-panel h2 { margin: 4px 0 8px; font-size: 1.5rem; }
+.pro-sub { margin: 18px 0 4px; font-size: 1rem; }
+.pro-packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
+.pro-pack { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 10px; border-radius: 18px; }
+.pro-pack b { font-size: 1.4rem; color: #ff7a1a; }
+.pro-pack small { opacity: .75; }
+
+.pro-tag { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; font-size: .62rem; font-weight: 700; letter-spacing: .06em; background: #ff7a1a; color: #1a0f05; vertical-align: 1px; }

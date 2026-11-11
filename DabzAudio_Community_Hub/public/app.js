@@ -109,7 +109,7 @@ async function addComment(postId, textarea){
   const content = textarea.value.trim();
   if(!content) return;
 
-  const author = (prompt("Name (optional):") || "Anonymous").trim() || "Anonymous";
+  const author = ((await dabzPrompt("Shown next to your reply.", "", { title: "Your name (optional)", okText: "Post reply" })) || "Anonymous").trim() || "Anonymous";
 
   const res = await fetch(`${API_BASE}/api/comments`, {
     method: "POST",
@@ -283,7 +283,7 @@ async function verifyAdminToken(token){
 }
 
 async function openAdmin(){
-  const tokenInputValue = prompt("Enter admin token to access admin tools:", adminToken || "");
+  const tokenInputValue = await dabzPrompt("Enter your admin token to open the admin tools.", adminToken || "", { title: "Admin access", okText: "Continue" });
   if(tokenInputValue === null) return;
 
   const token = tokenInputValue.trim();
