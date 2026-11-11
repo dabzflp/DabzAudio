@@ -21,7 +21,7 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - **Lyrics**: per-user create / list / read / update / delete.
 - **Playback**: owner-only release library for singles and albums, cover art,
   PostgreSQL-backed audio delivery, drag reordering, and public share links.
-- **Transfer a file**: upload files first, then separately email the saved
+- **Transfer files**: upload files first, then separately email the saved
   recipients or copy a link to share directly. Both use the same seven-day
   expiration, starting when the upload is ready; download notifications go to
   the sender.
@@ -52,10 +52,11 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
   example with `openssl rand -hex 32`. Keep this key private and stable: changing
   it makes existing MFA secrets unreadable.
 - Run `npm run migrate` after deploying these security changes.
-- `lb_users.unlimited_access` grants an account both standard and Pro feature
-  access without a subscription. Set this only for explicitly approved accounts;
-  future paid features should use the shared `isProUser` entitlement check.
-  AI credits, daily AI caps, and security safeguards still apply.
+- Grandfathered accounts (`billing_exempt`) include Pro features such as Drop
+  Pilot; `lb_users.unlimited_access` grants the same access without a
+  subscription. Both still use monthly AI credits and can buy top-ups when
+  those credits run out. Future paid features should use the shared `isProUser`
+  entitlement check; daily AI caps and security safeguards still apply.
 
 ## Membership pricing
 

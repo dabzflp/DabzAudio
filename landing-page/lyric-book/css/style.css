@@ -498,10 +498,10 @@ body.auth-bg .site-header {
   .row-2 { grid-template-columns: 1fr; }
 }
 
-/* Collapse the header actions behind a hamburger on phones/tablets */
-@media (max-width: 860px) {
+/* Collapse the header actions behind a hamburger on phones and portrait tablets */
+@media (max-width: 860px), (min-width: 861px) and (max-width: 1100px) and (orientation: portrait) {
   .site-header { padding: 12px 16px; }
-  .hamburger { display: flex; }
+  .hamburger { display: flex; margin-left: auto; }
   .header-actions {
     position: absolute; top: calc(100% + 6px); right: 12px;
     flex-direction: column; align-items: stretch; gap: 8px;
@@ -555,6 +555,22 @@ body.auth-bg .site-header {
 /* Realtime presence — avatar stack of who's editing now */
 .editor-bar .presence { margin-left: auto; display: inline-flex; align-items: center; flex-shrink: 0; }
 .editor-bar .save-state { margin-left: 10px; }
+
+@media (min-width: 861px) and (max-width: 1100px) and (orientation: portrait) {
+  .sidebar { width: 200px; }
+  .editor-main { padding: 16px; }
+  .suggest { width: 280px; padding: 16px; gap: 12px; }
+  .editor-back { display: inline-flex; }
+  .editor-bar { flex-wrap: wrap; gap: 8px; }
+  .editor-bar > .title-input { flex: 1 1 180px; min-width: 160px; }
+  .editor-bar .save-state { margin-left: 0; }
+  .editor-actions {
+    flex: 1 1 100%; width: 100%; min-width: 0; flex-wrap: wrap; justify-content: flex-start;
+  }
+  .editor-actions .btn { flex: 0 0 auto; }
+  .ai-panel { padding: 16px; }
+}
+
 .presence-av {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; border-radius: 25%; margin-left: -8px;
@@ -1067,7 +1083,7 @@ body.auth-bg .site-header {
   .membership-steps { grid-template-columns: 1fr; gap: 10px; }
 }
 
-/* ---------- Transfer a file ---------- */
+/* ---------- Transfer files ---------- */
 .tx-page { max-width: 760px; margin-left: auto; margin-right: auto; }
 .tx-card { display: flex; flex-direction: column; gap: 16px; padding: 18px; background: rgba(22,22,22,0.88); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
 .tx-card h1, .tx-card h2 { margin: 0; color: #fff; overflow-wrap: anywhere; }

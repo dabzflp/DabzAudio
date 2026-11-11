@@ -123,7 +123,7 @@ registerAIRoutes(app);
 // Playback routes are additive and use their own lb_playback_* tables.
 registerPlaybackRoutes(app);
 
-// Transfer a file — temporary (7-day) large file transfers; own lb_transfer* tables.
+// Transfer files — temporary (7-day) large file transfers; own lb_transfer* tables.
 registerTransferRoutes(app);
 
 // Self-delete account (irreversible). Deletes the user row; cascades to

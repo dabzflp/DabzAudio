@@ -59,9 +59,9 @@
       return;
     }
     if (billingExempt || status === "grandfathered") {
-      els.title.textContent = "Your Lyric Book access is active";
-      els.message.textContent = "Your account is grandfathered. You can continue using all Lyric Book tools.";
-      els.status.textContent = "Grandfathered access · no subscription required";
+      els.title.textContent = "Your grandfathered access is active";
+      els.message.textContent = "Your access includes Lyric Book Pro and Drop Pilot. Monthly AI credits are included; buy a credit top-up when they run out.";
+      els.status.textContent = "Grandfathered access · Pro and Drop Pilot included";
       els.continue.hidden = false;
       return;
     }

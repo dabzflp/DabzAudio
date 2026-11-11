@@ -25,9 +25,9 @@ function majorUnits(prices) {
   return Object.fromEntries(Object.entries(prices).map(([cur, p]) => [cur, { monthly: p.monthly / 100, annual: p.annual / 100 }]));
 }
 
-// Pro includes active subscriptions and the explicit unlimited-access grant.
+// Pro includes paid, grandfathered, and explicitly unlimited accounts.
 export function proActive(row) {
-  return row?.unlimited_access === true || (
+  return row?.billing_exempt === true || row?.unlimited_access === true || (
     row?.tier === "pro" && ["active", "past_due"].includes(row.status) &&
     (!row.current_period_end || new Date(row.current_period_end).getTime() > Date.now())
   );
@@ -35,7 +35,7 @@ export function proActive(row) {
 
 export async function isProUser(userId) {
   const { rows } = await pool.query(
-    `SELECT u.unlimited_access, s.tier, s.status, s.current_period_end
+    `SELECT u.billing_exempt, u.unlimited_access, s.tier, s.status, s.current_period_end
        FROM lb_users u LEFT JOIN lb_subscriptions s ON s.user_id = u.id WHERE u.id = $1`,
     [userId]
   );

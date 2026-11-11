@@ -2,7 +2,6 @@
   "use strict";
 
   var STORAGE_KEY = "dabz-theme";
-  var themeApplyVersion = 0;
 
   function resolve() {
     var saved = localStorage.getItem(STORAGE_KEY);
@@ -19,7 +18,6 @@
 
   function apply(theme, persist) {
     var root = document.documentElement;
-    var version = ++themeApplyVersion;
     root.classList.add("theme-switching");
     var isLight = theme === "light";
     root.setAttribute("data-theme", theme);
@@ -28,11 +26,8 @@
     root.classList.toggle("is-dark", !isLight);
     if (persist !== false) localStorage.setItem(STORAGE_KEY, theme);
     updateIcons(theme);
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        if (version === themeApplyVersion) root.classList.remove("theme-switching");
-      });
-    });
+    void root.offsetHeight;
+    root.classList.remove("theme-switching");
   }
 
   function updateIcons(theme) {

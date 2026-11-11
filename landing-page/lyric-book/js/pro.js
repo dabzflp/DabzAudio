@@ -98,12 +98,17 @@
       sub = await window.LB.apiFetch("/api/subscription");
       credits = await window.LB.apiFetch("/api/credits");
       els.panel.hidden = false;
-      const paidPro = sub.tier === "pro" && ["active", "past_due"].includes(sub.status);
-      els.upgrade.hidden = paidPro;
-      els.active.hidden = !sub.proActive;
-      if (sub.proActive) { els.title.textContent = "Lyric Book Pro · active"; renderActive(); }
-      if (!paidPro) renderUpgrade();
-      if (q.get("choose") === "pro" && !paidPro) {
+      const hasPro = !!sub.proActive;
+      els.upgrade.hidden = hasPro;
+      els.active.hidden = !hasPro;
+      if (hasPro) {
+        els.title.textContent = sub.billingExempt || sub.unlimitedAccess
+          ? "Lyric Book Pro · included"
+          : "Lyric Book Pro · active";
+        renderActive();
+      }
+      if (!hasPro) renderUpgrade();
+      if (q.get("choose") === "pro" && !hasPro) {
         say("You selected Pro during registration. Review the country-eligible price below and choose Get Pro to continue.");
         requestAnimationFrame(() => els.panel.scrollIntoView({ behavior: "smooth", block: "start" }));
       }

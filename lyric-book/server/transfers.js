@@ -1,5 +1,5 @@
 /**
- * transfers.js - "Transfer a file": temporary large-file transfers between creatives.
+ * transfers.js - "Transfer files": temporary large-file transfers between creatives.
  *
  * Files are uploaded in parts and assembled on the server's storage driver.
  * Currently only the "local" disk driver is implemented (TRANSFER_DIR); the

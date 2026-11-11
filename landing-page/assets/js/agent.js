@@ -21,7 +21,7 @@
         "<li><strong>Reverb &amp; Delay Calculator</strong> — tempo-synced FX times</li>" +
         "<li><strong>Lyric Book</strong> — write, store &amp; co-write lyrics with rhyme/rhythm help and AI Smart search</li>" +
         "<li><strong>Playback</strong> — share unreleased tracks privately for feedback</li>" +
-        "<li><strong>Transfer a file</strong> — send big files, folders and stems to other creatives</li>" +
+        "<li><strong>Transfer files</strong> — send big files, folders and stems to other creatives</li>" +
         "<li><strong>Drop Pilot</strong> (Pro) — a 21-day release campaign planner with pitches and a press kit</li>" +
         "<li><strong>Invoices</strong> &amp; <strong>Split Sheets</strong> — get paid and agree credits</li>" +
         "<li><strong>Gift an artist</strong> — send money to any artist by @username via Stripe</li>" +
@@ -91,7 +91,7 @@
       id: "transfer",
       keywords: ["transfer", "send file", "send files", "send a file", "large file", "big file", "stems", "zip", "folder", "wetransfer", "share file", "download link", "10gb"],
       answer:
-        "<strong>Transfer a file</strong> (inside the Lyric Book) lets you send work to other creatives:" +
+        "<strong>Transfer files</strong> (inside the Lyric Book) lets you send work to other creatives:" +
         "<ul>" +
         "<li>Send <strong>any file type</strong> — single files, <strong>zips, stems and whole folders</strong>, up to <strong>10&nbsp;GB</strong> per transfer.</li>" +
         "<li>Enter the recipient's <strong>email</strong> and we send them the download link, or <strong>copy the link</strong> and share it yourself.</li>" +
@@ -198,7 +198,7 @@
     {
       id: "hi",
       keywords: ["hi", "hey", "hello", "yo", "sup", "good morning", "good evening", "howdy"],
-      answer: "Hey! I'm Dabz, your product guide. Ask me what DabzAudio is, or how to use any tool — Key &amp; BPM, Reverb/Delay, Lyric Book, Playback or Transfer a file."
+      answer: "Hey! I'm Dabz, your product guide. Ask me what DabzAudio is, or how to use any tool — Key &amp; BPM, Reverb/Delay, Lyric Book, Playback or Transfer files."
     }
   ];
 
@@ -210,7 +210,7 @@
     { label: "How do I get started?", q: "How do I get started?" },
     { label: "Key & BPM tool", q: "Tell me about the Key and BPM tool" },
     { label: "Lyric Book", q: "What is the Lyric Book?" },
-    { label: "Transfer a file", q: "How does Transfer a file work?" },
+    { label: "Transfer files", q: "How does file transfer work?" },
     { label: "Playback", q: "What is Playback?" },
     { label: "Collaborate on lyrics", q: "How does collaboration work?" },
     { label: "Pricing", q: "How much does it cost?" },
@@ -220,7 +220,7 @@
   var FALLBACK =
     "I'm not fully sure about that one. I can tell you about <strong>DabzAudio</strong> and how to use the " +
     "<strong>Key &amp; BPM</strong> tool, <strong>Reverb &amp; Delay</strong> calculator, and the <strong>Lyric Book</strong> " +
-    "(writing, rhymes, collaboration, Playback, Transfer a file, invoices, split sheets). Try asking about one of those, or use the <a href='/#contact'>Feedback form</a> to reach a human.";
+    "(writing, rhymes, collaboration, Playback, Transfer files, invoices, split sheets). Try asking about one of those, or use the <a href='/#contact'>Feedback form</a> to reach a human.";
 
   // ---- Matching -------------------------------------------------------
   function findAnswer(raw) {

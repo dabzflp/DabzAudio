@@ -42,7 +42,7 @@
       <button class="btn subtle small" id="giftsBtn" type="button" title="Gifts & payouts" hidden>Gifts</button>
       <button class="btn subtle small" id="invoicesBtn" type="button" title="Invoices" hidden>Invoices <span class="inv-badge" id="invoicesBadge" hidden>0</span></button>
       <a class="btn subtle small" id="playbackBtn" href="playback.html" title="Your music Playback">Playback</a>
-      <a class="btn subtle small" id="transferBtn" href="transfer.html" title="Send large files to other creatives">Transfer a file</a>
+      <a class="btn subtle small" id="transferBtn" href="transfer.html" title="Send large files to other creatives">Transfer files</a>
       <button class="btn subtle small" id="dropPilotBtn" type="button" title="Drop Pilot: plan your release campaign (Pro)" hidden>Drop Pilot <span class="pro-tag">PRO</span></button>
       <a class="btn subtle small" id="contractBtn" href="contract.html" title="Split Sheet">Split Sheet</a>
       <a class="btn subtle small" id="membershipBtn" href="subscription.html" title="Lyric Book membership">Plan</a>
@@ -180,7 +180,7 @@
             <button class="ai-chip" id="aiIdeasBtn" type="button"><span class="ai-chip-icon">✦</span>Ideas</button>
           </div>
           <div class="ai-ask-row">
-            <input id="aiAskInput" placeholder="Ask about this song…" maxlength="2000" />
+            <input id="aiAskInput" placeholder="Ask AI…" maxlength="2000" />
             <button class="ai-send" id="aiAskBtn" type="button" aria-label="Ask">➤</button>
           </div>
           <button class="ai-more-toggle" id="aiMoreToggle" type="button" aria-expanded="false">More tools <span>▾</span></button>
@@ -509,7 +509,7 @@
   <script src="js/invoices.js"></script>
   <script src="js/ai-assistant.js"></script>
   <script>
-    // Mobile hamburger: collapse the header actions into a dropdown on small screens.
+    // Collapse the header actions into a dropdown on small screens and portrait tablets.
     (function () {
       var header = document.querySelector(".site-header");
       var toggle = document.getElementById("menuToggle");
@@ -522,12 +522,19 @@
         toggle.setAttribute("aria-expanded", open ? "true" : "false");
       });
       // Tapping an action or clicking outside closes the menu.
-      actions.addEventListener("click", function (e) { if (e.target.closest("button")) close(); });
+      actions.addEventListener("click", function (e) {
+        if (e.target.closest("#acctMenu")) return;
+        if (e.target.closest("a, button")) close();
+      });
       document.addEventListener("click", function (e) {
         if (!header.classList.contains("menu-open")) return;
         if (!actions.contains(e.target) && !toggle.contains(e.target)) close();
       });
-      window.addEventListener("resize", function () { if (window.innerWidth > 860) close(); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+      var compactHeader = window.matchMedia("(max-width: 860px), (min-width: 861px) and (max-width: 1100px) and (orientation: portrait)");
+      function onViewportChange() { if (!compactHeader.matches) close(); }
+      window.addEventListener("resize", onViewportChange);
+      window.addEventListener("orientationchange", onViewportChange);
     })();
   </script>
 </body>

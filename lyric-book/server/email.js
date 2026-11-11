@@ -284,7 +284,7 @@ export async function sendTransferEmail(to, { senderName, message, fileCount, to
   const note = message ? `<p style="color:#eaeaea;line-height:1.5;border-left:3px solid #ff7a00;padding-left:12px">${escapeHtml(message)}</p>` : "";
   const html = shell(`
       <h2 style="color:#fff;margin:0 0 12px">You've received a transfer</h2>
-      <p style="color:#9b9b9b;line-height:1.5">${name} sent you ${fileCount} ${fileCount === 1 ? "file" : "files"} (${escapeHtml(totalLabel)}) with DabzAudio Transfer a file. No account needed to download. The download link expires on ${escapeHtml(expiresLabel)}, seven days after the transfer is ready.</p>
+      <p style="color:#9b9b9b;line-height:1.5">${name} sent you ${fileCount} ${fileCount === 1 ? "file" : "files"} (${escapeHtml(totalLabel)}) with DabzAudio Transfer files. No account needed to download. The download link expires on ${escapeHtml(expiresLabel)}, seven days after the transfer is ready.</p>
       ${note}
       ${ctaButton(downloadUrl, "Download files")}`);
   if (!resend) {

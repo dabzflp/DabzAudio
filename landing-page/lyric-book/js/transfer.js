@@ -13,6 +13,7 @@
   const transferList = $("transferList");
   const sendEmailBtn = $("sendEmailBtn");
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const MAX_RECIPIENTS = 10;
   const MAX_BYTES = 10 * 1024 * 1024 * 1024;
   const PARALLEL = 3;
   const RETRIES = 4;
@@ -127,7 +128,13 @@
     const value = recipientInput.value.trim().replace(/,$/, "").toLowerCase();
     if (!value) return true;
     if (!EMAIL_RE.test(value)) { setMsg('"' + value + '" is not a valid email.', true); return false; }
-    if (!recipients.includes(value)) recipients.push(value);
+    if (!recipients.includes(value)) {
+      if (recipients.length >= MAX_RECIPIENTS) {
+        setMsg("You can email up to " + MAX_RECIPIENTS + " people at once.", true);
+        return false;
+      }
+      recipients.push(value);
+    }
     recipientInput.value = "";
     renderChips();
     return true;
