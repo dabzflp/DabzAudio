@@ -28,7 +28,7 @@
   <div class="auth-wrap">
     <form class="auth-card" id="signupForm" novalidate style="max-width:460px">
       <h1>Create your artist account</h1>
-      <p class="sub">Tell us a little about you so the Lyric Book fits your sound.</p>
+      <p class="sub">Tell us a little about you and choose how you want to start.</p>
 
       <div class="field">
         <label for="email">Email</label>
@@ -64,6 +64,18 @@
         </select>
         <div class="hint">Used to choose the payment options available to your account.</div>
       </div>
+
+      <fieldset class="billing-period signup-plan-options">
+        <legend>Choose your starting plan</legend>
+        <label class="plan-option">
+          <input type="radio" name="startTier" value="standard" checked />
+          <span><strong>Lyric Book Standard</strong><small>Start with your 30-day free trial. No card required to register.</small></span>
+        </label>
+        <label class="plan-option">
+          <input type="radio" name="startTier" value="pro" />
+          <span><strong>Lyric Book Pro</strong><small>Choose Pro as your starting plan. After account creation, review your country-eligible price and confirm checkout. Supported non-Naira prices use the £8.99/month GBP base and current FX rate.</small></span>
+        </label>
+      </fieldset>
 
       <div class="field">
         <label for="genre">What genre are you on?</label>

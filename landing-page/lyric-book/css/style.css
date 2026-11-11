@@ -41,7 +41,7 @@ a:hover { text-decoration: underline; }
 /* The brand "DA" circle doubles as the clickable profile photo. */
 .logo-circle {
   position: relative; overflow: hidden;
-  width: 44px; height: 44px; border-radius: 11px;
+  width: 44px; height: 44px; border-radius: 25%;
   background-color: var(--charcoal); color: var(--orange);
   background-size: cover; background-position: center;
   display: flex; align-items: center; justify-content: center;
@@ -50,7 +50,7 @@ a:hover { text-decoration: underline; }
   border: none; padding: 0; cursor: pointer;
 }
 .logo-circle .logo-cam {
-  position: absolute; inset: 0; border-radius: 11px;
+  position: absolute; inset: 0; border-radius: inherit;
   display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, 0.6); color: #fff;
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
@@ -487,15 +487,12 @@ body.auth-bg .site-header {
   }
   html.ai-ask-open,
   html.ai-ask-open body { overflow: hidden; }
-  /* Keep the mobile Ask AI surface at the viewport top, even when the editor
-     is scrolled, and give it the full usable screen. */
+  /* Keep Ask AI reachable while the editor is scrolled, without covering the page. */
   .ai-ask-popover {
-    position: fixed; inset: 0; width: auto; height: 100vh; height: 100dvh;
-    max-height: none; overflow-y: auto; z-index: 70; border-radius: 0;
-    padding: calc(16px + env(safe-area-inset-top))
-      calc(16px + env(safe-area-inset-right))
-      calc(16px + env(safe-area-inset-bottom))
-      calc(16px + env(safe-area-inset-left));
+    position: fixed; top: 50%; left: 50%; width: min(380px, calc(100vw - 32px));
+    height: auto; max-height: min(74vh, 560px); max-height: min(74dvh, 560px);
+    overflow-y: auto; z-index: 70; border-radius: 14px; padding: 16px;
+    transform: translate(-50%, -50%);
   }
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
@@ -560,7 +557,7 @@ body.auth-bg .site-header {
 .editor-bar .save-state { margin-left: 10px; }
 .presence-av {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 999px; margin-left: -8px;
+  width: 26px; height: 26px; border-radius: 25%; margin-left: -8px;
   border: 2px solid #131313; box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
   font-size: 10px; font-weight: 700; color: #fff; text-transform: uppercase;
   background-size: cover; background-position: center; overflow: hidden;
@@ -619,7 +616,7 @@ body.auth-bg .site-header {
   display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line);
 }
 .collab-av {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background-size: cover;
+  width: 34px; height: 34px; border-radius: 25%; flex-shrink: 0; background-size: cover;
   background-position: center; background-color: var(--charcoal); color: #fff;
   display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
 }
@@ -694,7 +691,7 @@ body.auth-bg .site-header {
 .gift-result-name b { font-weight: 600; }
 .gift-result-handle { color: var(--muted); font-size: 12px; }
 .gift-result-av {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 25%; flex-shrink: 0;
   background: var(--charcoal) center/cover no-repeat; border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
 }
@@ -1047,6 +1044,8 @@ body.auth-bg .site-header {
 .billing-period legend { width: 100%; padding: 0 0 7px; color: var(--muted); font-size: 13px; }
 .billing-period label { display: flex; align-items: flex-start; gap: 8px; min-height: 42px; padding: 12px; background: #111; border: 1px solid var(--line); border-radius: 9px; color: #ddd; font-size: 13px; cursor: pointer; }
 .billing-period .plan-option { flex: 1 1 180px; }
+.signup-plan-options { flex-direction: column; align-items: stretch; margin: 0 0 16px; }
+.signup-plan-options .plan-option { flex: 0 0 auto; }
 .plan-option input { margin: 3px 0 0; accent-color: var(--orange); }
 .plan-option > span, .plan-option strong, .plan-option small, .plan-option b { display: block; }
 .plan-option strong { color: #fff; }

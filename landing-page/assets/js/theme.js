@@ -17,7 +17,7 @@
     }
   }
 
-  function apply(theme) {
+  function apply(theme, persist) {
     var root = document.documentElement;
     var version = ++themeApplyVersion;
     root.classList.add("theme-switching");
@@ -26,7 +26,7 @@
     setMetaColor(!isLight);
     root.classList.toggle("is-light", isLight);
     root.classList.toggle("is-dark", !isLight);
-    localStorage.setItem(STORAGE_KEY, theme);
+    if (persist !== false) localStorage.setItem(STORAGE_KEY, theme);
     updateIcons(theme);
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
@@ -53,6 +53,13 @@
     var next = resolve() === "dark" ? "light" : "dark";
     apply(next);
   }
+
+  window.addEventListener("storage", function (event) {
+    if (event.storageArea !== localStorage || (event.key !== STORAGE_KEY && event.key !== null)) return;
+    var theme = event.newValue;
+    if (theme !== "dark" && theme !== "light") theme = resolve();
+    if (document.documentElement.getAttribute("data-theme") !== theme) apply(theme, false);
+  });
 
   // Headers marked data-theme-slot get a toggle (product pages have no bootstrap-icons).
   function injectToggles() {

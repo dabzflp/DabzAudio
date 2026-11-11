@@ -569,6 +569,7 @@
 
   function setSaveState(text) {
     els.saveState.textContent = text;
+    els.saveState.hidden = ["", "Saving…", "Saved", "Live", "Offline — reconnecting…"].includes(text);
   }
 
   async function logout() {

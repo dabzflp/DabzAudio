@@ -11,7 +11,7 @@
   const bar = $("bar");
   const progressText = $("progressText");
   const transferList = $("transferList");
-  const retryEmailBtn = $("retryEmailBtn");
+  const sendEmailBtn = $("sendEmailBtn");
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MAX_BYTES = 10 * 1024 * 1024 * 1024;
   const PARALLEL = 3;
@@ -225,7 +225,10 @@
       transferId = created.transfer.id;
       await uploadAll(transferId, created.files, created.partSize);
       progressText.textContent = "Finishing up...";
-      const done = await window.LB.apiFetch("/api/transfers/" + transferId + "/complete", { method: "POST" });
+      const done = await window.LB.apiFetch("/api/transfers/" + transferId + "/complete", {
+        method: "POST",
+        body: JSON.stringify({ sendEmails: false })
+      });
       showDone(done);
       loadTransfers();
     } catch (err) {
@@ -247,28 +250,40 @@
     $("doneLink").value = done.transfer.link;
     const expires = new Date(done.transfer.expiresAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
     const emailed = Number(done.emailed || 0);
-    $("doneTitle").textContent = emailed ? "Your files are on their way" : "Your transfer is ready to share";
-    let text = emailed
-      ? "Emailed to " + emailed + (emailed === 1 ? " person. " : " people. ") + "The download link expires " + expires + "."
-      : "No email sent. Copy the download link below to send it directly. It expires " + expires + ".";
-    if (done.emailFailed) text += " " + done.emailFailed + " email(s) could not be sent, so share the link yourself.";
+    const recipientCount = Array.isArray(done.transfer.recipients) ? done.transfer.recipients.length : 0;
+    const emailPending = Number(done.emailPending ?? Math.max(0, recipientCount - emailed));
+    const emailFailed = Number(done.emailFailed || 0);
+    $("doneTitle").textContent = emailed && !emailPending ? "Your files are on their way" : "Your transfer is ready to share";
+    let text;
+    if (!recipientCount) {
+      text = "Upload complete. Copy the download link below to share it directly. It expires " + expires + ".";
+    } else if (emailFailed) {
+      text = emailed
+        ? "Emailed to " + emailed + (emailed === 1 ? " person. " : " people. ") + emailFailed + " email(s) could not be sent. Retry or share the link below. It expires " + expires + "."
+        : emailFailed + " email(s) could not be sent. Retry or share the link below. It expires " + expires + ".";
+    } else if (emailPending) {
+      text = "Upload complete. Send an email to " + emailPending + (emailPending === 1 ? " recipient" : " recipients") + " below, or copy the link to share it directly. It expires " + expires + ".";
+    } else {
+      text = "Emailed to " + emailed + (emailed === 1 ? " person. " : " people. ") + "The download link expires " + expires + ".";
+    }
     $("doneText").textContent = text;
-    retryEmailBtn.hidden = !Number(done.emailFailed || 0);
-    retryEmailBtn.disabled = false;
-    retryEmailBtn.textContent = "Retry email";
+    sendEmailBtn.hidden = !emailPending;
+    sendEmailBtn.disabled = false;
+    sendEmailBtn.textContent = emailFailed ? "Retry email" : "Send email";
   }
   $("doneCopy").addEventListener("click", () => copy($("doneLink").value, $("doneCopy")));
-  retryEmailBtn.addEventListener("click", async () => {
-    retryEmailBtn.disabled = true;
-    retryEmailBtn.textContent = "Sending...";
+  sendEmailBtn.addEventListener("click", async () => {
+    sendEmailBtn.disabled = true;
+    sendEmailBtn.textContent = "Sending...";
     try {
-      const done = await window.LB.apiFetch("/api/transfers/" + encodeURIComponent(completedTransferId) + "/complete", { method: "POST" });
+      const done = await window.LB.apiFetch("/api/transfers/" + encodeURIComponent(completedTransferId) + "/send", { method: "POST" });
       showDone(done);
       loadTransfers();
     } catch (err) {
-      $("doneText").textContent += " Email retry failed: " + (err.message || "Please try again.");
-      retryEmailBtn.disabled = false;
-      retryEmailBtn.textContent = "Retry email";
+      if (err.status === 401) { location.replace("login.html"); return; }
+      $("doneText").textContent += " Email sending failed: " + (err.message || "Please try again.");
+      sendEmailBtn.disabled = false;
+      sendEmailBtn.textContent = "Retry email";
     }
   });
   $("againBtn").addEventListener("click", () => {

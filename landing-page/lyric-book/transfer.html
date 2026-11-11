@@ -31,7 +31,7 @@
       <div>
         <p class="playback-kicker">SEND FILES TO CREATIVES</p>
         <h1>Transfer a file</h1>
-        <p class="sub">Send stems, sessions, videos or anything else up to 10 GB. Links expire after 7 days. We’ll email you when a recipient downloads a file.</p>
+        <p class="sub">Upload stems, sessions, videos or anything else up to 10 GB. Then email recipients separately or copy the link to share it yourself. Links expire after 7 days.</p>
       </div>
     </section>
 
@@ -46,7 +46,7 @@
       <button class="btn ghost small tx-folder-btn" id="folderBtn" type="button">Choose a folder</button>
       <ul class="tx-files" id="fileList"></ul>
 
-      <label class="tx-field">Send to <span class="optional">optional · leave blank to copy and share the link yourself</span>
+      <label class="tx-field">Email recipients <span class="optional">optional · email is sent only after upload when you choose Send email</span>
         <div class="tx-chips" id="chips"><input id="recipientInput" type="email" placeholder="creative@email.com" autocomplete="off" /></div>
       </label>
       <label class="tx-field">Message <span class="optional">optional</span>
@@ -59,7 +59,7 @@
       </div>
 
       <div class="playback-form-actions">
-        <button class="btn" id="sendBtn" type="button" disabled>Transfer</button>
+        <button class="btn" id="sendBtn" type="button" disabled>Upload files</button>
         <span class="msg" id="sendMsg"></span>
       </div>
     </section>
@@ -71,7 +71,7 @@
         <div class="release-share"><input id="doneLink" aria-label="Shareable download link" readonly /><button class="btn ghost small" id="doneCopy" type="button">Copy download link</button></div>
       </label>
       <div class="playback-form-actions">
-        <button class="btn ghost small" id="retryEmailBtn" type="button" hidden>Retry email</button>
+        <button class="btn ghost small" id="sendEmailBtn" type="button" hidden>Send email</button>
         <button class="btn subtle small" id="againBtn" type="button">Send another</button>
       </div>
     </section>

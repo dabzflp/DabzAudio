@@ -40,6 +40,7 @@
     const password = document.getElementById("password").value;
     const password2 = document.getElementById("password2").value;
     const countryCode = countrySelect.value;
+    const startTier = form.querySelector('input[name="startTier"]:checked')?.value || "standard";
 
     if (!email) return fail("Enter a valid email address.");
     if (!countryCode) return fail("Select your country to continue.");
@@ -65,7 +66,12 @@
         body: JSON.stringify(payload)
       });
       window.LB.setToken(data.token);
-      location.replace(inviteToken ? "app.html?invite=" + encodeURIComponent(inviteToken) : "app.html");
+      if (startTier === "pro") {
+        if (inviteToken) localStorage.setItem("lb_pending_invite", inviteToken);
+        location.replace("subscription.html?choose=pro");
+      } else {
+        location.replace(inviteToken ? "app.html?invite=" + encodeURIComponent(inviteToken) : "app.html");
+      }
     } catch (err) {
       fail(err.message || "Could not create account.");
       btn.disabled = false;

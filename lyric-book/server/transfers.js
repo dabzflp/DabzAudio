@@ -157,6 +157,34 @@ function publicTransfer(row, files, recipients, req) {
   };
 }
 
+async function sendPendingEmails(req, transfer, files, recipients) {
+  const pending = recipients.filter((r) => !r.notified_at);
+  if (pending.length) {
+    const senderName = (await displayNameForUser(req.user.id, req.user.email)).name;
+    const url = shareUrl(req, transfer.token);
+    for (const recipient of pending) {
+      try {
+        const result = await sendTransferEmail(recipient.email, {
+          senderName,
+          message: transfer.message,
+          fileCount: files.length,
+          totalLabel: formatBytes(transfer.total_bytes),
+          expiresLabel: new Date(transfer.expires_at).toUTCString().slice(0, 16),
+          downloadUrl: url
+        });
+        if (!result.sent) continue;
+        await pool.query("UPDATE lb_transfer_recipients SET notified_at = NOW() WHERE id = $1", [recipient.id]);
+        recipient.notified_at = new Date();
+      } catch (err) {
+        console.error("Transfer email failed:", err.message);
+      }
+    }
+  }
+  const emailed = recipients.filter((r) => r.notified_at).length;
+  const emailPending = recipients.length - emailed;
+  return { emailed, emailFailed: emailPending, emailPending };
+}
+
 async function purgeTransfer(id) {
   await storage.removeTransfer(id);
   await pool.query("DELETE FROM lb_transfers WHERE id = $1", [id]);
@@ -307,7 +335,7 @@ export function registerTransferRoutes(app) {
 
   app.post("/api/transfers/:id/complete", requireAuth, async (req, res) => {
     try {
-      const transfer = await ownedTransfer(req.params.id, req.user.id);
+      let transfer = await ownedTransfer(req.params.id, req.user.id);
       if (!transfer) return res.status(404).json({ error: "Transfer not found." });
       const files = (await pool.query("SELECT * FROM lb_transfer_files WHERE transfer_id = $1 ORDER BY id", [transfer.id])).rows;
 
@@ -331,36 +359,34 @@ export function registerTransferRoutes(app) {
       }
 
       const recipients = (await pool.query("SELECT * FROM lb_transfer_recipients WHERE transfer_id = $1 ORDER BY id", [transfer.id])).rows;
-      const pending = recipients.filter((r) => !r.notified_at);
-      if (pending.length) {
-        const senderName = (await displayNameForUser(req.user.id, req.user.email)).name;
-        const url = shareUrl(req, transfer.token);
-        for (const r of pending) {
-          try {
-            const result = await sendTransferEmail(r.email, {
-              senderName,
-              message: transfer.message,
-              fileCount: files.length,
-              totalLabel: formatBytes(transfer.total_bytes),
-              expiresLabel: new Date(transfer.expires_at).toUTCString().slice(0, 16),
-              downloadUrl: url
-            });
-            if (!result.sent) continue;
-            await pool.query("UPDATE lb_transfer_recipients SET notified_at = NOW() WHERE id = $1", [r.id]);
-            r.notified_at = new Date();
-          } catch (err) {
-            console.error("Transfer email failed:", err.message);
-          }
-        }
-      }
+      const delivery = req.body?.sendEmails === false
+        ? { emailed: recipients.filter((r) => r.notified_at).length, emailFailed: 0, emailPending: recipients.filter((r) => !r.notified_at).length }
+        : await sendPendingEmails(req, transfer, files, recipients);
       res.json({
         transfer: publicTransfer(transfer, files, recipients, req),
-        emailed: recipients.filter((r) => r.notified_at).length,
-        emailFailed: recipients.filter((r) => !r.notified_at).length
+        ...delivery
       });
     } catch (err) {
       console.error("Complete transfer error:", err);
       res.status(500).json({ error: "Could not finish the transfer. Please try again." });
+    }
+  });
+
+  app.post("/api/transfers/:id/send", requireAuth, rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), async (req, res) => {
+    try {
+      const transfer = await ownedTransfer(req.params.id, req.user.id);
+      if (!transfer) return res.status(404).json({ error: "Transfer not found." });
+      if (transfer.status !== "ready") return res.status(409).json({ error: "Upload must finish before sending email." });
+      const files = (await pool.query("SELECT * FROM lb_transfer_files WHERE transfer_id = $1 ORDER BY id", [transfer.id])).rows;
+      const recipients = (await pool.query("SELECT * FROM lb_transfer_recipients WHERE transfer_id = $1 ORDER BY id", [transfer.id])).rows;
+      const delivery = await sendPendingEmails(req, transfer, files, recipients);
+      res.json({
+        transfer: publicTransfer(transfer, files, recipients, req),
+        ...delivery
+      });
+    } catch (err) {
+      console.error("Send transfer email error:", err);
+      res.status(500).json({ error: "Could not send transfer email. Please try again." });
     }
   });
 

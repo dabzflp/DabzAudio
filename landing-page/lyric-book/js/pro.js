@@ -47,9 +47,17 @@
     const ready = c === "ngn" ? !!sub.providers?.paystackPro : !!sub.providers?.stripe;
     els.buy.disabled = !ready;
     if (!ready) { els.note.textContent = "Naira checkout for Pro is being set up. Prices above are final."; return; }
-    els.note.textContent = sub.tier === "standard" && ["active", "past_due"].includes(sub.status)
-      ? "Switching from your current plan: unused time on it is credited towards Pro."
-      : "Includes " + (credits?.allowance || 120) + " AI credits every month.";
+    if (sub.tier === "standard" && ["active", "past_due"].includes(sub.status)) {
+      const standardPrice = sub.prices?.[c]?.[per];
+      const difference = Number.isFinite(standardPrice) ? p[per] - standardPrice : null;
+      const cadence = per === "annual" ? "year" : "month";
+      const priceNote = difference !== null && difference >= 0
+        ? `Compared with Standard on this billing schedule, Pro adds ${money(difference, c)} per ${cadence}. `
+        : "";
+      els.note.textContent = `${priceNote}Unused time on your current plan is credited towards your first Pro invoice. Includes ${credits?.allowance || 120} AI credits every month.`;
+    } else {
+      els.note.textContent = "Includes " + (credits?.allowance || 120) + " AI credits every month.";
+    }
   }
 
   function renderActive() {
@@ -95,6 +103,10 @@
       els.active.hidden = !sub.proActive;
       if (sub.proActive) { els.title.textContent = "Lyric Book Pro · active"; renderActive(); }
       if (!paidPro) renderUpgrade();
+      if (q.get("choose") === "pro" && !paidPro) {
+        say("You selected Pro during registration. Review the country-eligible price below and choose Get Pro to continue.");
+        requestAnimationFrame(() => els.panel.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
       if (q.get("credits") === "success") say("Payment received. Your credits will appear in a moment.");
     } catch { els.panel.hidden = true; }
   }
