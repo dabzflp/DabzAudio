@@ -337,7 +337,7 @@ export function registerTransferRoutes(app) {
         const url = shareUrl(req, transfer.token);
         for (const r of pending) {
           try {
-            await sendTransferEmail(r.email, {
+            const result = await sendTransferEmail(r.email, {
               senderName,
               message: transfer.message,
               fileCount: files.length,
@@ -345,6 +345,7 @@ export function registerTransferRoutes(app) {
               expiresLabel: new Date(transfer.expires_at).toUTCString().slice(0, 16),
               downloadUrl: url
             });
+            if (!result.sent) continue;
             await pool.query("UPDATE lb_transfer_recipients SET notified_at = NOW() WHERE id = $1", [r.id]);
             r.notified_at = new Date();
           } catch (err) {

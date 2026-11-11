@@ -51,6 +51,20 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
   example with `openssl rand -hex 32`. Keep this key private and stable: changing
   it makes existing MFA secrets unreadable.
 - Run `npm run migrate` after deploying these security changes.
+- `lb_users.unlimited_access` grants an account both standard and Pro feature
+  access without a subscription. Set this only for explicitly approved accounts;
+  future paid features should use the shared `isProUser` entitlement check.
+  AI credits, daily AI caps, and security safeguards still apply.
+
+## Membership pricing
+
+- Standard is £5/month and Pro is £8.99/month; annual plans are 11× their
+  monthly amount. Stripe currencies are converted from GBP using the latest
+  Frankfurter exchange rates, cached for 24 hours, and rounded up to the
+  smallest currency unit. Existing subscriptions keep their checkout currency
+  and amount. Nigerian Paystack prices remain fixed in NGN.
+- If FX rates cannot be reached, GBP and NGN remain available; other Stripe
+  currencies are temporarily withheld rather than charged at a stale amount.
 
 ## Tables (`server/sql/schema.sql`)
 

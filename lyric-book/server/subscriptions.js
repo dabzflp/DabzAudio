@@ -5,13 +5,13 @@ import { rateLimit } from "./rate-limit.js";
 import { stripe, giftCurrencies } from "./payments.js";
 import { paystackEnabled, paystackInitPlanTransaction, paystackDisableSubscription, paystackVerify } from "./paystack.js";
 import { paymentProviderForCountry } from "./country-routing.js";
-import { TIER_PRICES, TIERS } from "./pricing.js";
+import { getTierPrices, TIERS } from "./pricing.js";
 
 const TIER_LABEL = { standard: "DabzAudio Lyric Book", pro: "DabzAudio Lyric Book Pro" };
 
-function stripePrice(tier, currency, plan) {
+function stripePrice(tier, currency, plan, prices) {
   if (currency === "ngn") return null;
-  return TIER_PRICES[tier]?.[currency]?.[plan] ?? null;
+  return prices[tier]?.[currency]?.[plan] ?? null;
 }
 
 function paystackPlanCode(tier, plan) {
@@ -21,19 +21,21 @@ function paystackPlanCode(tier, plan) {
     : process.env[`PAYSTACK_LYRIC_${suffix}_PLAN_CODE`];
 }
 
-function majorUnits(tier) {
-  return Object.fromEntries(Object.entries(TIER_PRICES[tier]).map(([cur, p]) => [cur, { monthly: p.monthly / 100, annual: p.annual / 100 }]));
+function majorUnits(prices) {
+  return Object.fromEntries(Object.entries(prices).map(([cur, p]) => [cur, { monthly: p.monthly / 100, annual: p.annual / 100 }]));
 }
 
-// Pro = a paid (never trial/grandfathered) Pro subscription that is still in period.
-function proActive(row) {
-  return row?.tier === "pro" && ["active", "past_due"].includes(row.status) &&
-    (!row.current_period_end || new Date(row.current_period_end).getTime() > Date.now());
+// Pro includes active subscriptions and the explicit unlimited-access grant.
+export function proActive(row) {
+  return row?.unlimited_access === true || (
+    row?.tier === "pro" && ["active", "past_due"].includes(row.status) &&
+    (!row.current_period_end || new Date(row.current_period_end).getTime() > Date.now())
+  );
 }
 
 export async function isProUser(userId) {
   const { rows } = await pool.query(
-    `SELECT s.tier, s.status, s.current_period_end
+    `SELECT u.unlimited_access, s.tier, s.status, s.current_period_end
        FROM lb_users u LEFT JOIN lb_subscriptions s ON s.user_id = u.id WHERE u.id = $1`,
     [userId]
   );
@@ -52,7 +54,7 @@ function trialActive(row) {
 }
 
 function hasAccess(row) {
-  if (row?.billing_exempt) return true;
+  if (row?.unlimited_access || row?.billing_exempt) return true;
   if (trialActive(row)) return true;
   return ["active", "past_due"].includes(row?.status) &&
     (!row.current_period_end || new Date(row.current_period_end).getTime() > Date.now());
@@ -60,7 +62,7 @@ function hasAccess(row) {
 
 async function billingRow(userId) {
   const { rows } = await pool.query(
-    `SELECT u.email, u.country_code, u.billing_exempt, s.status, s.plan, s.tier, s.currency, s.provider,
+    `SELECT u.email, u.country_code, u.billing_exempt, u.unlimited_access, s.status, s.plan, s.tier, s.currency, s.provider,
             s.trial_started_at, s.trial_ends_at, s.current_period_end,
             s.cancel_at_period_end
        FROM lb_users u
@@ -76,16 +78,18 @@ export function registerSubscriptionRoutes(app) {
     try {
       const row = await billingRow(req.user.id);
       if (!row) return res.status(404).json({ error: "Account not found." });
+      const tierPrices = await getTierPrices();
       const stripeEnabled = !!stripe;
-      const stripeCurrencies = giftCurrencies().filter((currency) => TIER_PRICES.standard[currency] && currency !== "ngn");
+      const stripeCurrencies = giftCurrencies().filter((currency) => tierPrices.prices.standard[currency] && currency !== "ngn");
       const paystackReady = (tier) => !!(paystackPlanCode(tier, "monthly") && paystackPlanCode(tier, "annual"));
       const paymentProvider = paymentProviderForCountry(row.country_code);
       res.json({
         billingExempt: !!row.billing_exempt,
+        unlimitedAccess: !!row.unlimited_access,
         hasAccess: hasAccess(row),
         countryCode: row.country_code,
         paymentProvider,
-        status: row.billing_exempt ? "grandfathered" : row.status || "trialing",
+        status: row.unlimited_access ? "unlimited" : row.billing_exempt ? "grandfathered" : row.status || "trialing",
         plan: row.plan || null,
         tier: row.tier || "standard",
         proActive: await isProUser(req.user.id),
@@ -95,8 +99,10 @@ export function registerSubscriptionRoutes(app) {
         trialEndsAt: row.trial_ends_at || null,
         currentPeriodEnd: row.current_period_end || null,
         cancelAtPeriodEnd: !!row.cancel_at_period_end,
-        prices: majorUnits("standard"),
-        proPrices: majorUnits("pro"),
+        prices: majorUnits(tierPrices.prices.standard),
+        proPrices: majorUnits(tierPrices.prices.pro),
+        fxAvailable: tierPrices.fxAvailable,
+        fxRateDate: tierPrices.fxRateDate,
         currencies: {
           stripe: paymentProvider === "stripe" ? stripeCurrencies : [],
           paystack: paymentProvider === "paystack" ? ["ngn"] : []
@@ -122,6 +128,9 @@ export function registerSubscriptionRoutes(app) {
     try {
       const row = await billingRow(req.user.id);
       if (!row) return res.status(404).json({ error: "Account not found." });
+      if (row.unlimited_access) {
+        return res.status(409).json({ error: "This account already has unlimited feature access." });
+      }
       if (row.billing_exempt && tier !== "pro") return res.status(409).json({ error: "This account already has grandfathered access." });
       const upgrading = tier === "pro" && hasAccess(row) && row.status !== "trialing" && row.tier !== "pro";
       if (tier === "pro" && proActive(row)) return res.status(409).json({ error: "You already have Pro." });
@@ -152,11 +161,15 @@ export function registerSubscriptionRoutes(app) {
       }
 
       if (currency === "ngn") return res.status(400).json({ error: "NGN subscriptions are available only to Nigerian accounts." });
-      if (stripePrice(tier, currency, plan) === null || !giftCurrencies().includes(currency)) {
+      const tierPrices = await getTierPrices();
+      if (currency !== "gbp" && !tierPrices.fxAvailable) {
+        return res.status(503).json({ error: "Currency conversion rates are temporarily unavailable. Choose GBP or try again later." });
+      }
+      if (stripePrice(tier, currency, plan, tierPrices.prices) === null || !giftCurrencies().includes(currency)) {
         return res.status(400).json({ error: "Choose a currency supported for Lyric Book subscriptions." });
       }
       if (!stripe) return res.status(503).json({ error: "Card subscriptions are not configured yet." });
-      const amount = stripePrice(tier, currency, plan);
+      const amount = stripePrice(tier, currency, plan, tierPrices.prices);
       const metadata = { billingUserId: String(req.user.id), plan, tier, currency };
       // Reuse the Stripe customer on upgrades so unused time credited from the
       // old subscription is applied to the first Pro invoice.

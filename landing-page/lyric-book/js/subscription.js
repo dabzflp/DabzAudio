@@ -43,7 +43,7 @@
   }
 
   function render() {
-    const { status, billingExempt, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, prices, providers, currencies } = state;
+    const { status, billingExempt, unlimitedAccess, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, prices, providers, currencies } = state;
     const trialDays = daysLeft(trialEndsAt);
     populateCurrencies(currencies, providers);
     els.continue.hidden = true;
@@ -51,6 +51,13 @@
     els.controls.hidden = true;
     els.status.hidden = false;
 
+    if (unlimitedAccess) {
+      els.title.textContent = "Your unlimited access is active";
+      els.message.textContent = "All current and future paid features are unlocked. AI use still uses credits; you can buy more when needed.";
+      els.status.textContent = "Unlimited feature access · AI credits and safety limits still apply";
+      els.continue.hidden = false;
+      return;
+    }
     if (billingExempt || status === "grandfathered") {
       els.title.textContent = "Your Lyric Book access is active";
       els.message.textContent = "Your account is grandfathered. You can continue using all Lyric Book tools.";
@@ -126,7 +133,12 @@
     els.price.innerHTML = `${formatMoney(amount, currency)} <small>/ ${plan === "annual" ? "year" : "month"}</small>`;
     const available = currency === "ngn" ? providers.paystack : providers.stripe;
     els.subscribe.disabled = !available;
-    els.note.textContent = !available
+    const fxNotice = !state.fxAvailable && currency !== "ngn"
+      ? "Foreign-currency prices are temporarily unavailable; GBP checkout remains available. "
+      : state.fxAvailable && currency !== "gbp" && currency !== "ngn" && state.fxRateDate
+        ? `Converted from GBP using rates dated ${state.fxRateDate}. `
+        : "";
+    els.note.textContent = fxNotice + (!available
       ? currency === "ngn"
         ? "Paystack Naira subscriptions are not ready yet. Monthly and annual plans must be set up first."
         : "Card subscriptions are not configured yet."
@@ -134,7 +146,7 @@
         ? `Upgrade now and billing starts at checkout. Your trial will not automatically charge you. ${plan === "annual" ? "Annual plan renews yearly." : "Monthly plan renews monthly."}`
       : plan === "annual"
         ? `Billed annually. One month free: ${formatMoney(amount, currency)} instead of ${formatMoney(prices[currency].monthly * 12, currency)}.`
-        : "Billed monthly. Cancel renewal any time.";
+        : "Billed monthly. Cancel renewal any time.");
   }
 
   async function load() {

@@ -78,7 +78,7 @@ export async function requireAuth(req, res, next) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT u.country_code, u.billing_exempt, u.auth_version, s.status, s.trial_ends_at, s.current_period_end
+      `SELECT u.country_code, u.billing_exempt, u.unlimited_access, u.auth_version, s.status, s.trial_ends_at, s.current_period_end
          FROM lb_users u
          LEFT JOIN lb_subscriptions s ON s.user_id = u.id
         WHERE u.id = $1`,
@@ -102,7 +102,7 @@ export async function requireAuth(req, res, next) {
     const trialActive = billing?.status === "trialing" && billing.trial_ends_at && new Date(billing.trial_ends_at).getTime() > now;
     const paidThrough = ["active", "past_due"].includes(billing?.status) &&
       (!billing.current_period_end || new Date(billing.current_period_end).getTime() > now);
-    if (billing?.billing_exempt || trialActive || paidThrough) return next();
+    if (billing?.unlimited_access || billing?.billing_exempt || trialActive || paidThrough) return next();
     return res.status(402).json({
       code: "SUBSCRIPTION_REQUIRED",
       error: "Your free trial has ended. Choose a plan to continue using Lyric Book.",

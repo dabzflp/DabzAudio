@@ -32,6 +32,13 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
 /* The hidden attribute must always win over component display rules
    (.btn, .release-edit, .release-share ... set display: flex/inline-flex). */
 body.dabz-lite [hidden] {

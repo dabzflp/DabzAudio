@@ -258,7 +258,7 @@ export function initCollab(httpServer, isAllowedOrigin) {
     try {
       const payload = verifyToken(token);
       const { rows } = await pool.query(
-        `SELECT u.billing_exempt, u.auth_version, s.status, s.trial_ends_at, s.current_period_end
+        `SELECT u.billing_exempt, u.unlimited_access, u.auth_version, s.status, s.trial_ends_at, s.current_period_end
            FROM lb_users u LEFT JOIN lb_subscriptions s ON s.user_id = u.id
           WHERE u.id = $1`,
         [payload.uid]
@@ -271,7 +271,7 @@ export function initCollab(httpServer, isAllowedOrigin) {
       const trialActive = billing?.status === "trialing" && billing.trial_ends_at && new Date(billing.trial_ends_at).getTime() > now;
       const paidThrough = ["active", "past_due"].includes(billing?.status) &&
         (!billing.current_period_end || new Date(billing.current_period_end).getTime() > now);
-      if (!billing || !(billing.billing_exempt || trialActive || paidThrough)) {
+      if (!billing || !(billing.unlimited_access || billing.billing_exempt || trialActive || paidThrough)) {
         return next(new Error("subscription_required"));
       }
       socket.data.uid = payload.uid;

@@ -301,12 +301,16 @@
     function open() {
       popover.hidden = false;
       toggle.setAttribute("aria-expanded", "true");
+      if (window.matchMedia("(max-width: 860px)").matches) {
+        document.documentElement.classList.add("ai-ask-open");
+      }
       if (onOpen) onOpen();
       if (input) input.focus();
     }
     function close() {
       popover.hidden = true;
       toggle.setAttribute("aria-expanded", "false");
+      document.documentElement.classList.remove("ai-ask-open");
     }
     toggle.addEventListener("click", () => (popover.hidden ? open() : close()));
     if (closeBtn) closeBtn.addEventListener("click", close);

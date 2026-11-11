@@ -104,7 +104,7 @@
       answer:
         "<strong>Drop Pilot</strong> is part of <strong>Lyric Book Pro</strong>. It turns one release into a <strong>21-day content plan</strong>, with pitch drafts for playlists and press, a content calendar and a shareable press kit (EPK)." +
         "<ul>" +
-        "<li><strong>Pro</strong> is <strong>$8.99/month</strong> or <strong>$98.89/year</strong> and includes a monthly pool of <strong>AI credits</strong>.</li>" +
+        "<li><strong>Pro</strong> is <strong>£8.99/month</strong> or <strong>£98.89/year in GBP</strong> and includes a monthly pool of <strong>AI credits</strong>. Other currencies use the GBP equivalent shown at checkout.</li>" +
         "<li>Need more? You can buy <strong>credit packs</strong> that never expire.</li>" +
         "<li>It plans your rollout only. It <strong>doesn't analyse your audio or distribute your music</strong>, and it can't promise results.</li>" +
         "<li>If Pro ends, your campaigns stay viewable (read-only) and Lyric Book carries on as a normal plan.</li>" +

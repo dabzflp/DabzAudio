@@ -288,10 +288,11 @@ export async function sendTransferEmail(to, { senderName, message, fileCount, to
       ${note}
       ${ctaButton(downloadUrl, "Download files")}`);
   if (!resend) {
-    console.log(`[email disabled] Transfer for ${to}: ${downloadUrl}`);
+    console.warn("Transfer email not sent: configure RESEND_API_KEY to enable email delivery.");
     return { sent: false };
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+  if (error) throw new Error(`Transfer email failed: ${error.message || "Resend rejected the message."}`);
   return { sent: true };
 }
 

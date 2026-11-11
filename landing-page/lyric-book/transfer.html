@@ -67,8 +67,13 @@
     <section class="tx-card tx-done" id="donePanel" hidden>
       <h2 id="doneTitle">Your transfer is ready to share</h2>
       <p class="sub" id="doneText"></p>
-      <div class="release-share"><input id="doneLink" readonly /><button class="btn ghost small" id="doneCopy" type="button">Copy link</button></div>
-      <div class="playback-form-actions"><button class="btn subtle small" id="againBtn" type="button">Send another</button></div>
+      <label class="tx-field">Shareable download link <span class="optional">Copy and send directly · expires after 7 days</span>
+        <div class="release-share"><input id="doneLink" aria-label="Shareable download link" readonly /><button class="btn ghost small" id="doneCopy" type="button">Copy download link</button></div>
+      </label>
+      <div class="playback-form-actions">
+        <button class="btn ghost small" id="retryEmailBtn" type="button" hidden>Retry email</button>
+        <button class="btn subtle small" id="againBtn" type="button">Send another</button>
+      </div>
     </section>
 
     <section class="tx-history">

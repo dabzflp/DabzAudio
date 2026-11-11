@@ -11,6 +11,7 @@
   const bar = $("bar");
   const progressText = $("progressText");
   const transferList = $("transferList");
+  const retryEmailBtn = $("retryEmailBtn");
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MAX_BYTES = 10 * 1024 * 1024 * 1024;
   const PARALLEL = 3;
@@ -18,6 +19,7 @@
   let files = [];
   let recipients = [];
   let sending = false;
+  let completedTransferId = null;
 
   function formatBytes(n) {
     if (n >= 1073741824) return (n / 1073741824).toFixed(2) + " GB";
@@ -241,6 +243,7 @@
   function showDone(done) {
     $("sendPanel").hidden = true;
     $("donePanel").hidden = false;
+    completedTransferId = done.transfer.id;
     $("doneLink").value = done.transfer.link;
     const expires = new Date(done.transfer.expiresAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
     const emailed = Number(done.emailed || 0);
@@ -250,8 +253,24 @@
       : "No email sent. Copy the download link below to send it directly. It expires " + expires + ".";
     if (done.emailFailed) text += " " + done.emailFailed + " email(s) could not be sent, so share the link yourself.";
     $("doneText").textContent = text;
+    retryEmailBtn.hidden = !Number(done.emailFailed || 0);
+    retryEmailBtn.disabled = false;
+    retryEmailBtn.textContent = "Retry email";
   }
   $("doneCopy").addEventListener("click", () => copy($("doneLink").value, $("doneCopy")));
+  retryEmailBtn.addEventListener("click", async () => {
+    retryEmailBtn.disabled = true;
+    retryEmailBtn.textContent = "Sending...";
+    try {
+      const done = await window.LB.apiFetch("/api/transfers/" + encodeURIComponent(completedTransferId) + "/complete", { method: "POST" });
+      showDone(done);
+      loadTransfers();
+    } catch (err) {
+      $("doneText").textContent += " Email retry failed: " + (err.message || "Please try again.");
+      retryEmailBtn.disabled = false;
+      retryEmailBtn.textContent = "Retry email";
+    }
+  });
   $("againBtn").addEventListener("click", () => {
     files = []; recipients = [];
     $("messageInput").value = "";

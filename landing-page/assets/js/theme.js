@@ -2,6 +2,7 @@
   "use strict";
 
   var STORAGE_KEY = "dabz-theme";
+  var themeApplyVersion = 0;
 
   function resolve() {
     var saved = localStorage.getItem(STORAGE_KEY);
@@ -17,13 +18,21 @@
   }
 
   function apply(theme) {
+    var root = document.documentElement;
+    var version = ++themeApplyVersion;
+    root.classList.add("theme-switching");
     var isLight = theme === "light";
-    document.documentElement.setAttribute("data-theme", theme);
+    root.setAttribute("data-theme", theme);
     setMetaColor(!isLight);
-    document.documentElement.classList.toggle("is-light", isLight);
-    document.documentElement.classList.toggle("is-dark", !isLight);
+    root.classList.toggle("is-light", isLight);
+    root.classList.toggle("is-dark", !isLight);
     localStorage.setItem(STORAGE_KEY, theme);
     updateIcons(theme);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (version === themeApplyVersion) root.classList.remove("theme-switching");
+      });
+    });
   }
 
   function updateIcons(theme) {
@@ -68,8 +77,10 @@
         toggle();
       });
     });
-    apply(resolve());
+    updateIcons(resolve());
   }
+
+  apply(resolve());
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bind);

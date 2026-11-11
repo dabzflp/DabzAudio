@@ -15,26 +15,74 @@ const num = (name, fallback) => {
   return Number.isFinite(v) && v > 0 ? v : fallback;
 };
 
-// Naira: Pro is the standard Naira price + 60%. Packs keep the ~N400 per $1 ratio of the standard plan.
-// Subscription prices, in minor units (cents / kobo). Annual = 11 x monthly.
-export const TIER_PRICES = {
-  standard: {
-    usd: { monthly: 500, annual: 5500 },
-    gbp: { monthly: 500, annual: 5500 },
-    eur: { monthly: 500, annual: 5500 },
-    cad: { monthly: 500, annual: 5500 },
-    aud: { monthly: 500, annual: 5500 },
-    ngn: { monthly: 200000, annual: 2200000 }
-  },
-  pro: {
-    usd: { monthly: 899, annual: 9889 },
-    gbp: { monthly: 899, annual: 9889 },
-    eur: { monthly: 899, annual: 9889 },
-    cad: { monthly: 899, annual: 9889 },
-    aud: { monthly: 899, annual: 9889 },
-    ngn: { monthly: 320000, annual: 3520000 }
+const GBP_MONTHLY_PRICES = { standard: 500, pro: 899 };
+const NGN_MONTHLY_PRICES = { standard: 200000, pro: 320000 };
+const FX_CURRENCIES = ["USD", "EUR", "CAD", "AUD"];
+const FX_RATES_URL = "https://api.frankfurter.dev/v1/latest?base=GBP&symbols=USD,EUR,CAD,AUD";
+const FX_CACHE_MS = 24 * 60 * 60 * 1000;
+const FX_RETRY_MS = 5 * 60 * 1000;
+let cachedFx = null;
+let fxRefresh = null;
+let fxRetryAfter = 0;
+
+export function buildTierPrices(rates = null) {
+  const prices = {};
+  for (const tier of ["standard", "pro"]) {
+    const gbpMonthly = GBP_MONTHLY_PRICES[tier];
+    const ngnMonthly = NGN_MONTHLY_PRICES[tier];
+    prices[tier] = {
+      gbp: { monthly: gbpMonthly, annual: gbpMonthly * 11 },
+      ngn: { monthly: ngnMonthly, annual: ngnMonthly * 11 }
+    };
+    for (const currency of FX_CURRENCIES) {
+      if (!rates) continue;
+      const rate = Number(rates[currency]);
+      if (!Number.isFinite(rate) || rate <= 0) {
+        throw new Error(`Missing or invalid GBP exchange rate for ${currency}.`);
+      }
+      const monthly = Math.ceil(gbpMonthly * rate);
+      prices[tier][currency.toLowerCase()] = { monthly, annual: monthly * 11 };
+    }
   }
-};
+  return prices;
+}
+
+async function refreshFxRates() {
+  const response = await fetch(FX_RATES_URL, { signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error(`FX service returned HTTP ${response.status}.`);
+  const data = await response.json();
+  if (!data.date || !data.rates || typeof data.rates !== "object") {
+    throw new Error("FX service returned an invalid response.");
+  }
+  buildTierPrices(data.rates);
+  cachedFx = { rates: data.rates, date: data.date, fetchedAt: Date.now() };
+  fxRetryAfter = 0;
+  return cachedFx;
+}
+
+export async function getTierPrices() {
+  const fallback = () => ({ prices: buildTierPrices(), fxAvailable: false, fxRateDate: null });
+  if (cachedFx && Date.now() - cachedFx.fetchedAt < FX_CACHE_MS) {
+    return {
+      prices: buildTierPrices(cachedFx.rates),
+      fxAvailable: true,
+      fxRateDate: cachedFx.date
+    };
+  }
+  if (Date.now() < fxRetryAfter) return fallback();
+
+  try {
+    if (!fxRefresh) fxRefresh = refreshFxRates();
+    const fx = await fxRefresh;
+    return { prices: buildTierPrices(fx.rates), fxAvailable: true, fxRateDate: fx.date };
+  } catch (err) {
+    console.error("Subscription FX rate refresh failed:", err.message);
+    fxRetryAfter = Date.now() + FX_RETRY_MS;
+    return fallback();
+  } finally {
+    fxRefresh = null;
+  }
+}
 
 export const TIERS = ["standard", "pro"];
 

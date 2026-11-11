@@ -485,12 +485,17 @@ body.auth-bg .site-header {
   .editor-actions .btn.danger {
     flex-shrink: 1;
   }
-  /* The popover's normal "anchored below the button" positioning sits too
-     close to the sticky header on small screens; dock it as a bottom sheet
-     instead so it never overlaps the header or gets clipped off-screen. */
+  html.ai-ask-open,
+  html.ai-ask-open body { overflow: hidden; }
+  /* Keep the mobile Ask AI surface at the viewport top, even when the editor
+     is scrolled, and give it the full usable screen. */
   .ai-ask-popover {
-    position: fixed; inset: auto 12px 12px 12px; top: auto; left: auto;
-    width: auto; max-height: 60vh; z-index: 70;
+    position: fixed; inset: 0; width: auto; height: 100vh; height: 100dvh;
+    max-height: none; overflow-y: auto; z-index: 70; border-radius: 0;
+    padding: calc(16px + env(safe-area-inset-top))
+      calc(16px + env(safe-area-inset-right))
+      calc(16px + env(safe-area-inset-bottom))
+      calc(16px + env(safe-area-inset-left));
   }
   .suggest { width: 100%; border-left: none; border-top: 1px solid var(--line); }
   .row-2 { grid-template-columns: 1fr; }
