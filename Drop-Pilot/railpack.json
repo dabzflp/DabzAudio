@@ -2,6 +2,6 @@
   "$schema": "https://schema.railpack.com",
   "deploy": {
     "aptPackages": ["unzip", "curl"],
-    "startCommand": "echo '[Drop Pilot] Applying database migrations' && uv run reflex db migrate && echo '[Drop Pilot] Starting Reflex' && uv run reflex run --env prod --frontend-port $PORT --backend-port $PORT --backend-host 0.0.0.0"
+    "startCommand": "echo '[Drop Pilot] Applying database migrations' && reflex db migrate && echo '[Drop Pilot] Starting Reflex' && reflex run --env prod --frontend-port $PORT --backend-port $PORT --backend-host 0.0.0.0"
   }
 }
