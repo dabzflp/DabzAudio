@@ -138,6 +138,9 @@ class AuthState(rx.State):
         token = str(self.router.url.query_parameters.get("token", ""))
         info = lyric_bridge.verify_handoff(token)
         if info is None:
+            logging.warning(
+                "Drop Pilot hand-off rejected: token missing, expired, replayed, or invalid."
+            )
             return rx.redirect(lyric_bridge.app_url("subscription.html"))
         try:
             onboarded = await self._upsert_user(info)
