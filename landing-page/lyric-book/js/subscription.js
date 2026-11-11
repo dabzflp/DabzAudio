@@ -26,7 +26,9 @@
 
   function formatMoney(amount, currency) {
     try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+      const locale = currency === "ngn" ? "en-NG" : undefined;
+      const maximumFractionDigits = currency === "ngn" ? 0 : 2;
+      return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits }).format(amount);
     } catch {
       return `${currency.toUpperCase()} ${amount}`;
     }
@@ -78,14 +80,21 @@
     if (status === "active" || status === "past_due") {
       els.title.textContent = status === "active" ? "Your subscription is active" : "Payment needs attention";
       const planName = state.plan === "annual" ? "Annual" : "Monthly";
-      const planCurrency = String(state.currency || "").toLowerCase();
-      const planPrice = state.prices?.[planCurrency]?.[state.plan];
+      const isNigerianAccount = String(state.countryCode || "").toUpperCase() === "NG";
+      const storedCurrency = String(state.currency || "").toLowerCase();
+      const planCurrency = isNigerianAccount ? "ngn" : storedCurrency;
+      const prices = state.tier === "pro" ? state.proPrices : state.prices;
+      const planPrice = prices?.[planCurrency]?.[state.plan];
       els.message.textContent = Number.isFinite(planPrice)
         ? `${planName} plan · ${formatMoney(planPrice, planCurrency)} / ${state.plan === "annual" ? "year" : "month"}`
         : `${planName} plan · ${planCurrency.toUpperCase()}`;
-      els.status.textContent = cancelAtPeriodEnd
+      const billingStatus = cancelAtPeriodEnd
         ? `Renewal is cancelled. Your access continues through ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "the current period"}.`
         : `Next renewal: ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "provider confirmation pending"}.`;
+      const currencyNotice = isNigerianAccount && storedCurrency !== "ngn"
+        ? "Nigerian plan pricing is shown; your existing payment setup has not been switched to Naira. "
+        : "";
+      els.status.textContent = currencyNotice + billingStatus;
       els.continue.hidden = false;
       els.cancel.hidden = status !== "active" || cancelAtPeriodEnd;
       return;

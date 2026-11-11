@@ -135,7 +135,7 @@ class AuthState(rx.State):
 
     @rx.event
     async def handoff(self):
-        token = str(self.router.page.params.get("token", ""))
+        token = str(self.router.url.query_parameters.get("token", ""))
         info = lyric_bridge.verify_handoff(token)
         if info is None:
             return rx.redirect(lyric_bridge.app_url("subscription.html"))
