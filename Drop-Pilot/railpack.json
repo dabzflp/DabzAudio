@@ -1,6 +1,7 @@
 {
   "$schema": "https://schema.railpack.com",
   "deploy": {
-    "aptPackages": ["unzip", "curl"]
+    "aptPackages": ["unzip", "curl"],
+    "startCommand": "reflex db migrate && reflex run --env prod --frontend-port $PORT --backend-port $PORT --backend-host 0.0.0.0"
   }
 }
