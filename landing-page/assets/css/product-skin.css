@@ -317,6 +317,14 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .site-header {
 }
 
 @media (max-width: 860px) {
+  body.dabz-lite:not([data-product]) {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body.dabz-lite:not([data-product]) .site-header {
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
   html:not([data-theme="light"]) body.dabz-lite:not([data-product]):not(.auth-bg) .site-header {
     background: #07070a;
   }
