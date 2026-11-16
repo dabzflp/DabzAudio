@@ -12,7 +12,7 @@
   function setMetaColor(dark) {
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.content = dark ? "#0c0c0c" : "#e8e8e8";
+      meta.content = dark ? "#07070a" : "#fafaf8";
     }
   }
 

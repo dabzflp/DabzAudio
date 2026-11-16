@@ -315,6 +315,16 @@ html[data-theme="light"] body.dabz-lite:not([data-product]) .site-header {
   backdrop-filter: blur(22px) saturate(1.6);
   -webkit-backdrop-filter: blur(22px) saturate(1.6);
 }
+
+@media (max-width: 860px) {
+  html:not([data-theme="light"]) body.dabz-lite:not([data-product]):not(.auth-bg) .site-header {
+    background: #07070a;
+  }
+  html[data-theme="light"] body.dabz-lite:not([data-product]):not(.auth-bg) .site-header {
+    background: #fafaf8;
+  }
+}
+
 html[data-theme="light"] body.dabz-lite .site-footer,
 html[data-theme="light"] body.dabz-lite .footer {
   background: transparent;
