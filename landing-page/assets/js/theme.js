@@ -9,19 +9,11 @@
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
-  function setMetaColor(dark) {
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.content = dark ? "#07070a" : "#fafaf8";
-    }
-  }
-
   function apply(theme, persist) {
     var root = document.documentElement;
     root.classList.add("theme-switching");
     var isLight = theme === "light";
     root.setAttribute("data-theme", theme);
-    setMetaColor(!isLight);
     root.classList.toggle("is-light", isLight);
     root.classList.toggle("is-dark", !isLight);
     if (persist !== false) localStorage.setItem(STORAGE_KEY, theme);
