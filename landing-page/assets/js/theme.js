@@ -56,6 +56,11 @@
     if (document.documentElement.getAttribute("data-theme") !== theme) apply(theme, false);
   });
 
+  window.addEventListener("pageshow", function () {
+    var theme = resolve();
+    if (document.documentElement.getAttribute("data-theme") !== theme) apply(theme, false);
+  });
+
   // Headers marked data-theme-slot get a toggle (product pages have no bootstrap-icons).
   function injectToggles() {
     document.querySelectorAll("[data-theme-slot]").forEach(function (header) {
