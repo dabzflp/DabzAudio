@@ -123,7 +123,10 @@ npm start              # API + static frontend on http://localhost:4000
   is enforced by the app; total storage remains subject to database capacity and
   hosting-plan limits.
 5. Point the frontend at the service URL via `landing-page/lyric-book/js/config.js`
-   (or add a Netlify `_redirects` proxy for `/api/*`).
+   (or add a Netlify `_redirects` proxy for `/api/*`). Playback audio and cover
+   uploads use `LB_UPLOAD_API_BASE` to call the Lyric Book service directly;
+   this avoids Netlify's 26-second rewrite-proxy timeout. Production `CORS_ORIGIN`
+   must allow the frontend origin for these direct uploads.
 6. The Lyric Book service is the metered AI gateway for both Lyric Book and
    Drop Pilot. Set `NODE_ENV=production`, `LLM_PROVIDER=groq`, and
    `GROQ_API_KEY` on the Lyric Book service; optionally set `GROQ_MODEL`

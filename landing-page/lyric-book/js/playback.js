@@ -14,7 +14,8 @@
     return new Promise((resolve, reject) => {
       const request = new XMLHttpRequest();
       const startedAt = Date.now();
-      request.open(method, (window.LB_API_BASE || "").replace(/\/$/, "") + path);
+      const base = (window.LB_UPLOAD_API_BASE ?? window.LB_API_BASE ?? "").replace(/\/$/, "");
+      request.open(method, base + path);
       request.withCredentials = true;
       const token = window.LB.getToken();
       if (token) request.setRequestHeader("Authorization", "Bearer " + token);

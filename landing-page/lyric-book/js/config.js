@@ -6,3 +6,8 @@ window.LB_API_BASE =
   ["localhost", "127.0.0.1"].includes(location.hostname)
     ? ""
     : "/lyric-book";
+
+window.LB_UPLOAD_API_BASE =
+  ["localhost", "127.0.0.1"].includes(location.hostname)
+    ? ""
+    : "https://dabzaudio-production-7fd4.up.railway.app";
