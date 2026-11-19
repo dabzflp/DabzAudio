@@ -21,10 +21,12 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - **Lyrics**: per-user create / list / read / update / delete.
 - **Playback**: owner-only release library for singles and albums, cover art,
   PostgreSQL-backed audio delivery, drag reordering, and public share links.
-- **Transfer files**: upload files first, then separately email the saved
-  recipients or copy a link to share directly. Both use the same seven-day
-  expiration, starting when the upload is ready; download notifications go to
-  the sender.
+- **Transfer files**: upload up to 2 GB per transfer, then email recipients or
+  copy a link to share directly. Downloadable files expire four days after
+  upload completion. Transfer details and per-file download events remain in
+  the sender's history until deleted; file bytes are removed at expiration.
+  Production stores bytes on a mounted persistent volume configured by
+  `TRANSFER_DIR`; active transfer storage is capped at 2 GB by default.
 - **AI Assistant**: LangChain-powered lyric suggestions (improve line, rhyme
   analysis, ideas, ask), gated by the same lyric ownership/collaborator check
   as the REST API. Groq is the production provider; Ollama is available for
@@ -101,6 +103,12 @@ npm start              # API + static frontend on http://localhost:4000
 
 1. Create a **new service** from this repo with root `lyric-book/` (Procfile: `web: node server/server.js`).
 2. Set Variables: `DATABASE_URL`, `JWT_SECRET`, `APP_BASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `NODE_ENV=production`.
+   For transfers, attach a persistent Railway volume to this service (for
+   example mounted at `/data`) and set `TRANSFER_DIR=/data/transfers`. The
+   temporary 5 GB volume setup uses a 2 GB maximum per transfer and a 2 GB
+   active-storage cap (`TRANSFER_MAX_GB` and `TRANSFER_ACTIVE_GB`); increase
+   these only after increasing volume capacity. Without persistent storage,
+   uploads can disappear after a restart or redeploy.
    `EMAIL_FROM` must use a sender/domain verified in Resend. If email delivery
    is unavailable, transfers still provide a copyable download link after upload.
    `CORS_ORIGIN` must be a comma-separated list of exact HTTPS frontend origins

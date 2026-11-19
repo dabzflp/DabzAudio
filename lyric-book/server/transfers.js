@@ -4,11 +4,12 @@
  * Files are uploaded in parts and assembled on the server's storage driver.
  * Currently only the "local" disk driver is implemented (TRANSFER_DIR); the
  * driver functions below are the seam for a Railway Bucket (S3) driver.
- * Transfers and their files are deleted TRANSFER_TTL_DAYS (7) after creation.
+ * File bytes are deleted four days after upload completion; transfer history remains.
  *
  * Env vars (all optional):
  *  - TRANSFER_DIR          storage folder (default server/.transfers)
- *  - TRANSFER_MAX_GB       max size of one transfer (default 10)
+ *  - TRANSFER_MAX_GB       max size of one transfer (default 2)
+ *  - TRANSFER_ACTIVE_GB    max total active transfer storage (default 2)
  *  - TRANSFER_USER_QUOTA_GB  max active transfer storage per user (default 20)
  */
 import crypto from "crypto";
@@ -24,9 +25,11 @@ import { displayNameForUser } from "./access.js";
 import { sendTransferEmail, sendTransferDownloaded } from "./email.js";
 
 const GB = 1024 * 1024 * 1024;
-const MAX_TRANSFER_BYTES = Number(process.env.TRANSFER_MAX_GB || 10) * GB;
+const MAX_TRANSFER_BYTES = Number(process.env.TRANSFER_MAX_GB || 2) * GB;
+const ACTIVE_STORAGE_BYTES = Number(process.env.TRANSFER_ACTIVE_GB || 2) * GB;
 const USER_QUOTA_BYTES = Number(process.env.TRANSFER_USER_QUOTA_GB || 20) * GB;
-const TTL_DAYS = 7;
+const TTL_DAYS = 4;
+const HISTORY_PAGE_SIZE = 50;
 const PART_SIZE = 16 * 1024 * 1024;
 const MAX_FILES = 1000;
 const MAX_RECIPIENTS = 10;
@@ -36,6 +39,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(process.env.TRANSFER_DIR || path.join(__dirname, ".transfers"));
+if (process.env.NODE_ENV === "production" && !process.env.TRANSFER_DIR) {
+  console.warn("TRANSFER_DIR is not set; transfer files will use ephemeral service storage. Mount a persistent volume and set TRANSFER_DIR.");
+}
 
 /* ---------- local storage driver ---------- */
 const storage = {
@@ -150,6 +156,7 @@ function publicTransfer(row, files, recipients, req) {
     totalBytes: Number(row.total_bytes),
     downloadCount: row.download_count,
     expiresAt: row.expires_at,
+    completedAt: row.completed_at,
     createdAt: row.created_at,
     link: shareUrl(req, row.token),
     files: files.map((f) => ({ id: f.id, name: f.name, size: Number(f.size), completed: f.completed })),
@@ -193,15 +200,30 @@ async function purgeTransfer(id) {
 export async function cleanupTransfers() {
   try {
     const { rows } = await pool.query(
-      `SELECT id FROM lb_transfers
-        WHERE expires_at <= NOW()
+      `SELECT id, status FROM lb_transfers
+        WHERE (status = 'ready' AND expires_at <= NOW())
            OR (status = 'uploading' AND created_at < NOW() - ($1 || ' hours')::interval)`,
       [String(STALE_UPLOAD_HOURS)]
     );
+    let expired = 0;
+    let stale = 0;
     for (const row of rows) {
-      try { await purgeTransfer(row.id); } catch (err) { console.error("Transfer cleanup failed:", row.id, err.message); }
+      try {
+        await storage.removeTransfer(row.id);
+        if (row.status === "ready") {
+          await pool.query("UPDATE lb_transfers SET status = 'expired' WHERE id = $1 AND status = 'ready'", [row.id]);
+          expired += 1;
+        } else {
+          await pool.query("DELETE FROM lb_transfers WHERE id = $1", [row.id]);
+          stale += 1;
+        }
+      } catch (err) {
+        console.error("Transfer cleanup failed:", row.id, err.message);
+      }
     }
-    if (rows.length) console.log(`Transfer cleanup removed ${rows.length} transfer(s).`);
+    if (expired || stale) {
+      console.log(`Transfer cleanup removed files for ${expired} expired transfer(s) and deleted ${stale} stale upload(s).`);
+    }
   } catch (err) {
     console.error("Transfer cleanup error:", err.message);
   }
@@ -214,17 +236,35 @@ export function registerTransferRoutes(app) {
 
   app.get("/api/transfers", requireAuth, async (req, res) => {
     try {
+      const before = /^\d+$/.test(String(req.query.before || "")) ? String(req.query.before) : null;
       const { rows } = await pool.query(
-        "SELECT * FROM lb_transfers WHERE user_id = $1 AND expires_at > NOW() ORDER BY created_at DESC LIMIT 100",
-        [req.user.id]
+        `SELECT * FROM lb_transfers
+          WHERE user_id = $1 AND ($2::bigint IS NULL OR id < $2)
+          ORDER BY id DESC LIMIT $3`,
+        [req.user.id, before, HISTORY_PAGE_SIZE + 1]
       );
+      const hasMore = rows.length > HISTORY_PAGE_SIZE;
+      if (hasMore) rows.pop();
       const ids = rows.map((r) => r.id);
       const files = ids.length ? (await pool.query("SELECT * FROM lb_transfer_files WHERE transfer_id = ANY($1) ORDER BY id", [ids])).rows : [];
       const recips = ids.length ? (await pool.query("SELECT * FROM lb_transfer_recipients WHERE transfer_id = ANY($1) ORDER BY id", [ids])).rows : [];
+      const downloads = ids.length
+        ? (await pool.query("SELECT * FROM lb_transfer_downloads WHERE transfer_id = ANY($1) ORDER BY downloaded_at DESC", [ids])).rows
+        : [];
       res.json({
         maxTransferBytes: MAX_TRANSFER_BYTES,
+        activeStorageBytes: ACTIVE_STORAGE_BYTES,
         ttlDays: TTL_DAYS,
-        transfers: rows.map((r) => publicTransfer(r, files.filter((f) => f.transfer_id === r.id), recips.filter((x) => x.transfer_id === r.id), req))
+        transfers: rows.map((r) => ({
+          ...publicTransfer(r, files.filter((f) => f.transfer_id === r.id), recips.filter((x) => x.transfer_id === r.id), req),
+          recipientDelivery: recips
+            .filter((recipient) => recipient.transfer_id === r.id)
+            .map((recipient) => ({ email: recipient.email, notifiedAt: recipient.notified_at })),
+          downloads: downloads
+            .filter((d) => d.transfer_id === r.id)
+            .map((d) => ({ fileNames: d.file_names, type: d.download_type, downloadedAt: d.downloaded_at }))
+        })),
+        nextCursor: hasMore ? String(rows.at(-1).id) : null
       });
     } catch (err) {
       console.error("List transfers error:", err);
@@ -258,19 +298,27 @@ export function registerTransferRoutes(app) {
         return res.status(413).json({ error: `A transfer can be up to ${formatBytes(MAX_TRANSFER_BYTES)}.` });
       }
 
-      const used = await pool.query(
-        "SELECT COALESCE(SUM(total_bytes), 0) AS used FROM lb_transfers WHERE user_id = $1 AND expires_at > NOW()",
-        [req.user.id]
-      );
-      if (Number(used.rows[0].used) + total > USER_QUOTA_BYTES) {
-        return res.status(413).json({ error: `You have reached your active transfer limit of ${formatBytes(USER_QUOTA_BYTES)}. Delete a transfer or wait for one to expire.` });
-      }
-
       const client = await pool.connect();
       let transfer;
       let saved = [];
       try {
         await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('lb_transfer_storage_quota'))");
+        const globalUsed = await client.query(
+          "SELECT COALESCE(SUM(total_bytes), 0) AS used FROM lb_transfers WHERE status IN ('uploading', 'ready')"
+        );
+        if (Number(globalUsed.rows[0].used) + total > ACTIVE_STORAGE_BYTES) {
+          await client.query("ROLLBACK");
+          return res.status(413).json({ error: `Transfer storage is temporarily full. The active limit is ${formatBytes(ACTIVE_STORAGE_BYTES)}; delete an active transfer or try again later.` });
+        }
+        const userUsed = await client.query(
+          "SELECT COALESCE(SUM(total_bytes), 0) AS used FROM lb_transfers WHERE user_id = $1 AND status IN ('uploading', 'ready')",
+          [req.user.id]
+        );
+        if (Number(userUsed.rows[0].used) + total > USER_QUOTA_BYTES) {
+          await client.query("ROLLBACK");
+          return res.status(413).json({ error: `You have reached your active transfer limit of ${formatBytes(USER_QUOTA_BYTES)}. Delete a transfer or wait for one to expire.` });
+        }
         transfer = (await client.query(
           `INSERT INTO lb_transfers (user_id, token, message, total_bytes, expires_at)
            VALUES ($1, $2, $3, $4, NOW() + ($5 || ' days')::interval) RETURNING *`,
@@ -351,7 +399,9 @@ export function registerTransferRoutes(app) {
         }
         await pool.query(
           `UPDATE lb_transfers
-              SET status = 'ready', expires_at = NOW() + ($2 || ' days')::interval
+              SET status = 'ready',
+                  completed_at = NOW(),
+                  expires_at = NOW() + ($2 || ' days')::interval
             WHERE id = $1 AND status = 'uploading'`,
           [transfer.id, String(TTL_DAYS)]
         );
@@ -392,7 +442,10 @@ export function registerTransferRoutes(app) {
 
   app.delete("/api/transfers/:id", requireAuth, async (req, res) => {
     try {
-      const transfer = await ownedTransfer(req.params.id, req.user.id);
+      const transfer = (await pool.query(
+        "SELECT * FROM lb_transfers WHERE id = $1 AND user_id = $2",
+        [req.params.id, req.user.id]
+      )).rows[0];
       if (!transfer) return res.status(404).json({ error: "Transfer not found." });
       await purgeTransfer(transfer.id);
       res.json({ ok: true });
@@ -409,6 +462,24 @@ export function registerTransferRoutes(app) {
       [String(token)]
     );
     return rows[0] || null;
+  }
+
+  async function storedFilesExist(transfer, files) {
+    if (!files.length) return false;
+    for (const file of files) {
+      try {
+        const stat = await fs.promises.stat(storage.filePath(transfer.id, file.id));
+        if (!stat.isFile() || stat.size !== Number(file.size)) return false;
+      } catch (err) {
+        if (err.code === "ENOENT") return false;
+        throw err;
+      }
+    }
+    return true;
+  }
+
+  function unavailableDownload(res) {
+    return res.status(404).type("text/plain").send("This transfer file is unavailable. The sender may need to upload it again.");
   }
 
   app.get("/api/transfers/public/:token", rateLimit({ windowMs: 15 * 60 * 1000, max: 120 }), async (req, res) => {
@@ -433,13 +504,12 @@ export function registerTransferRoutes(app) {
   app.get("/api/transfers/public/:token/zip", rateLimit({ windowMs: 15 * 60 * 1000, max: 30 }), async (req, res) => {
     try {
       const transfer = await readyByToken(req.params.token);
-      if (!transfer) return res.status(404).json({ error: "This transfer has expired or was removed." });
+      if (!transfer) return res.status(404).type("text/plain").send("This transfer has expired or was removed.");
       const files = (await pool.query("SELECT * FROM lb_transfer_files WHERE transfer_id = $1 AND completed ORDER BY id", [transfer.id])).rows;
-      if (!files.length) return res.status(404).json({ error: "File not found." });
+      if (!(await storedFilesExist(transfer, files))) return unavailableDownload(res);
 
       res.once("finish", () => {
-        const fileName = files.length === 1 ? files[0].name : "All files (ZIP)";
-        notifyDownload(req, transfer, fileName).catch((err) => console.error("Download notice failed:", err.message));
+        notifyDownload(req, transfer, files.map((file) => file.name), "zip").catch((err) => console.error("Download notice failed:", err.message));
       });
       res.setHeader("Content-Type", "application/zip");
       res.setHeader("Content-Disposition", 'attachment; filename="DabzAudio-transfer.zip"');
@@ -458,34 +528,42 @@ export function registerTransferRoutes(app) {
       await zip.finalize();
     } catch (err) {
       console.error("Zip download error:", err);
-      if (!res.headersSent) res.status(500).json({ error: "Could not prepare the download." });
+      if (!res.headersSent) res.status(500).type("text/plain").send("Could not prepare the download. Please try again later.");
     }
   });
 
   app.get("/api/transfers/public/:token/files/:fileId", rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }), async (req, res) => {
     try {
       const transfer = await readyByToken(req.params.token);
-      if (!transfer) return res.status(404).json({ error: "This transfer has expired or was removed." });
+      if (!transfer) return res.status(404).type("text/plain").send("This transfer has expired or was removed.");
       const file = (await pool.query("SELECT * FROM lb_transfer_files WHERE id = $1 AND transfer_id = $2 AND completed", [req.params.fileId, transfer.id])).rows[0];
-      if (!file) return res.status(404).json({ error: "File not found." });
+      if (!file || !(await storedFilesExist(transfer, [file]))) return unavailableDownload(res);
 
       // Range requests (resumed downloads) only count as a download from byte 0.
       const isStart = !req.headers.range || /^bytes=0-/.test(req.headers.range);
       res.download(storage.filePath(transfer.id, file.id), baseName(file.name), { acceptRanges: true }, (err) => {
         if (err) {
-          if (!res.headersSent) res.status(404).json({ error: "File not found." });
+          console.error("Transfer file download failed:", err.message);
+          if (!res.headersSent) unavailableDownload(res);
+          else res.destroy(err);
           return;
         }
-        if (isStart) notifyDownload(req, transfer, file.name).catch((noticeErr) => console.error("Download notice failed:", noticeErr.message));
+        if (isStart) {
+          notifyDownload(req, transfer, [file.name], "file").catch((noticeErr) => console.error("Download notice failed:", noticeErr.message));
+        }
       });
     } catch (err) {
       console.error("Download error:", err);
-      if (!res.headersSent) res.status(500).json({ error: "Could not download this file." });
+      if (!res.headersSent) res.status(500).type("text/plain").send("Could not download this file. Please try again later.");
     }
   });
 }
 
-async function notifyDownload(req, transfer, fileName) {
+async function notifyDownload(req, transfer, fileNames, downloadType) {
+  await pool.query(
+    "INSERT INTO lb_transfer_downloads (transfer_id, file_names, download_type) VALUES ($1, $2, $3)",
+    [transfer.id, fileNames, downloadType]
+  );
   const { rows } = await pool.query(
     `UPDATE lb_transfers
         SET download_count = download_count + 1,
@@ -498,7 +576,7 @@ async function notifyDownload(req, transfer, fileName) {
   const owner = (await pool.query("SELECT email FROM lb_users WHERE id = $1", [transfer.user_id])).rows[0];
   if (!owner) return;
   await sendTransferDownloaded(owner.email, {
-    fileName,
+    fileName: downloadType === "zip" ? "All files (ZIP)" : fileNames[0],
     count: rows[0].download_count,
     manageUrl: `${linkBase(req)}/transfer.html`
   });

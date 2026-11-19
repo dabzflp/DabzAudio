@@ -11,16 +11,20 @@
   const bar = $("bar");
   const progressText = $("progressText");
   const transferList = $("transferList");
+  const loadOlderTransfersBtn = $("loadOlderTransfers");
   const sendEmailBtn = $("sendEmailBtn");
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MAX_RECIPIENTS = 10;
-  const MAX_BYTES = 10 * 1024 * 1024 * 1024;
+  let maxBytes = 2 * 1024 * 1024 * 1024;
+  const transferLimitLabels = document.querySelectorAll("[data-transfer-limit]");
   const PARALLEL = 3;
   const RETRIES = 4;
   let files = [];
   let recipients = [];
   let sending = false;
   let completedTransferId = null;
+  let nextTransferCursor = null;
+  let loadingTransfers = false;
 
   function formatBytes(n) {
     if (n >= 1073741824) return (n / 1073741824).toFixed(2) + " GB";
@@ -49,7 +53,7 @@
     });
     const total = totalBytes();
     sendBtn.disabled = sending || !files.length;
-    if (total > MAX_BYTES) { setMsg("Total size is " + formatBytes(total) + ". The limit is 10 GB.", true); sendBtn.disabled = true; }
+    if (total > maxBytes) { setMsg("Total size is " + formatBytes(total) + ". The current limit is " + formatBytes(maxBytes) + ".", true); sendBtn.disabled = true; }
     else if (files.length) setMsg(files.length + (files.length === 1 ? " file · " : " files · ") + formatBytes(total));
     else setMsg("");
   }
@@ -319,40 +323,116 @@
     return "Expires in " + hours + (hours === 1 ? " hour" : " hours");
   }
 
-  async function loadTransfers() {
-    try {
-      const data = await window.LB.apiFetch("/api/transfers");
-      transferList.innerHTML = "";
-      if (!data.transfers.length) {
-        transferList.innerHTML = '<li class="tx-empty">No active transfers. Files you send show up here until they expire.</li>';
-        return;
-      }
-      data.transfers.forEach((t) => {
-        const li = document.createElement("li");
-        li.className = "tx-item";
-        li.innerHTML = '<div class="tx-item-main"><b></b><small></small></div><div class="tx-item-actions"><button class="btn ghost small tx-copy" type="button">Copy link</button><button class="track-delete" type="button" title="Delete transfer" aria-label="Delete transfer">&times;</button></div>';
-        const first = t.files[0] ? t.files[0].name : "Transfer";
-        li.querySelector("b").textContent = t.files.length > 1 ? first + " + " + (t.files.length - 1) + " more" : first;
-        const parts = [formatBytes(t.totalBytes), t.status === "ready" ? expiryLabel(t.expiresAt) : "Uploading", t.downloadCount + (t.downloadCount === 1 ? " download" : " downloads")];
-        if (t.recipients.length) parts.push("To " + t.recipients.join(", "));
-        li.querySelector("small").textContent = parts.join(" · ");
-        const copyBtn = li.querySelector(".tx-copy");
-        if (t.status !== "ready") copyBtn.hidden = true;
-        copyBtn.addEventListener("click", () => copy(t.link, copyBtn));
-        li.querySelector(".track-delete").addEventListener("click", async () => {
-          if (!(await dabzConfirm("The download link will stop working.", { title: "Delete transfer?", okText: "Delete" }))) return;
-          try { await window.LB.apiFetch("/api/transfers/" + t.id, { method: "DELETE" }); loadTransfers(); }
-          catch (err) { $("listMsg").textContent = err.message; $("listMsg").className = "msg err"; }
-        });
-        transferList.appendChild(li);
+  function dateLabel(value) {
+    return value ? new Date(value).toLocaleString() : "Not completed";
+  }
+
+  function renderTransfer(t) {
+    const li = document.createElement("li");
+    li.className = "tx-item";
+    li.innerHTML = '<div class="tx-item-summary"><div class="tx-item-main"><b></b><small></small></div><div class="tx-item-actions"><button class="btn ghost small tx-copy" type="button">Copy link</button><button class="track-delete tx-history-delete" type="button" aria-label="Delete transfer history">&times;</button></div></div><details class="tx-history-details"><summary>Transfer log</summary><p class="tx-history-sent"></p><ul class="tx-history-files"></ul><p class="tx-history-recipients"></p><p class="tx-history-message" hidden></p><ul class="tx-download-log"></ul></details>';
+    const expired = t.status === "expired" || new Date(t.expiresAt).getTime() <= Date.now();
+    const ready = t.status === "ready" && !expired;
+    const first = t.files[0] ? t.files[0].name : "Transfer";
+    li.querySelector("b").textContent = t.files.length > 1 ? first + " + " + (t.files.length - 1) + " more" : first;
+    const status = expired ? "Expired · files removed" : ready ? expiryLabel(t.expiresAt) : "Uploading";
+    const parts = [formatBytes(t.totalBytes), status, t.downloadCount + (t.downloadCount === 1 ? " download" : " downloads")];
+    li.querySelector(".tx-item-main small").textContent = parts.join(" · ");
+
+    const copyBtn = li.querySelector(".tx-copy");
+    copyBtn.hidden = !ready;
+    copyBtn.addEventListener("click", () => copy(t.link, copyBtn));
+    li.querySelector(".tx-history-sent").textContent = "Completed " + dateLabel(t.completedAt);
+
+    const filesList = li.querySelector(".tx-history-files");
+    t.files.forEach((file) => {
+      const item = document.createElement("li");
+      item.textContent = file.name + " · " + formatBytes(file.size);
+      filesList.appendChild(item);
+    });
+    const recipientDelivery = Array.isArray(t.recipientDelivery)
+      ? t.recipientDelivery
+      : t.recipients.map((email) => ({ email, notifiedAt: null }));
+    li.querySelector(".tx-history-recipients").textContent = recipientDelivery.length
+      ? "Recipients: " + recipientDelivery.map((recipient) =>
+        recipient.email + (recipient.notifiedAt ? " (email sent " + dateLabel(recipient.notifiedAt) + ")" : " (email not sent)")
+      ).join(", ")
+      : "No email recipients recorded; shared by link.";
+    if (t.message) {
+      const message = li.querySelector(".tx-history-message");
+      message.hidden = false;
+      message.textContent = "Message: " + t.message;
+    }
+
+    const downloadList = li.querySelector(".tx-download-log");
+    const downloads = Array.isArray(t.downloads) ? t.downloads : [];
+    if (downloads.length) {
+      downloads.forEach((download) => {
+        const item = document.createElement("li");
+        const names = Array.isArray(download.fileNames) ? download.fileNames.join(", ") : "Unknown file";
+        item.textContent = (download.type === "zip" ? "Downloaded ZIP: " : "Downloaded: ") +
+          names + " · " + dateLabel(download.downloadedAt);
+        downloadList.appendChild(item);
       });
+    } else {
+      const item = document.createElement("li");
+      item.textContent = t.downloadCount
+        ? t.downloadCount + " earlier download(s); detailed file and time history starts with this update."
+        : "No downloads recorded.";
+      downloadList.appendChild(item);
+    }
+
+    li.querySelector(".tx-history-delete").addEventListener("click", async () => {
+      const prompt = expired
+        ? "This permanently deletes the transfer history."
+        : "The download link will stop working and its history will be deleted.";
+      if (!(await dabzConfirm(prompt, { title: expired ? "Delete transfer history?" : "Delete transfer?", okText: "Delete" }))) return;
+      try {
+        await window.LB.apiFetch("/api/transfers/" + t.id, { method: "DELETE" });
+        loadTransfers();
+      } catch (err) {
+        $("listMsg").textContent = err.message;
+        $("listMsg").className = "msg err";
+      }
+    });
+    transferList.appendChild(li);
+  }
+
+  async function loadTransfers(append) {
+    if (loadingTransfers) return;
+    loadingTransfers = true;
+    loadOlderTransfersBtn.disabled = true;
+    try {
+      const cursor = append ? nextTransferCursor : null;
+      const query = cursor ? "?before=" + encodeURIComponent(cursor) : "";
+      const data = await window.LB.apiFetch("/api/transfers" + query);
+      if (Number.isSafeInteger(data.maxTransferBytes) && data.maxTransferBytes > 0) {
+        maxBytes = data.maxTransferBytes;
+        transferLimitLabels.forEach((label) => { label.textContent = formatBytes(maxBytes); });
+        renderFiles();
+      }
+      if (!append) {
+        transferList.innerHTML = "";
+        $("listMsg").textContent = "";
+      }
+      if (!append && !data.transfers.length) {
+        transferList.innerHTML = '<li class="tx-empty">Your sent-transfer history will appear here. File downloads expire after 4 days.</li>';
+      } else {
+        data.transfers.forEach(renderTransfer);
+      }
+      nextTransferCursor = data.nextCursor;
+      loadOlderTransfersBtn.hidden = !nextTransferCursor;
     } catch (err) {
       if (err.status === 401) { location.replace("login.html"); return; }
       $("listMsg").textContent = err.message;
       $("listMsg").className = "msg err";
+    } finally {
+      loadingTransfers = false;
+      loadOlderTransfersBtn.disabled = false;
     }
   }
 
+  loadOlderTransfersBtn.addEventListener("click", () => loadTransfers(true));
   window.addEventListener("beforeunload", (e) => { if (sending) { e.preventDefault(); e.returnValue = ""; } });
   if (!window.LB.isAuthed()) { location.replace("login.html"); return; }
   loadTransfers();

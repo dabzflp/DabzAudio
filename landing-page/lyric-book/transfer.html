@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../assets/css/dabz-glass.css" />
   <link rel="stylesheet" href="../assets/css/theme.css" />
   <link rel="stylesheet" href="../assets/css/product-skin.css" />
+  <link rel="stylesheet" href="css/ui.css" />
   <link rel="icon" type="image/png" href="../assets/img/dabzaudiobck.png" />
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
@@ -32,7 +33,7 @@
       <div>
         <p class="playback-kicker">SEND FILES TO CREATIVES</p>
         <h1>Transfer files</h1>
-        <p class="sub">Upload stems, sessions, videos or anything else up to 10 GB. Then email recipients separately or copy the link to share it yourself. Links expire after 7 days.</p>
+        <p class="sub">Upload stems, sessions, videos or anything else up to <b data-transfer-limit>2 GB</b>. Then email recipients separately or copy the link to share it yourself. Download links expire after 4 days; transfer history remains until you delete it.</p>
       </div>
     </section>
 
@@ -40,7 +41,7 @@
       <label class="tx-drop" id="dropZone" for="fileInput">
         <span class="tx-drop-icon" aria-hidden="true">+</span>
         <strong>Add files</strong>
-        <span>or drag and drop files or folders · zips, stems, any file type · up to 10 GB total</span>
+        <span>or drag and drop files or folders · zips, stems, any file type · up to <b data-transfer-limit>2 GB</b> total</span>
         <input id="fileInput" type="file" multiple hidden />
         <input id="folderInput" type="file" webkitdirectory hidden />
       </label>
@@ -68,7 +69,7 @@
     <section class="tx-card tx-done" id="donePanel" hidden>
       <h2 id="doneTitle">Your transfer is ready to share</h2>
       <p class="sub" id="doneText"></p>
-      <label class="tx-field">Shareable download link <span class="optional">Copy and send directly · expires after 7 days</span>
+      <label class="tx-field">Shareable download link <span class="optional">Copy and send directly · expires after 4 days</span>
         <div class="release-share"><input id="doneLink" aria-label="Shareable download link" readonly /><button class="btn ghost small" id="doneCopy" type="button">Copy download link</button></div>
       </label>
       <div class="playback-form-actions">
@@ -78,9 +79,11 @@
     </section>
 
     <section class="tx-history">
-      <h2>Your transfers</h2>
+      <h2>Your transfer history</h2>
+      <p class="tx-history-note">Files are removed after 4 days. Transfer details and download activity remain here until you delete the history. Downloads show file names and times, not the downloader’s identity.</p>
       <div class="msg" id="listMsg"></div>
       <ul class="tx-list" id="transferList"></ul>
+      <button class="btn ghost small" id="loadOlderTransfers" type="button" hidden>Load older history</button>
     </section>
   </main>
 

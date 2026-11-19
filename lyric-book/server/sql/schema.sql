@@ -391,7 +391,12 @@ CREATE INDEX IF NOT EXISTS idx_lb_contract_signers_contract ON lb_contract_signe
 -- Add signature image storage to existing contract signer rows.
 ALTER TABLE lb_contract_signers ADD COLUMN IF NOT EXISTS signature_url TEXT;
 
--- Transfer a file: temporary (7-day) large file transfers between creatives.
+-- Transfer a file: temporary file storage with retained sender history.
+CREATE TABLE IF NOT EXISTS lb_schema_migrations (
+  name TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS lb_transfers (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES lb_users(id) ON DELETE CASCADE,
@@ -402,9 +407,26 @@ CREATE TABLE IF NOT EXISTS lb_transfers (
   download_count INTEGER NOT NULL DEFAULT 0,
   last_notified_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ NOT NULL,
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT lb_transfer_status CHECK (status IN ('uploading', 'ready'))
 );
+ALTER TABLE lb_transfers ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE lb_transfers DROP CONSTRAINT IF EXISTS lb_transfer_status;
+ALTER TABLE lb_transfers ADD CONSTRAINT lb_transfer_status CHECK (status IN ('uploading', 'ready', 'expired'));
+
+DO $transfer_expiry_migration$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM lb_schema_migrations WHERE name = 'transfer-expiry-four-days') THEN
+    UPDATE lb_transfers
+       SET completed_at = COALESCE(completed_at, expires_at - INTERVAL '7 days'),
+           expires_at = expires_at - INTERVAL '3 days'
+     WHERE status = 'ready';
+    INSERT INTO lb_schema_migrations (name) VALUES ('transfer-expiry-four-days');
+  END IF;
+END;
+$transfer_expiry_migration$;
+
 CREATE TABLE IF NOT EXISTS lb_transfer_files (
   id BIGSERIAL PRIMARY KEY,
   transfer_id BIGINT NOT NULL REFERENCES lb_transfers(id) ON DELETE CASCADE,
@@ -421,10 +443,18 @@ CREATE TABLE IF NOT EXISTS lb_transfer_recipients (
   email TEXT NOT NULL,
   notified_at TIMESTAMPTZ
 );
+CREATE TABLE IF NOT EXISTS lb_transfer_downloads (
+  id BIGSERIAL PRIMARY KEY,
+  transfer_id BIGINT NOT NULL REFERENCES lb_transfers(id) ON DELETE CASCADE,
+  file_names TEXT[] NOT NULL,
+  download_type TEXT NOT NULL CHECK (download_type IN ('file', 'zip')),
+  downloaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE INDEX IF NOT EXISTS idx_lb_transfers_user ON lb_transfers(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lb_transfers_expiry ON lb_transfers(expires_at);
 CREATE INDEX IF NOT EXISTS idx_lb_transfer_files_transfer ON lb_transfer_files(transfer_id);
 CREATE INDEX IF NOT EXISTS idx_lb_transfer_recipients_transfer ON lb_transfer_recipients(transfer_id);
+CREATE INDEX IF NOT EXISTS idx_lb_transfer_downloads_transfer ON lb_transfer_downloads(transfer_id, downloaded_at DESC);
 ALTER TABLE lb_transfers ADD COLUMN IF NOT EXISTS download_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE lb_transfers ADD COLUMN IF NOT EXISTS last_notified_at TIMESTAMPTZ;
 

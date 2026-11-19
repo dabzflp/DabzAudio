@@ -32,11 +32,10 @@
       const url = base + "/api/transfers/public/" + encodeURIComponent(token) + "/files/" + file.id;
       urls.push(url);
       const li = document.createElement("li");
-      li.innerHTML = '<span class="tx-file-name"></span><small></small><a class="btn small" download>Download</a>';
+      li.innerHTML = '<span class="tx-file-name"></span><small></small><a class="btn small">Download</a>';
       li.querySelector(".tx-file-name").textContent = file.name;
       li.querySelector("small").textContent = formatBytes(file.size);
       li.querySelector("a").href = url;
-      li.querySelector("a").download = file.name.split("/").pop();
       list.appendChild(li);
     });
     if (urls.length > 1) {
