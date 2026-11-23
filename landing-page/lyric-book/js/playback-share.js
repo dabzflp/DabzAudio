@@ -32,7 +32,6 @@
       const audio = item.querySelector("audio");
       const repeat = item.querySelector(".repeat-track");
       audio.setAttribute("controlsList", "nodownload noplaybackrate");
-      audio.setAttribute("disableRemotePlayback", "true");
       audio.addEventListener("contextmenu", (event) => event.preventDefault());
       repeat.addEventListener("click", () => {
         audio.loop = !audio.loop;
@@ -41,7 +40,11 @@
       });
       count.textContent = playLabel(track.playCount);
       audio.src = track.audioUrl;
-      window.LBPlaybackPlayer.mount(audio, { protectedAudio: true, mixSettings: track.mixSettings });
+      window.LBPlaybackPlayer.mount(audio, {
+        protectedAudio: true,
+        mixSettings: track.mixSettings,
+        metadata: { title: track.title, artist: release.artistName, album: release.title, artwork: release.coverUrl }
+      });
       audio.addEventListener("play", () => {
         fetch(track.playUrl, { method: "POST", credentials: "omit" })
           .then((response) => response.ok ? response.json() : null)

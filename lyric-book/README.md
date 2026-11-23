@@ -20,7 +20,8 @@ Lyric Book API (this server, on Railway)  --->  PostgreSQL (Railway)
 - **Profiles**: artist questions captured at sign-up (name, genre, influences, etc.).
 - **Lyrics**: per-user create / list / read / update / delete.
 - **Playback**: owner-only release library for singles and albums, cover art,
-  PostgreSQL-backed audio delivery, drag reordering, and public share links.
+  PostgreSQL-backed audio delivery, drag reordering, public share links, and
+  mobile background playback with lock-screen media controls where supported.
 - **Transfer files**: upload up to 2 GB per transfer, then email recipients or
   copy a link to share directly. Downloadable files expire four days after
   upload completion. Transfer details and per-file download events remain in

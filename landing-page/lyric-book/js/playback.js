@@ -237,7 +237,10 @@
       const replaceStatus = item.querySelector(".replace-status");
       trackInfo.textContent = formatDuration(track.durationSeconds) + " · " + playLabel(track.playCount);
       audio.src = track.audioUrl;
-      const player = window.LBPlaybackPlayer.mount(audio, { mixSettings: track.mixSettings });
+      const player = window.LBPlaybackPlayer.mount(audio, {
+        mixSettings: track.mixSettings,
+        metadata: { title: track.title, album: release.title, artwork: release.coverUrl }
+      });
       const mixToggle = item.querySelector(".track-mix-toggle");
       const mixPanel = item.querySelector(".track-mix-panel");
       const mixBypass = item.querySelector(".track-mix-bypass");
