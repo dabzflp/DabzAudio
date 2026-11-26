@@ -1,0 +1,184 @@
+/* Shared styling for DabzAudio legal pages (Privacy Policy & Cookie Policy) */
+:root {
+  --legal-bg: #0d0d0d;
+  --legal-surface: #141417;
+  --legal-text: #e8e8e8;
+  --legal-body: #cfcfcf;
+  --legal-muted: #8b8b94;
+  --legal-heading: #ffffff;
+  --legal-border: #26262c;
+  --legal-accent: #ff7a00;
+  --legal-pill-bg: #1c1c21;
+}
+
+html[data-theme="light"] {
+  --legal-bg: #f4f4f6;
+  --legal-surface: #ffffff;
+  --legal-text: #111111;
+  --legal-body: #2c2c34;
+  --legal-muted: #5b5b66;
+  --legal-heading: #0d0d0d;
+  --legal-border: #dcdce2;
+  --legal-accent: #d95f00;
+  --legal-pill-bg: #ececf0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.legal-page {
+  background: var(--legal-bg);
+  color: var(--legal-text);
+  font: 16px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+}
+
+.legal-header {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.legal-back {
+  color: var(--legal-accent);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.legal-back:hover {
+  text-decoration: underline;
+}
+
+.legal-header .theme-toggle {
+  color: var(--legal-text);
+}
+
+.legal-wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 28px 20px 84px;
+}
+
+.legal-wrap h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: var(--legal-heading);
+}
+
+.legal-wrap h2 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 34px 0 10px;
+  color: var(--legal-heading);
+}
+
+.legal-wrap h3 {
+  font-size: 16px;
+  margin: 20px 0 6px;
+  color: var(--legal-heading);
+}
+
+.legal-wrap p,
+.legal-wrap li {
+  color: var(--legal-body);
+}
+
+.legal-wrap ul {
+  padding-left: 20px;
+}
+
+.legal-wrap li + li {
+  margin-top: 6px;
+}
+
+.legal-wrap a {
+  color: var(--legal-accent);
+  text-decoration: none;
+}
+
+.legal-wrap a:hover {
+  text-decoration: underline;
+}
+
+.legal-muted {
+  color: var(--legal-muted);
+  font-size: 14px;
+}
+
+.legal-card {
+  background: var(--legal-surface);
+  border: 1px solid var(--legal-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 18px 0;
+}
+
+.legal-table-wrap {
+  overflow-x: auto;
+  margin: 14px 0;
+}
+
+.legal-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.legal-wrap th,
+.legal-wrap td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--legal-border);
+  vertical-align: top;
+}
+
+.legal-wrap th {
+  color: var(--legal-heading);
+  font-weight: 600;
+}
+
+.legal-wrap td {
+  color: var(--legal-body);
+}
+
+.legal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--legal-border);
+  background: var(--legal-pill-bg);
+  color: var(--legal-text);
+  font-family: inherit;
+}
+
+.legal-btn:hover {
+  border-color: var(--legal-accent);
+}
+
+.legal-btn:focus-visible {
+  outline: 2px solid var(--legal-accent);
+  outline-offset: 2px;
+}
+
+.legal-footer {
+  margin-top: 44px;
+  padding-top: 20px;
+  border-top: 1px solid var(--legal-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 14px;
+  color: var(--legal-muted);
+}

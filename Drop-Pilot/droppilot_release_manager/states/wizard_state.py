@@ -459,6 +459,15 @@ class WizardState(rx.State):
         self.error = ""
         self.stage_index = 0
 
+    async def _refresh_credits_and_notifications(self) -> None:
+        from droppilot_release_manager.states.auth_state import AuthState
+        from droppilot_release_manager.states.shell_state import ShellState
+
+        auth = await self.get_state(AuthState)
+        await auth.refresh_entitlement()
+        shell = await self.get_state(ShellState)
+        await shell.load_notifications()
+
     @rx.event
     async def generate(self):
         from droppilot_release_manager.states.auth_state import AuthState
@@ -644,6 +653,7 @@ class WizardState(rx.State):
                 await session.commit()
                 new_campaign_id = campaign.id
         except ai_campaign.AINotAllowed as e:
+            await self._refresh_credits_and_notifications()
             self.is_generating = False
             self.error = e.message
             return
@@ -656,6 +666,7 @@ class WizardState(rx.State):
             )
             return
 
+        await self._refresh_credits_and_notifications()
         self.stage_index = 3
         yield
         await asyncio.sleep(0.5)

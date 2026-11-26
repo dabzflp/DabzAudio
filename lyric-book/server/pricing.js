@@ -89,12 +89,18 @@ export const TIERS = ["standard", "pro"];
 // Monthly credit allowance included with Pro (resets each calendar month).
 export const PRO_MONTHLY_ALLOWANCE = num("PRO_MONTHLY_CREDITS", 120);
 
-// Credits charged per action.
+// Global threshold at or below which users see a low-credit notification.
+export const LOW_CREDIT_THRESHOLD = num("LOW_CREDIT_THRESHOLD", 20);
+
+// Credits charged per action (shared globally across Drop Pilot and Lyric Book AI).
 export const CREDIT_COSTS = {
   campaign_generate: 10,
   pitch_draft: 1,
   item_rewrite: 1,
-  epk_bio: 1
+  epk_bio: 1,
+  lyric_assistant: 1,
+  lyric_search: 1,
+  help_assistant: 1
 };
 
 // Output-token ceiling per action, so one request can't run away.
@@ -102,7 +108,10 @@ export const MAX_OUTPUT_TOKENS = {
   campaign_generate: 14000,
   pitch_draft: 1200,
   item_rewrite: 800,
-  epk_bio: 800
+  epk_bio: 800,
+  lyric_assistant: 2000,
+  lyric_search: 1200,
+  help_assistant: 1200
 };
 
 // Keep the standard tier identifier for existing clients and usage history.

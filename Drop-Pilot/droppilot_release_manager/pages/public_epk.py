@@ -65,7 +65,14 @@ def public_epk_page() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 wordmark(),
-                class_name="flex h-16 w-full items-center border-b border-white/5",
+                rx.el.button(
+                    rx.el.span(data_dp_theme_icon="", class_name="shrink-0"),
+                    rx.el.span("Theme", data_dp_theme_label=""),
+                    type="button",
+                    data_dp_theme_btn="",
+                    class_name="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-stone-300 transition-colors hover:border-violet-400/40 hover:text-stone-100",
+                ),
+                class_name="flex h-16 w-full items-center justify-between border-b border-white/5",
             ),
             rx.el.div(
                 rx.cond(

@@ -64,7 +64,8 @@
     const b = credits.balance;
     els.balance.textContent = `${b.total} credits available · ${b.monthly} monthly (resets next month) + ${b.purchased} top-up (never expire)`;
     const c = credits.costs;
-    els.costNote.textContent = `A full campaign costs ${c.campaign_generate.standard} credits; a pitch or rewrite costs ${c.pitch_draft.standard}.`;
+    const lyricCost = c.lyric_assistant?.standard ?? 1;
+    els.costNote.textContent = `Shared across Lyric Book AI and Drop Pilot: ${lyricCost} credit per Lyric Book AI request, pitch or rewrite; ${c.campaign_generate.standard} credits for a full campaign.`;
     els.packs.replaceChildren(...credits.packs.map((pack) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -129,13 +130,13 @@
       location.assign(r.url);
     } catch (err) { say(err.message || "Could not start checkout.", true); els.buy.disabled = false; }
   });
-  els.launch.addEventListener("click", async () => {
-    els.launch.disabled = true;
-    try {
-      const r = await window.LB.apiFetch("/api/droppilot/launch", { method: "POST", body: "{}" });
-      const theme = window.dabzTheme ? window.dabzTheme.get() : "dark";
-      location.assign(`${r.url}&theme=${encodeURIComponent(theme)}`);
-    } catch (err) { say(err.message || "Could not open Drop Pilot.", true); els.launch.disabled = false; }
+  els.launch.addEventListener("click", () => {
+    if (window.launchDropPilot) {
+      window.launchDropPilot({
+        triggerBtn: els.launch,
+        onError: (err) => say(err.message || "Could not open Drop Pilot.", true)
+      });
+    }
   });
 
   window.addEventListener("pageshow", () => { els.launch.disabled = false; });

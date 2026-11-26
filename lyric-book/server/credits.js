@@ -13,7 +13,7 @@ import { rateLimit } from "./rate-limit.js";
 import { stripe, giftCurrencies } from "./payments.js";
 import { paystackEnabled, paystackInitTransaction, paystackVerify } from "./paystack.js";
 import { paymentProviderForCountry } from "./country-routing.js";
-import { CREDIT_PACKS, PRO_MONTHLY_ALLOWANCE, CREDIT_COSTS, MODEL_TIERS, creditCost } from "./pricing.js";
+import { CREDIT_PACKS, PRO_MONTHLY_ALLOWANCE, LOW_CREDIT_THRESHOLD, CREDIT_COSTS, MODEL_TIERS, creditCost } from "./pricing.js";
 
 function appBase() {
   const configured = (process.env.APP_BASE_URL || "https://dabzaudio.com").replace(/\/$/, "");
@@ -50,7 +50,16 @@ async function lockedRow(client, userId, isPro) {
 
 function shape(row, isPro) {
   const monthly = isPro ? row.monthly_credits : 0;
-  return { monthly, purchased: row.purchased_credits, total: monthly + row.purchased_credits, allowance: PRO_MONTHLY_ALLOWANCE };
+  const total = monthly + row.purchased_credits;
+  const low = (isPro || row.purchased_credits > 0) && total <= LOW_CREDIT_THRESHOLD;
+  return {
+    monthly,
+    purchased: row.purchased_credits,
+    total,
+    allowance: PRO_MONTHLY_ALLOWANCE,
+    lowThreshold: LOW_CREDIT_THRESHOLD,
+    low
+  };
 }
 
 export async function getBalance(userId, isPro) {
@@ -164,6 +173,7 @@ export function packCatalog() {
 export function pricingCatalog() {
   return {
     allowance: PRO_MONTHLY_ALLOWANCE,
+    lowThreshold: LOW_CREDIT_THRESHOLD,
     costs: Object.fromEntries(Object.keys(CREDIT_COSTS).map((a) => [a, {
       standard: creditCost(a, "standard")
     }])),

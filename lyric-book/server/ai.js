@@ -2,22 +2,25 @@
  * ai.js
  * Real-auth wrapper around ai-workflow.js for the Lyric Book "AI Assistant".
  *
- * Security model (this is the part the LLM must never be trusted with):
+ * Security & billing model (never trusted to the LLM):
  *  - requireAuth confirms who the caller is.
  *  - getLyricAccess confirms the caller may see THIS lyric (owner or an
  *    accepted collaborator) before any of its text is sent to the model.
  *  - The client can never choose the provider — that is fixed by the server's
- *    LLM_PROVIDER env var, so a compromised/curious client can't force paid
- *    API usage the operator didn't configure.
- *  - Only a short audit row (who/what/when) is stored, never the request text
- *    or the model's reply, since the lyric itself already lives in lb_lyrics.
+ *    LLM_PROVIDER env var.
+ *  - Every AI call shares the global AI credit pool (lb_credits / lb_ai_usage)
+ *    with Drop Pilot: credits are reserved atomically before calling the model
+ *    and automatically refunded if the provider call fails.
  */
+import crypto from "crypto";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { getLyricAccess } from "./access.js";
 import { rateLimit } from "./rate-limit.js";
 import { runLyricAssistant, runHelpAssistant, runLyricSearch, isSupportedAction } from "./ai-workflow.js";
 import { getAIProvider } from "./ai-provider.js";
+import { spendCredits, refundCredits } from "./credits.js";
+import { creditCost, estimateCostMicroUsd } from "./pricing.js";
 
 const MAX_REQUEST_CHARS = 2000;
 const MAX_CONTEXT_CHARS = 4000;
@@ -67,7 +70,104 @@ async function googleTtsVoice(language) {
   return voice;
 }
 
-export function registerAIRoutes(app) {
+function sendAIError(res, err, fallbackMessage) {
+  const suffix = err?.refunded ? " You were not charged." : "";
+  if (err?.status === 429 || /quota|rate.?limit/i.test(err?.message || "")) {
+    return res.status(429).json({
+      error: `The AI assistant has hit its usage limit for now. Please try again in a minute.${suffix}`,
+      ...(err?.balance ? { balance: err.balance } : {})
+    });
+  }
+  if (err?.status === 503 || /overloaded|high demand|unavailable/i.test(err?.message || "")) {
+    return res.status(503).json({
+      error: `The AI provider is temporarily busy. Please try again shortly.${suffix}`,
+      ...(err?.balance ? { balance: err.balance } : {})
+    });
+  }
+  return res.status(500).json({
+    error: `${fallbackMessage}${suffix}`,
+    ...(err?.balance ? { balance: err.balance } : {})
+  });
+}
+
+/**
+ * Shared credit-metered execution helper for all Lyric Book AI endpoints.
+ * Deducts credits from the global lb_credits pool before invoking the model,
+ * refunds on failure, and records token/credit usage in lb_ai_usage.
+ */
+export async function runMeteredLyricAI({
+  userId,
+  isProUser,
+  action,
+  provider,
+  inputChars = 0,
+  run,
+  spendFn = spendCredits,
+  refundFn = refundCredits,
+  queryFn = (sql, params) => pool.query(sql, params)
+}) {
+  const modelTier = "standard";
+  const cost = creditCost(action, modelTier);
+  if (cost === null) {
+    const err = new Error("Unsupported AI credit action.");
+    err.status = 400;
+    throw err;
+  }
+
+  const pro = await isProUser(userId);
+  const ref = `lb_${action}_${crypto.randomBytes(6).toString("hex")}`;
+
+  let spent;
+  try {
+    spent = await spendFn(userId, pro, cost, ref);
+  } catch (err) {
+    if (err.code === "INSUFFICIENT") {
+      const hasPurchased = Number(err.balance?.purchased || 0) > 0;
+      const code = !pro && !hasPurchased ? "PRO_REQUIRED" : "INSUFFICIENT_CREDITS";
+      const message = code === "PRO_REQUIRED"
+        ? "Lyric Book AI uses the shared AI credit plan included with Pro. Upgrade to Pro in Plan to unlock monthly AI credits."
+        : "You are out of AI credits. Top up your credits in Plan to continue.";
+      return {
+        insufficient: true,
+        status: 402,
+        body: { error: message, code, needed: cost, balance: err.balance }
+      };
+    }
+    throw err;
+  }
+
+  let usageMeta = null;
+  let result;
+  try {
+    result = await run((meta) => { usageMeta = meta; });
+  } catch (err) {
+    try {
+      const refundedBalance = await refundFn(userId, pro, spent.parts, ref);
+      err.refunded = true;
+      err.balance = refundedBalance;
+    } catch (refundErr) {
+      console.error("Credit refund failed:", refundErr.message);
+    }
+    queryFn(
+      "INSERT INTO lb_ai_usage (user_id, source, action, model_tier, provider, credits, ok) VALUES ($1,'lyricbook',$2,$3,$4,0,FALSE)",
+      [userId, action, modelTier, provider]
+    ).catch((logErr) => console.error("AI usage log failed:", logErr.message));
+    throw err;
+  }
+
+  const inTok = Number(usageMeta?.input_tokens ?? Math.ceil(inputChars / 4));
+  const outTok = Number(usageMeta?.output_tokens ?? Math.ceil(JSON.stringify(result || "").length / 4));
+  const estMicroUsd = provider === "ollama" ? 0 : estimateCostMicroUsd(modelTier, inTok, outTok);
+  queryFn(
+    `INSERT INTO lb_ai_usage (user_id, source, action, model_tier, provider, input_tokens, output_tokens, credits, est_cost_micro_usd)
+     VALUES ($1,'lyricbook',$2,$3,$4,$5,$6,$7,$8)`,
+    [userId, action, modelTier, provider, inTok, outTok, cost, estMicroUsd]
+  ).catch((logErr) => console.error("AI usage log failed:", logErr.message));
+
+  return { insufficient: false, result, credits: cost, balance: spent.balance };
+}
+
+export function registerAIRoutes(app, { isProUser = async () => false } = {}) {
   app.post(
     "/api/lyrics/:id/assistant",
     requireAuth,
@@ -88,7 +188,7 @@ export function registerAIRoutes(app) {
       }
 
       try {
-        // The application decides access BEFORE any lyric text reaches the model.
+        // The application decides access BEFORE any lyric text reaches the model or spends credits.
         const access = await getLyricAccess(req.params.id, req.user.id);
         if (!access) {
           return res.status(403).json({ error: "You do not have access to this lyric." });
@@ -108,12 +208,22 @@ export function registerAIRoutes(app) {
 
         // Provider is server-controlled, never client-supplied.
         const provider = getAIProvider();
-        const result = await runLyricAssistant({
-          userRequest: request,
-          action,
-          songContext,
-          provider
+        const metered = await runMeteredLyricAI({
+          userId: req.user.id,
+          isProUser,
+          action: "lyric_assistant",
+          provider,
+          inputChars: request.length + songContext.selectedLyrics.length,
+          run: (onUsage) =>
+            runLyricAssistant({
+              userRequest: request,
+              action,
+              songContext,
+              provider,
+              onUsage
+            })
         });
+        if (metered.insufficient) return res.status(metered.status).json(metered.body);
 
         pool
           .query(
@@ -123,22 +233,10 @@ export function registerAIRoutes(app) {
           )
           .catch((err) => console.error("AI request audit log failed:", err.message));
 
-        res.json(result);
+        res.json({ ...metered.result, credits: metered.credits, balance: metered.balance });
       } catch (err) {
         console.error("AI workflow error:", err);
-        // Never expose provider errors, API keys or internal stack traces —
-        // but a quota/overload hit is common enough to explain plainly.
-        if (err.status === 429 || /quota|rate.?limit/i.test(err.message || "")) {
-          return res.status(429).json({
-            error: "The AI assistant has hit its usage limit for now. Please try again in a minute."
-          });
-        }
-        if (err.status === 503 || /overloaded|high demand|unavailable/i.test(err.message || "")) {
-          return res.status(503).json({
-            error: "The AI provider is temporarily busy. Please try again shortly."
-          });
-        }
-        res.status(500).json({ error: "The AI assistant could not complete this request." });
+        sendAIError(res, err, "The AI assistant could not complete this request.");
       }
     }
   );
@@ -204,17 +302,19 @@ export function registerAIRoutes(app) {
       }
       try {
         const provider = getAIProvider();
-        const result = await runHelpAssistant({ question, provider });
-        res.json(result);
+        const metered = await runMeteredLyricAI({
+          userId: req.user.id,
+          isProUser,
+          action: "help_assistant",
+          provider,
+          inputChars: question.length,
+          run: (onUsage) => runHelpAssistant({ question, provider, onUsage })
+        });
+        if (metered.insufficient) return res.status(metered.status).json(metered.body);
+        res.json({ ...metered.result, credits: metered.credits, balance: metered.balance });
       } catch (err) {
         console.error("Help assistant error:", err);
-        if (err.status === 429 || /quota|rate.?limit/i.test(err.message || "")) {
-          return res.status(429).json({ error: "The help assistant has hit its usage limit for now. Please try again in a minute." });
-        }
-        if (err.status === 503 || /overloaded|high demand|unavailable/i.test(err.message || "")) {
-          return res.status(503).json({ error: "The AI provider is temporarily busy. Please try again shortly." });
-        }
-        res.status(500).json({ error: "The help assistant could not complete this request." });
+        sendAIError(res, err, "The help assistant could not complete this request.");
       }
     }
   );
@@ -244,19 +344,28 @@ export function registerAIRoutes(app) {
           [req.user.id]
         );
         const lyrics = rows.map((r) => ({ id: String(r.id), title: r.title, excerpt: r.excerpt }));
+        if (!lyrics.length) return res.json({ matches: [] });
+
         const provider = getAIProvider();
-        const result = await runLyricSearch({ query, lyrics, provider });
+        const metered = await runMeteredLyricAI({
+          userId: req.user.id,
+          isProUser,
+          action: "lyric_search",
+          provider,
+          inputChars: query.length + lyrics.reduce((sum, l) => sum + (l.title?.length || 0) + (l.excerpt?.length || 0), 0),
+          run: (onUsage) => runLyricSearch({ query, lyrics, provider, onUsage })
+        });
+        if (metered.insufficient) return res.status(metered.status).json(metered.body);
+
         const validIds = new Set(lyrics.map((l) => l.id));
-        res.json({ matches: (result.matches || []).filter((m) => validIds.has(m.id)) });
+        res.json({
+          matches: (metered.result.matches || []).filter((m) => validIds.has(m.id)),
+          credits: metered.credits,
+          balance: metered.balance
+        });
       } catch (err) {
         console.error("Lyric search error:", err);
-        if (err.status === 429 || /quota|rate.?limit/i.test(err.message || "")) {
-          return res.status(429).json({ error: "Search has hit its usage limit for now. Please try again in a minute." });
-        }
-        if (err.status === 503 || /overloaded|high demand|unavailable/i.test(err.message || "")) {
-          return res.status(503).json({ error: "The AI provider is temporarily busy. Please try again shortly." });
-        }
-        res.status(500).json({ error: "Could not search your lyrics right now." });
+        sendAIError(res, err, "Could not search your lyrics right now.");
       }
     }
   );

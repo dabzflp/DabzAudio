@@ -57,6 +57,18 @@ def _lyric_group(item_fn, active: str) -> rx.Component:
     )
 
 
+def _theme_button(compact: bool = False, extra_class: str = "") -> rx.Component:
+    return rx.el.button(
+        rx.el.span(data_dp_theme_icon="", class_name="shrink-0"),
+        rx.fragment()
+        if compact
+        else rx.el.span("Theme", data_dp_theme_label="", class_name="truncate"),
+        type="button",
+        data_dp_theme_btn="",
+        class_name=extra_class,
+    )
+
+
 def _sidebar(active: str) -> rx.Component:
     return rx.el.aside(
         rx.el.div(
@@ -93,10 +105,18 @@ def _sidebar(active: str) -> rx.Component:
         rx.el.div(
             rx.cond(
                 ShellState.collapsed,
-                rx.fragment(),
-                rx.el.p(
-                    "DropPilot plans and runs your rollout. It never distributes your music.",
-                    class_name="text-xs font-medium leading-relaxed text-stone-500",
+                _theme_button(
+                    compact=True,
+                    extra_class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-stone-300 transition-colors hover:border-violet-400/40 hover:text-stone-100",
+                ),
+                rx.el.div(
+                    _theme_button(
+                        extra_class="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-stone-300 transition-colors hover:border-violet-400/40 hover:text-stone-50"
+                    ),
+                    rx.el.p(
+                        "DropPilot plans and runs your rollout. It never distributes your music.",
+                        class_name="mt-3 text-xs font-medium leading-relaxed text-stone-500",
+                    ),
                 ),
             ),
             class_name="shrink-0 border-t border-white/5 p-4",
@@ -171,6 +191,14 @@ def _profile_menu() -> rx.Component:
         rx.el.div(
             rx.icon("sparkles", class_name="h-4 w-4 text-violet-300"),
             rx.el.span(AuthState.credits, " AI credits"),
+            rx.cond(
+                AuthState.is_low_credits,
+                rx.el.span(
+                    "Low",
+                    class_name="ml-auto rounded-full bg-orange-400/20 px-2 py-0.5 text-[11px] font-semibold text-orange-200",
+                ),
+                rx.fragment(),
+            ),
             class_name="flex items-center gap-2 px-4 py-3 text-sm font-medium text-stone-300",
         ),
         rx.el.a(
@@ -178,6 +206,9 @@ def _profile_menu() -> rx.Component:
             "Plan & credits",
             href=lyric_bridge.app_url("subscription.html"),
             class_name="flex items-center gap-2 px-4 py-3 text-sm font-medium text-stone-300 transition-colors hover:bg-white/[0.04] hover:text-stone-50",
+        ),
+        _theme_button(
+            extra_class="flex w-full items-center gap-2 border-t border-white/5 px-4 py-3 text-left text-sm font-medium text-stone-300 transition-colors hover:bg-white/[0.04] hover:text-stone-50"
         ),
         rx.el.button(
             rx.icon("arrow-left", class_name="h-4 w-4"),
@@ -285,6 +316,12 @@ def _drawer(active: str) -> rx.Component:
                 _lyric_group(_drawer_item, active),
                 class_name="flex flex-1 flex-col gap-1.5 overflow-y-auto p-3",
             ),
+            rx.el.div(
+                _theme_button(
+                    extra_class="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-stone-300 transition-colors hover:border-violet-400/40 hover:text-stone-50"
+                ),
+                class_name="shrink-0 border-t border-white/5 p-3",
+            ),
             class_name="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-white/10 bg-stone-900",
         ),
         class_name="fixed inset-0 z-50 flex lg:hidden",
@@ -334,6 +371,40 @@ def _read_only_banner() -> rx.Component:
     )
 
 
+def _low_credit_banner() -> rx.Component:
+    return rx.el.div(
+        rx.icon("triangle-alert", class_name="h-4 w-4 shrink-0 text-orange-300"),
+        rx.el.p(
+            rx.cond(
+                AuthState.is_out_of_credits,
+                "You are out of AI credits (0 remaining across Drop Pilot and Lyric Book).",
+                rx.fragment(
+                    "Low AI credits: ",
+                    rx.el.strong(AuthState.credits),
+                    " remaining across Drop Pilot and Lyric Book.",
+                ),
+            ),
+            class_name="text-sm font-medium text-orange-100",
+        ),
+        rx.el.div(
+            rx.el.a(
+                "Top up credits",
+                href=lyric_bridge.app_url("subscription.html#proPanel"),
+                class_name="shrink-0 rounded-full bg-orange-400 px-3 py-1 text-xs font-semibold text-stone-950 transition-colors hover:bg-orange-300",
+            ),
+            rx.el.button(
+                rx.icon("x", class_name="h-3.5 w-3.5"),
+                type="button",
+                on_click=ShellState.dismiss_low_credit,
+                aria_label="Dismiss low credit warning",
+                class_name="flex h-6 w-6 items-center justify-center rounded-full text-orange-200/80 transition-colors hover:bg-white/10 hover:text-orange-100",
+            ),
+            class_name="ml-auto flex shrink-0 items-center gap-2",
+        ),
+        class_name="flex flex-wrap items-center gap-3 border-b border-orange-400/30 bg-orange-400/10 px-4 py-2.5",
+    )
+
+
 def app_shell(
     *children: rx.Component, active: str = "/dashboard"
 ) -> rx.Component:
@@ -342,6 +413,11 @@ def app_shell(
         rx.el.div(
             _top_bar(),
             rx.cond(AuthState.read_only, _read_only_banner(), rx.fragment()),
+            rx.cond(
+                ~AuthState.read_only & AuthState.is_low_credits & ~ShellState.low_credit_dismissed,
+                _low_credit_banner(),
+                rx.fragment(),
+            ),
             rx.el.main(
                 *children,
                 class_name="w-full min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8",

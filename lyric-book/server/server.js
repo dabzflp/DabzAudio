@@ -116,9 +116,8 @@ registerDropPilotRoutes(app, { isProUser });
 // Music contracts — create/store contracts and signers.
 registerContractRoutes(app);
 
-// AI Assistant — additive; defaults to mock mode (no external calls) unless
-// The server selects Groq in production and Ollama for local testing.
-registerAIRoutes(app);
+// AI Assistant — shares the global AI credit pool (lb_credits / lb_ai_usage).
+registerAIRoutes(app, { isProUser });
 
 // Playback routes are additive and use their own lb_playback_* tables.
 registerPlaybackRoutes(app);

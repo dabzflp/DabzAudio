@@ -57,6 +57,7 @@ class ShellState(rx.State):
     drawer_open: bool = False
     profile_open: bool = False
     notifications_open: bool = False
+    low_credit_dismissed: bool = False
     search_query: str = ""
     notifications: list[NotificationRow] = []
     unread_count: int = 0
@@ -90,6 +91,10 @@ class ShellState(rx.State):
     def close_menus(self):
         self.profile_open = False
         self.notifications_open = False
+
+    @rx.event
+    def dismiss_low_credit(self):
+        self.low_credit_dismissed = True
 
     @rx.event
     def set_search_query(self, value: str):
@@ -132,6 +137,23 @@ class ShellState(rx.State):
                     }
                     for row in rows
                 ]
+                if auth.pro and (auth.low_credits_flag or auth.credits <= auth.low_credit_threshold):
+                    if auth.credits <= 0:
+                        msg = "You have 0 AI credits remaining across Drop Pilot and Lyric Book. Top up in Plan & credits to keep using AI."
+                        title = "Out of AI credits"
+                    else:
+                        msg = f"Only {auth.credits} AI credit{'s' if auth.credits != 1 else ''} remaining across Drop Pilot and Lyric Book."
+                        title = "Low AI credits"
+                    self.notifications.insert(
+                        0,
+                        {
+                            "id": 0,
+                            "title": title,
+                            "message": msg,
+                            "kind": "low_credits",
+                            "is_read": bool(self.low_credit_dismissed),
+                        },
+                    )
                 self.unread_count = sum(
                     1 for n in self.notifications if not n["is_read"]
                 )
@@ -163,4 +185,5 @@ class ShellState(rx.State):
         except Exception as e:
             logging.exception(f"Could not mark notifications read: {e}")
             return
+        self.low_credit_dismissed = True
         yield ShellState.load_notifications

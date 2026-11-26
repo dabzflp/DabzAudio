@@ -1,5 +1,6 @@
 import reflex as rx
 
+from droppilot_release_manager.components.brand import waveform, wordmark
 from droppilot_release_manager.pages.calendar import calendar_page
 from droppilot_release_manager.pages.campaign_detail import campaign_detail_page
 from droppilot_release_manager.pages.campaign_new import campaign_new_page
@@ -135,10 +136,35 @@ app.add_page(
     route="/studio",
     title="Studio \u00b7 DropPilot",
 )
+def _handoff_page() -> rx.Component:
+    return rx.el.main(
+        rx.el.div(
+            wordmark(),
+            rx.el.div(
+                rx.el.div(
+                    class_name="h-10 w-10 animate-spin rounded-full border-2 border-violet-400/25 border-t-violet-400"
+                ),
+                rx.el.div(
+                    rx.el.h1(
+                        "Opening Drop Pilot\u2026",
+                        class_name="text-lg font-semibold tracking-tight text-stone-50",
+                    ),
+                    rx.el.p(
+                        "Syncing your studio and AI credits",
+                        class_name="mt-1 text-sm font-medium text-stone-400",
+                    ),
+                ),
+                class_name="mt-6 flex items-center gap-4",
+            ),
+            waveform("mt-8 opacity-80"),
+            class_name="w-full max-w-sm rounded-2xl border border-white/10 bg-stone-900 p-7",
+        ),
+        class_name="font-['Inter'] flex min-h-dvh w-full items-center justify-center bg-stone-950 px-6",
+    )
+
+
 app.add_page(
-    lambda: rx.el.main(
-        rx.el.p("Opening Drop Pilot\u2026", class_name="p-8 text-sm"),
-    ),
+    _handoff_page,
     route="/auth/handoff",
     title="Opening Drop Pilot",
     on_load=AuthState.handoff,

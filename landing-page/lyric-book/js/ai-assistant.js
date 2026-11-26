@@ -25,6 +25,59 @@
       .replace(/'/g, "&#39;");
   }
 
+  const creditBadges = [
+    document.getElementById("aiCreditsBadge"),
+    document.getElementById("aiPopoverCreditsBadge")
+  ].filter(Boolean);
+  let knownPro = null;
+  let knownBalance = null;
+
+  function renderCreditBadges() {
+    if (!creditBadges.length || knownBalance == null) return;
+    const total = Number(knownBalance.total || 0);
+    const label = total > 0
+      ? `${total} credit${total === 1 ? "" : "s"} · 1/use`
+      : (knownPro ? "0 credits" : "Pro · AI credits");
+    creditBadges.forEach((el) => {
+      el.textContent = label;
+      el.classList.toggle("is-empty", total <= 0);
+      el.title = total > 0
+        ? `Shared AI credit pool (${total} left across Lyric Book AI and Drop Pilot)`
+        : "Lyric Book AI uses the shared Pro AI credit pool";
+      el.hidden = false;
+    });
+  }
+
+  async function refreshCredits() {
+    try {
+      const data = await window.LB.apiFetch("/api/credits");
+      knownPro = !!data.pro;
+      if (data.balance) knownBalance = data.balance;
+      renderCreditBadges();
+    } catch { /* keep badge hidden if credits cannot be read */ }
+  }
+
+  function syncCreditsFromPayload(payload) {
+    if (!payload || !payload.balance) return;
+    if (payload.code === "PRO_REQUIRED") knownPro = false;
+    knownBalance = payload.balance;
+    renderCreditBadges();
+  }
+
+  function renderErrorInto(el, err, fallbackText) {
+    syncCreditsFromPayload(err?.data);
+    el.className = "msg err";
+    if (err && err.status === 402) {
+      const text = esc(err.message || "AI credits are required.");
+      const cta = err.code === "PRO_REQUIRED" ? "Upgrade to Pro" : "Top up credits";
+      el.innerHTML = `${text} <a href="subscription.html#proPanel">${cta} &rarr;</a>`;
+      return;
+    }
+    el.textContent = err?.message || fallbackText;
+  }
+
+  refreshCredits();
+
   function selectedLyricText() {
     if (!body) return "";
     const { selectionStart, selectionEnd, value } = body;
@@ -278,11 +331,12 @@
       buttons.forEach((b) => { if (b) b.disabled = true; });
       try {
         const data = await doCall(action, request);
+        syncCreditsFromPayload(data);
         setStatus("Ready");
         doRender(results, data, speechLanguage || (action === "ask" ? detectSpeechLanguage(request) : ""));
       } catch (err) {
         setStatus(err.silent ? "Ready" : "Error", err.silent ? undefined : "error");
-        setMsg(err.message || "The AI assistant could not complete this request.", true);
+        renderErrorInto(msg, err, "The AI assistant could not complete this request.");
       } finally {
         buttons.forEach((b) => { if (b) b.disabled = false; });
       }
@@ -474,11 +528,12 @@
       setSearchMsg("Searching…");
       try {
         const data = await window.LB.apiFetch("/api/lyrics/search", { method: "POST", body: JSON.stringify({ query }) });
+        syncCreditsFromPayload(data);
         const ids = (data.matches || []).map((m) => Number(m.id));
         setSearchMsg(ids.length ? "" : "No matching lyrics found.");
         document.dispatchEvent(new CustomEvent("lb-search-results", { detail: { ids } }));
       } catch (err) {
-        setSearchMsg(err.message || "Could not search your lyrics.", true);
+        renderErrorInto(searchMsg, err, "Could not search your lyrics.");
       } finally {
         smartSearchBtn.disabled = false;
       }

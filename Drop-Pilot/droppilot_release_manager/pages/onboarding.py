@@ -274,11 +274,21 @@ def onboarding_page() -> rx.Component:
     return rx.el.main(
         rx.el.header(
             wordmark(),
-            rx.el.button(
-                rx.icon("log-out", class_name="h-4 w-4"),
-                "Back to Lyric Book",
-                on_click=AuthState.back_to_lyric_book,
-                class_name="flex w-fit items-center gap-2 text-sm font-semibold text-stone-400 transition-colors hover:text-stone-100",
+            rx.el.div(
+                rx.el.button(
+                    rx.el.span(data_dp_theme_icon="", class_name="shrink-0"),
+                    rx.el.span("Theme", data_dp_theme_label=""),
+                    type="button",
+                    data_dp_theme_btn="",
+                    class_name="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-stone-300 transition-colors hover:border-violet-400/40 hover:text-stone-100",
+                ),
+                rx.el.button(
+                    rx.icon("log-out", class_name="h-4 w-4"),
+                    "Back to Lyric Book",
+                    on_click=AuthState.back_to_lyric_book,
+                    class_name="flex w-fit items-center gap-2 text-sm font-semibold text-stone-400 transition-colors hover:text-stone-100",
+                ),
+                class_name="flex items-center gap-3",
             ),
             class_name="flex w-full items-center justify-between border-b border-white/5 px-6 py-5 sm:px-10",
         ),

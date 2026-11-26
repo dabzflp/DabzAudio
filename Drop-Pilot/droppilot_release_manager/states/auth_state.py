@@ -34,6 +34,16 @@ class AuthState(rx.State):
     # Lyric Book decides who is Pro; lapsed Pro accounts are read-only.
     pro: bool = False
     credits: int = 0
+    low_credits_flag: bool = False
+    low_credit_threshold: int = 20
+
+    @rx.var
+    def is_low_credits(self) -> bool:
+        return bool(self.pro and (self.low_credits_flag or self.credits <= self.low_credit_threshold))
+
+    @rx.var
+    def is_out_of_credits(self) -> bool:
+        return bool(self.pro and self.credits <= 0)
 
     @rx.var
     def user_id(self) -> int:
@@ -112,6 +122,8 @@ class AuthState(rx.State):
             return rx.redirect(lyric_bridge.app_url("login.html"))
         self.pro = ent.pro
         self.credits = ent.credits
+        self.low_credits_flag = ent.low_credits
+        self.low_credit_threshold = ent.low_threshold
         if not allow_onboarding and not user["onboarding_complete"]:
             return rx.redirect("/onboarding")
 
@@ -128,6 +140,8 @@ class AuthState(rx.State):
         ent = await lyric_bridge.entitlement(self.user_id, fresh=True)
         self.pro = ent.pro
         self.credits = ent.credits
+        self.low_credits_flag = ent.low_credits
+        self.low_credit_threshold = ent.low_threshold
 
     # ------------------------------------------------------------------
     # hand-off from Lyric Book

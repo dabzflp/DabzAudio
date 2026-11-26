@@ -89,6 +89,8 @@ class Entitlement:
     exists: bool = False
     pro: bool = False
     credits: int = 0
+    low_credits: bool = False
+    low_threshold: int = 20
 
     @property
     def read_only(self) -> bool:
@@ -109,11 +111,18 @@ async def entitlement(uid: int, fresh: bool = False) -> Entitlement:
             )
         resp.raise_for_status()
         data = resp.json()
+        bal = data.get("balance") or {}
+        pro = bool(data.get("pro"))
+        credits = int(bal.get("total") or 0)
+        low_threshold = int(bal.get("lowThreshold") or 20)
+        low_credits = bool(bal.get("low")) if "low" in bal else (pro and credits <= low_threshold)
         result = Entitlement(
             reachable=True,
             exists=bool(data.get("exists")),
-            pro=bool(data.get("pro")),
-            credits=int((data.get("balance") or {}).get("total") or 0),
+            pro=pro,
+            credits=credits,
+            low_credits=low_credits,
+            low_threshold=low_threshold,
         )
     except Exception as exc:
         logging.warning("Lyric Book entitlement check failed: %s", exc)

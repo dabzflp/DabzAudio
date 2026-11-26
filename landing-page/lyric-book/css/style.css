@@ -311,6 +311,33 @@ body.auth-bg .site-header {
 .ai-status { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--orange); }
 .ai-status.is-thinking { color: #ffc46b; }
 .ai-status.is-error { color: var(--danger); }
+.ai-credits-pill {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 0, 0.35);
+  background: rgba(255, 122, 0, 0.12);
+  color: #ffc46b;
+  white-space: nowrap;
+}
+.ai-credits-pill.is-empty {
+  border-color: rgba(255, 122, 0, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+html[data-theme="light"] .ai-credits-pill {
+  color: #a84803;
+  background: rgba(255, 122, 0, 0.12);
+  border-color: rgba(217, 95, 0, 0.3);
+}
+html[data-theme="light"] .ai-credits-pill.is-empty {
+  color: #5b5b66;
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+}
 
 /* Pulsing orb: three dots orbiting a core, like a small AI "eye". */
 .ai-orb {
@@ -342,6 +369,178 @@ body.auth-bg .site-header {
 }
 @media (prefers-reduced-motion: reduce) {
   .ai-orb::before, .ai-orb span { animation: none; }
+}
+
+/* Drop Pilot handover loading overlay (DabzAudio theme) */
+.dp-launch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(255, 122, 0, 0.20), transparent 70%),
+    radial-gradient(45% 40% at 85% 90%, rgba(255, 122, 0, 0.10), transparent 70%),
+    rgba(7, 7, 10, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.dp-launch-overlay.is-visible { opacity: 1; }
+.dp-launch-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 28px 24px 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 122, 0, 0.28);
+  background: rgba(18, 18, 22, 0.92);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+.dp-launch-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.dp-launch-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #ff7a00;
+  color: #140b02;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.04em;
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.35);
+}
+.dp-launch-orb {
+  margin: 6px 0 2px;
+  width: 54px;
+  height: 54px;
+  flex: none;
+}
+.dp-launch-orb::before { inset: 14px; animation-duration: 0.9s; }
+.dp-launch-orb span { animation-duration: 1.4s; }
+.dp-launch-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.dp-launch-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dp-launch-track {
+  width: 100%;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.dp-launch-bar {
+  width: 42%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff7a00, #ffc46b);
+  animation: dp-launch-slide 1.25s ease-in-out infinite;
+}
+@keyframes dp-launch-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(260%); }
+}
+html[data-theme="light"] .dp-launch-overlay {
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(255, 122, 0, 0.14), transparent 70%),
+    rgba(246, 246, 249, 0.94);
+}
+html[data-theme="light"] .dp-launch-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(217, 95, 0, 0.28);
+  box-shadow: 0 24px 60px rgba(20, 20, 30, 0.12);
+}
+html[data-theme="light"] .dp-launch-brand,
+html[data-theme="light"] .dp-launch-title { color: #111; }
+html[data-theme="light"] .dp-launch-track { background: rgba(0, 0, 0, 0.08); }
+@media (prefers-reduced-motion: reduce) {
+  .dp-launch-bar { animation: none; width: 100%; }
+}
+
+/* Global low-credit notification bar (shared across Lyric Book pages) */
+.lb-low-credit-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffe6cc;
+  background: rgba(255, 122, 0, 0.14);
+  border-bottom: 1px solid rgba(255, 122, 0, 0.34);
+}
+.lb-low-credit-banner.is-empty {
+  color: #ffd7d2;
+  background: rgba(235, 87, 87, 0.14);
+  border-bottom-color: rgba(235, 87, 87, 0.34);
+}
+.lb-low-credit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.lb-low-credit-actions a {
+  color: #140b02;
+  background: #ff7a00;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.lb-low-credit-actions a:hover { filter: brightness(1.06); }
+.lb-low-credit-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.75;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.lb-low-credit-dismiss:hover { opacity: 1; }
+html[data-theme="light"] .lb-low-credit-banner {
+  color: #7a3500;
+  background: rgba(255, 122, 0, 0.12);
+  border-bottom-color: rgba(217, 95, 0, 0.28);
+}
+html[data-theme="light"] .lb-low-credit-banner.is-empty {
+  color: #8f1d1d;
+  background: rgba(220, 38, 38, 0.10);
+  border-bottom-color: rgba(220, 38, 38, 0.24);
+}
+html[data-theme="light"] .lb-low-credit-actions a {
+  color: #fff;
+  background: #d95f00;
 }
 
 .ai-panel-sub { margin: 4px 0 16px !important; font-size: 13px; }

@@ -97,7 +97,7 @@
     bar.innerHTML =
       "<p>Essential cookies are always on: they keep you signed in and remember your theme and this choice. " +
       "With your permission we also load Google AdSense on our public pages, which may set advertising cookies. " +
-      "See our <a href=\"/privacy.html\">Privacy &amp; Cookie Policy</a>.</p>" +
+      "See our <a href=\"/privacy.html\">Privacy Policy</a> and <a href=\"/cookies.html\">Cookie Policy</a>.</p>" +
       "<div class=\"dz-cookie-actions\">" +
       "<button type=\"button\" class=\"dz-reject\">Reject non-essential</button>" +
       "<button type=\"button\" class=\"primary dz-accept\">Accept all</button>" +

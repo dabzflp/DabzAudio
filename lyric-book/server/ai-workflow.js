@@ -60,8 +60,11 @@ function coerceArrayFields(obj, paths) {
   }
 }
 
-async function invokeStructured({ prompt, model, inputs, schema, arrayFieldPaths = [] }) {
+async function invokeStructured({ prompt, model, inputs, schema, arrayFieldPaths = [], onUsage = null }) {
   const aiMessage = await prompt.pipe(model).invoke(inputs);
+  if (typeof onUsage === "function" && aiMessage?.usage_metadata) {
+    onUsage(aiMessage.usage_metadata);
+  }
   const text = typeof aiMessage.content === "string" ? aiMessage.content : JSON.stringify(aiMessage.content);
   let parsed;
   try {
@@ -139,7 +142,7 @@ export function createModel(provider) {
   return null;
 }
 
-export async function runLyricAssistant({ userRequest, action = "ask", songContext, provider = getAIProvider() }) {
+export async function runLyricAssistant({ userRequest, action = "ask", songContext, provider = getAIProvider(), onUsage = null }) {
 
   const model = createModel(provider);
   if (!model) {
@@ -164,7 +167,8 @@ export async function runLyricAssistant({ userRequest, action = "ask", songConte
       songContext: JSON.stringify(songContext)
     },
     schema: outputSchema,
-    arrayFieldPaths: ["analysis.notes", "riskFlags"]
+    arrayFieldPaths: ["analysis.notes", "riskFlags"],
+    onUsage
   });
 }
 
@@ -191,7 +195,7 @@ DabzAudio Lyric Book feature summary:
 - Delete account permanently removes the user and their data.
 `;
 
-export async function runHelpAssistant({ question, provider = getAIProvider() }) {
+export async function runHelpAssistant({ question, provider = getAIProvider(), onUsage = null }) {
 
   const model = createModel(provider);
   if (!model) throw Object.assign(new Error(`AI provider unavailable: ${provider}`), { status: 503 });
@@ -213,7 +217,8 @@ export async function runHelpAssistant({ question, provider = getAIProvider() })
       question
     },
     schema: helpOutputSchema,
-    arrayFieldPaths: ["relatedTopics"]
+    arrayFieldPaths: ["relatedTopics"],
+    onUsage
   });
 }
 
@@ -234,7 +239,7 @@ const searchOutputSchema = z.object({
 });
 const searchParser = StructuredOutputParser.fromZodSchema(searchOutputSchema);
 
-export async function runLyricSearch({ query, lyrics, provider = getAIProvider() }) {
+export async function runLyricSearch({ query, lyrics, provider = getAIProvider(), onUsage = null }) {
   if (!lyrics.length) return { matches: [] };
 
   const model = createModel(provider);
@@ -257,7 +262,8 @@ export async function runLyricSearch({ query, lyrics, provider = getAIProvider()
       lyrics: JSON.stringify(lyrics)
     },
     schema: searchOutputSchema,
-    arrayFieldPaths: ["matches"]
+    arrayFieldPaths: ["matches"],
+    onUsage
   });
   return { matches: result.matches.map((m) => ({ ...m, id: String(m.id) })) };
 }

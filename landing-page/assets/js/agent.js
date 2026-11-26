@@ -138,7 +138,7 @@
       keywords: ["ai", "smart search", "search", "assistant", "artificial intelligence", "suggest", "suggestions", "find a lyric", "idea"],
       answer:
         "<strong>Smart search</strong> in the Lyric Book uses AI to help you find lyrics and ideas by meaning, not just exact words — " +
-        "and you also get rhyme suggestions and syllable counts as you write. Only the text you search with is sent to the AI provider; see our <a href='/privacy.html'>Privacy &amp; Cookie Policy</a>."
+        "and you also get rhyme suggestions and syllable counts as you write. Only the text you search with is sent to the AI provider; see our <a href='/privacy.html'>Privacy Policy</a>."
     },
     {
       id: "theme",
@@ -152,7 +152,7 @@
       answer:
         "Essential cookies (sign-in, theme, your cookie choice) are always on. Advertising cookies only load if you choose <strong>Accept all</strong> — " +
         "<strong>Reject non-essential</strong> keeps them off, and you can change your mind any time via <em>Cookie settings</em> in the footer. " +
-        "Full details: <a href='/privacy.html'>Privacy &amp; Cookie Policy</a>."
+        "Full details: <a href='/privacy.html'>Privacy Policy</a> &middot; <a href='/cookies.html'>Cookie Policy</a>."
     },
     {
       id: "hub",
