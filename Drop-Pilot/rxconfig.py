@@ -21,6 +21,7 @@ config = rx.Config(
     app_name="droppilot_release_manager",
     db_url=database_url,
     async_db_url=async_database_url,
+    show_built_with_reflex=False,
     plugins=[
         rx.plugins.SitemapPlugin(),
         rx.plugins.TailwindV4Plugin(),
